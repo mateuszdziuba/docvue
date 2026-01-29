@@ -124,6 +124,15 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
           />
         )
 
+      case 'separator':
+        return (
+          <div className="prose dark:prose-invert max-w-none">
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap text-base leading-relaxed">
+              {field.label}
+            </p>
+          </div>
+        )
+
       default:
         return (
           <input
@@ -141,7 +150,7 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {fields.map((field: FormField) => (
         <div key={field.name}>
-          {field.type !== 'checkbox' && (
+          {field.type !== 'checkbox' && field.type !== 'separator' && (
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}

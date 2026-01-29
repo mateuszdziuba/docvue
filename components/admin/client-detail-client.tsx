@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { assignFormToClient, deleteClientForm } from '@/actions/client-forms'
 import type { Client, ClientForm, Submission } from '@/types/database'
 
@@ -48,6 +49,9 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
   const handleCopyLink = async (token: string) => {
     const link = `${window.location.origin}/f/${token}`
     await navigator.clipboard.writeText(link)
+    toast.success('Link został skopiowany do schowka', {
+      position: 'bottom-center'
+    })
     setCopiedToken(token)
     setTimeout(() => setCopiedToken(null), 3000)
   }

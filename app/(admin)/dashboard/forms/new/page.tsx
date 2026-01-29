@@ -15,6 +15,7 @@ const fieldTypes = [
   { type: 'checkbox', label: 'Checkbox', icon: '☑️' },
   { type: 'date', label: 'Data', icon: '📅' },
   { type: 'signature', label: 'Podpis', icon: '✍️' },
+  { type: 'separator', label: 'Opis / Rozdzielacz', icon: '📝' },
 ]
 
 export default function NewFormPage() {
@@ -183,21 +184,33 @@ export default function NewFormPage() {
                       <span>{fieldTypes.find(ft => ft.type === field.type)?.label}</span>
                     </div>
                     
-                    <input
-                      type="text"
-                      value={field.label}
-                      onChange={(e) => updateField(index, { label: e.target.value })}
-                      placeholder="Etykieta pola (np. Imię i nazwisko)"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    />
-                    
-                    <input
-                      type="text"
-                      value={field.placeholder || ''}
-                      onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                      placeholder="Placeholder (opcjonalnie)"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    />
+                    {field.type === 'separator' ? (
+                      <textarea
+                        value={field.label}
+                        onChange={(e) => updateField(index, { label: e.target.value })}
+                        placeholder="Treść separatora / opisu (HTML dozwolony)"
+                        rows={3}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
+                      />
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          value={field.label}
+                          onChange={(e) => updateField(index, { label: e.target.value })}
+                          placeholder="Etykieta pola (np. Imię i nazwisko)"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        />
+                        
+                        <input
+                          type="text"
+                          value={field.placeholder || ''}
+                          onChange={(e) => updateField(index, { placeholder: e.target.value })}
+                          placeholder="Placeholder (opcjonalnie)"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        />
+                      </>
+                    )}
 
                     {(field.type === 'select' || field.type === 'radio') && (
                       <textarea
@@ -215,15 +228,17 @@ export default function NewFormPage() {
                       />
                     )}
 
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={field.required || false}
-                        onChange={(e) => updateField(index, { required: e.target.checked })}
-                        className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Pole wymagane</span>
-                    </label>
+                    {field.type !== 'separator' && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={field.required || false}
+                          onChange={(e) => updateField(index, { required: e.target.checked })}
+                          className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Pole wymagane</span>
+                      </label>
+                    )}
                   </div>
 
                   {/* Remove button */}
