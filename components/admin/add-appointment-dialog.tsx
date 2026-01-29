@@ -103,13 +103,13 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Dodaj zabieg
+            Dodaj wizytę
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Dodaj zabieg</DialogTitle>
+          <DialogTitle>Umów wizytę</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
@@ -181,7 +181,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
 
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Zapisywanie...' : 'Dodaj zabieg'}
+              {isLoading ? 'Zapisywanie...' : 'Zapisz wizytę'}
             </Button>
           </div>
         </form>

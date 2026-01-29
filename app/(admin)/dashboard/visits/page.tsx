@@ -28,13 +28,10 @@ export default async function VisitsPage({ searchParams }: Props) {
   // Simple search implementation
   // Note: Complex OR across relations is hard in standard Supabase query without View.
   // For now, if q is present, we'll try to filter by client name using the !inner join hint on clients
-  if (q) {
-     // This only filters by client name efficiently
-     query = query.ilike('clients.name', `%${q}%`)
-     // To also search treatments, we'd need a more complex query or a Database Function/View.
-     // Let's stick to client search primarily or try to add treatment search if possible.
-  }
-
+  // Simple search implementation
+  // Note: We are fetching all (limit logic can be added later) and filtering in JS to handle relation search easily without Views.
+  // This ensures searching for "Treatment Name" also works.
+  
   const { data: visits } = await query
 
   // Client-side filtering for treatment name (as a fallback for complex OR query constraints)

@@ -63,6 +63,12 @@ export default async function ClientDetailPage({ params }: Props) {
     .order('created_at', { ascending: false })
     .limit(10)
 
+  // Get visit count
+  const { count: visitCount } = await supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .eq('client_id', id)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,7 +163,12 @@ export default async function ClientDetailPage({ params }: Props) {
 
       <div className="mt-8">
          <div className="flex items-center justify-between mb-4">
-           <h2 className="text-lg font-bold text-gray-900 dark:text-white">Historia Wizyt</h2>
+           <div className="flex items-center gap-2">
+             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Historia Wizyt</h2>
+             <span className="px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium border border-gray-200 dark:border-gray-700">
+               {visitCount || 0}
+             </span>
+           </div>
            <AddAppointmentDialog clientId={client.id} salonId={client.salon_id} />
          </div>
          
