@@ -46,6 +46,40 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
     .eq('client_id', appointment.client_id)
     .order('created_at', { ascending: false })
 
+  // --- Status Auto-Sync Logic ---
+  // Check if status needs to be updated based on form requirements
+  if (appointment.status !== 'completed' && appointment.status !== 'cancelled') {
+      const treatmentForms = appointment.treatments?.treatment_forms || []
+      const requiredFormIds = treatmentForms.map((tf: any) => tf.forms.id)
+      
+      let shouldBeStatus = 'scheduled'
+      
+      if (requiredFormIds.length > 0) {
+          // Check if all required forms are in submissions
+          const submittedFormIds = clientSubmissions?.map((s: any) => s.form_id) || []
+          const submittedSet = new Set(submittedFormIds)
+          const allMet = requiredFormIds.every((id: string) => submittedSet.has(id))
+          
+          if (!allMet) {
+              shouldBeStatus = 'pending_forms'
+          }
+      }
+
+      // If status mismatch, update it
+      if (appointment.status !== shouldBeStatus) {
+          console.log(`Auto-updating appointment ${id} status from ${appointment.status} to ${shouldBeStatus}`)
+          
+          await supabase
+            .from('appointments')
+            .update({ status: shouldBeStatus })
+            .eq('id', id)
+          
+          // Update local object for display
+          appointment.status = shouldBeStatus
+      }
+  }
+  // -----------------------------
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-500">
