@@ -1,15 +1,28 @@
-'use client'
-
-import { useState } from 'react'
-import Image from 'next/image'
+import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider'
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 
 interface PhotoComparisonProps {
-  beforePath: string
-  afterPath: string
+  beforePath: string | null
+  afterPath: string | null
 }
 
 export function PhotoComparison({ beforePath, afterPath }: PhotoComparisonProps) {
+  const isDisabled = !beforePath || !afterPath
+  
+  if (isDisabled) {
+    return (
+      <button 
+        disabled 
+        className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 font-medium rounded-xl cursor-not-allowed border border-gray-200 dark:border-gray-700"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+        Porównaj efekty (Wymaga obu zdjęć)
+      </button>
+    )
+  }
+
   const beforeUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/visit-photos/${beforePath}`
   const afterUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/visit-photos/${afterPath}`
 
@@ -20,37 +33,23 @@ export function PhotoComparison({ beforePath, afterPath }: PhotoComparisonProps)
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
           </svg>
-          Porównaj efekty (Side by Side)
+          Porównaj efekty (Suwak)
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl w-full p-1 bg-white dark:bg-gray-900 border-none">
+      <DialogContent className="max-w-5xl w-full p-0 bg-transparent border-none shadow-none overflow-hidden">
         <DialogTitle className="sr-only">Porównanie efektów</DialogTitle>
-        <div className="grid grid-cols-2 gap-1 h-[60vh] md:h-[80vh]">
-          {/* Before */}
-          <div className="relative w-full h-full bg-black/5 dark:bg-white/5 rounded-l-lg overflow-hidden group">
-            <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-white text-sm font-medium">
+        <div className="relative w-full aspect-[4/3] max-h-[80vh] bg-black/50 rounded-lg overflow-hidden flex items-center justify-center">
+            <ReactCompareSlider
+                itemOne={<ReactCompareSliderImage src={beforeUrl} alt="Przed" />}
+                itemTwo={<ReactCompareSliderImage src={afterUrl} alt="Po" />}
+                className="w-full h-full object-contain"
+            />
+            <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-white text-sm font-medium pointer-events-none">
               PRZED
             </div>
-            <Image
-              src={beforeUrl}
-              alt="Zdjęcie przed"
-              fill
-              className="object-contain"
-            />
-          </div>
-
-          {/* After */}
-          <div className="relative w-full h-full bg-black/5 dark:bg-white/5 rounded-r-lg overflow-hidden group">
-             <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-purple-600/80 backdrop-blur-md rounded-full text-white text-sm font-medium">
+            <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-purple-600/80 backdrop-blur-md rounded-full text-white text-sm font-medium pointer-events-none">
               PO
             </div>
-            <Image
-              src={afterUrl}
-              alt="Zdjęcie po"
-              fill
-              className="object-contain"
-            />
-          </div>
         </div>
       </DialogContent>
     </Dialog>

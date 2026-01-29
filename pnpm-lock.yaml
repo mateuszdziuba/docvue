@@ -170,6 +170,9 @@ importers:
       react:
         specifier: 19.2.3
         version: 19.2.3
+      react-compare-slider:
+        specifier: ^3.1.0
+        version: 3.1.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-day-picker:
         specifier: ^8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@19.2.3)
@@ -179,6 +182,9 @@ importers:
       react-dropzone:
         specifier: ^14.2.3
         version: 14.3.5(react@19.2.3)
+      react-easy-crop:
+        specifier: ^5.5.6
+        version: 5.5.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-grid-layout:
         specifier: ^1.4.4
         version: 1.5.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -4926,6 +4932,9 @@ packages:
     resolution: {integrity: sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==}
     engines: {node: '>=0.10.0'}
 
+  normalize-wheel@1.0.1:
+    resolution: {integrity: sha512-1OnlAPZ3zgrk8B91HyRj+eVv+kS5u+Z0SCsak6Xil/kmgEia50ga7zfkumayonZrImffAxPU/5WcyGhzetHNPA==}
+
   nprogress@0.2.0:
     resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
 
@@ -5265,6 +5274,13 @@ packages:
     peerDependencies:
       webpack: ^4.0.0 || ^5.0.0
 
+  react-compare-slider@3.1.0:
+    resolution: {integrity: sha512-TQVbZYmYyTIeKRmQciVXCmUwHjTThQTON7GfWfzMAOInRRG9tCiQnVXnCUd5DJ5l3Hngh4IEzOb9TG82gjoEhQ==}
+    engines: {node: '>=16.9.0'}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
+
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
     peerDependencies:
@@ -5287,6 +5303,12 @@ packages:
     engines: {node: '>= 10.13'}
     peerDependencies:
       react: '>= 16.8 || 18.0.0'
+
+  react-easy-crop@5.5.6:
+    resolution: {integrity: sha512-Jw3/ozs8uXj3NpL511Suc4AHY+mLRO23rUgipXvNYKqezcFSYHxe4QXibBymkOoY6oOtLVMPO2HNPRHYvMPyTw==}
+    peerDependencies:
+      react: '>=16.4.0'
+      react-dom: '>=16.4.0'
 
   react-grid-layout@1.5.0:
     resolution: {integrity: sha512-WBKX7w/LsTfI99WskSu6nX2nbJAUD7GD6nIXcwYLyPpnslojtmql2oD3I2g5C3AK8hrxIarYT8awhuDIp7iQ5w==}
@@ -11674,6 +11696,8 @@ snapshots:
 
   normalize-range@0.1.2: {}
 
+  normalize-wheel@1.0.1: {}
+
   nprogress@0.2.0: {}
 
   nth-check@2.1.1:
@@ -12023,6 +12047,11 @@ snapshots:
       schema-utils: 3.3.0
       webpack: 5.97.1
 
+  react-compare-slider@3.1.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+
   react-day-picker@8.10.1(date-fns@3.6.0)(react@19.2.3):
     dependencies:
       date-fns: 3.6.0
@@ -12046,6 +12075,13 @@ snapshots:
       file-selector: 2.1.2
       prop-types: 15.8.1
       react: 19.2.3
+
+  react-easy-crop@5.5.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      normalize-wheel: 1.0.1
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      tslib: 2.8.1
 
   react-grid-layout@1.5.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:

@@ -8,6 +8,7 @@ import { VisitStatusSelect } from '@/components/admin/visit-status-select'
 import { VisitNotes } from '@/components/admin/visit-notes'
 import { DeleteVisitButton } from '@/components/admin/delete-visit-button'
 import { PhotoComparison } from '@/components/admin/photo-comparison'
+import { FillVisitFormButton } from '@/components/admin/fill-visit-form-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -78,11 +79,18 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-bold mb-4">Wymagane formularze</h3>
               {appointment.treatments?.treatment_forms && appointment.treatments.treatment_forms.length > 0 ? (
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {appointment.treatments.treatment_forms.map((tf: any) => (
-                    <li key={tf.forms.id} className="flex items-center gap-2 text-sm">
-                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                      {tf.forms.title}
+                    <li key={tf.forms.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <div className="flex items-center gap-3 text-sm font-medium">
+                        <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                        {tf.forms.title}
+                      </div>
+                      <FillVisitFormButton 
+                        clientId={appointment.client_id}
+                        formId={tf.forms.id}
+                        formTitle={tf.forms.title}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -109,13 +117,10 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
                   initialPath={appointment.after_photo_path} 
                />
              </div>
-             
-             {appointment.before_photo_path && appointment.after_photo_path && (
-                <PhotoComparison 
-                    beforePath={appointment.before_photo_path} 
-                    afterPath={appointment.after_photo_path} 
-                />
-             )}
+             <PhotoComparison 
+                beforePath={appointment.before_photo_path} 
+                afterPath={appointment.after_photo_path} 
+             />
           </div>
         </div>
       </div>
