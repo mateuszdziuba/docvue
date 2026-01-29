@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
 import { updateSalonSettings } from '@/actions/settings'
 import type { Salon } from '@/types/database'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 
 interface SettingsDialogProps {
   salon: Salon
@@ -47,20 +48,24 @@ export function SettingsDialog({ salon, trigger }: SettingsDialogProps) {
           
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Kod PIN (Kiosk Mode)
               </label>
-              <input
-                type="text"
-                pattern="[0-9]*"
-                inputMode="numeric"
-                maxLength={4}
-                value={pinCode}
-                onChange={(e) => setPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="Np. 1234"
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={4}
+                  value={pinCode}
+                  onChange={(value) => setPinCode(value)}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
                 Ten kod będzie wymagany do wyjścia z trybu kiosku (wypełnianie formularza w salonie).
               </p>
             </div>

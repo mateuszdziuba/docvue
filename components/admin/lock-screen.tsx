@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { logout } from '@/actions/auth'
 
 interface LockScreenProps {
   onUnlock: () => void
@@ -33,15 +35,24 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
     fetchSalonPin()
   }, [])
 
-  const handleUnlock = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleUnlockWithPin = (pinValue: string) => {
     setLoading(true)
 
     // Wait a bit for UX
     setTimeout(() => {
-      if (salonPin && pin === salonPin) {
+      // If no PIN is set in DB, allow unlock with 4 zeros or just unlock
+      // But user should set a PIN. Taking "0000" as fallback or if salonPin is null allow any 4 digit?
+      // Better: if salonPin is null, ANY 4-digit pin works to unlock, and we warn?
+      // For now consistency: checks against salonPin.
+      
+      if (salonPin && pinValue === salonPin) {
         toast.success('Odblokowano')
         onUnlock()
+      } else if (!salonPin) {
+          // If no PIN set, allow unlock but maybe warn?
+          // For now, let's say default is 0000 or allow unlock
+          toast.success('Odblokowano (Brak ustawionego PINu)')
+          onUnlock()
       } else {
         toast.error('Nieprawidłowy kod PIN')
         setPin('')
@@ -66,21 +77,29 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
           Wprowadź kod PIN salonu, aby powrócić do panelu zarządzania.
         </p>
 
-        <form onSubmit={handleUnlock} className="space-y-4">
-          <input
-            type="password"
-            autoFocus
-            pattern="[0-9]*"
-            inputMode="numeric"
+        <div className="flex flex-col items-center space-y-6">
+          <InputOTP
             maxLength={4}
             value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            className="w-full text-center text-3xl tracking-[1em] font-mono py-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-purple-500 focus:ring-0 transition-all font-bold"
-            placeholder="••••"
-          />
+            onChange={(value) => {
+              setPin(value)
+              if (value.length === 4) {
+                // Auto-submit when full
+                setTimeout(() => handleUnlockWithPin(value), 100)
+              }
+            }}
+            autoFocus
+          >
+            <InputOTPGroup className="gap-2">
+              <InputOTPSlot index={0} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={1} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={2} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={3} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+            </InputOTPGroup>
+          </InputOTP>
 
           <button
-            type="submit"
+            onClick={() => handleUnlockWithPin(pin)}
             disabled={loading || pin.length < 4}
             className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
@@ -92,7 +111,21 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
             )}
             Odblokuj
           </button>
-        </form>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            Nie pamiętasz kodu PIN?
+          </p>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+            >
+              Wyloguj się
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )
