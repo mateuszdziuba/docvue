@@ -33,7 +33,24 @@ export default async function PublicFormPage({ params }: Props) {
   }
 
   const clientForm = result.clientForm!
+  const clientForm = result.clientForm!
   const form = clientForm.forms
+  
+  if (!form) {
+      return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl text-center">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Formularz niedostępny
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400">
+            Nie udało się załadować danych formularza.
+            </p>
+        </div>
+      </div>
+      )
+  }
+
   const client = clientForm.clients
 
   return (

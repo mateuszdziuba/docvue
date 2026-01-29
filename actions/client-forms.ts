@@ -98,6 +98,10 @@ export async function getClientFormByToken(token: string) {
     return { error: 'Ten formularz został już wypełniony', completed: true }
   }
 
+  if ((clientForm as any).forms === null) {
+    return { error: 'Formularz nie jest dostępny' }
+  }
+
   return { clientForm }
 }
 
