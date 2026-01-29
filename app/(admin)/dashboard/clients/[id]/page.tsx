@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ClientDetailClient } from '@/components/admin/client-detail-client'
 import { EditClientDialog } from '@/components/admin/edit-client-dialog'
+import { AddAppointmentDialog } from '@/components/admin/add-appointment-dialog'
+import { Suspense } from 'react'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -75,10 +77,27 @@ export default async function ClientDetailPage({ params }: Props) {
             </svg>
             Wróć do listy
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {client.name}
-          </h1>
-          <div className="flex items-center gap-4 mt-2 text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {client.name}
+            </h1>
+            {client.birth_date && (
+              <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
+                {(() => {
+                  const today = new Date()
+                  const birthDate = new Date(client.birth_date)
+                  let age = today.getFullYear() - birthDate.getFullYear()
+                  const m = today.getMonth() - birthDate.getMonth()
+                  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--
+                  }
+                  return `${age} lat`
+                })()}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-500 dark:text-gray-400">
             {client.email && (
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +114,26 @@ export default async function ClientDetailPage({ params }: Props) {
                 {client.phone}
               </span>
             )}
+            {client.birth_date && (
+               <span className="flex items-center gap-1">
+                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                 </svg>
+                 {new Date(client.birth_date).toLocaleDateString('pl-PL')}
+               </span>
+            )}
           </div>
+
+          {client.notes && (
+            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 whitespace-pre-wrap flex gap-2">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                {client.notes}
+              </p>
+            </div>
+          )}
         </div>
         <EditClientDialog 
           client={client} 
@@ -116,6 +154,77 @@ export default async function ClientDetailPage({ params }: Props) {
         availableForms={availableForms || []}
         submissions={submissions || []}
       />
+
+      <div className="mt-8">
+         <div className="flex items-center justify-between mb-4">
+           <h2 className="text-lg font-bold text-gray-900 dark:text-white">Historia Wizyt</h2>
+           <AddAppointmentDialog clientId={client.id} salonId={client.salon_id} />
+         </div>
+         
+         <Suspense fallback={<div>Ładowanie wizyt...</div>}>
+           <ClientVisitsList clientId={client.id} />
+         </Suspense>
+      </div>
+    </div>
+  )
+}
+
+async function ClientVisitsList({ clientId }: { clientId: string }) {
+  const supabase = await createClient()
+  const { data: visits } = await supabase
+    .from('appointments')
+    .select(`
+      *,
+      treatments (name, duration_minutes)
+    `)
+    .eq('client_id', clientId)
+    .order('start_time', { ascending: false })
+
+  if (!visits || visits.length === 0) {
+    return (
+      <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+        <p className="text-gray-500">Brak historii wizyt</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {visits.map((visit) => {
+        const date = new Date(visit.start_time)
+        return (
+          <div key={visit.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-sm transition-shadow">
+             <div className="flex items-center gap-4">
+               <div className="flex flex-col items-center justify-center w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-700 dark:text-purple-300">
+                 <span className="text-xs font-bold uppercase">{date.toLocaleDateString('pl-PL', { month: 'short' })}</span>
+                 <span className="text-lg font-bold">{date.getDate()}</span>
+               </div>
+               <div>
+                 <h3 className="font-semibold text-gray-900 dark:text-white">{visit.treatments?.name}</h3>
+                 <p className="text-sm text-gray-500">
+                   {date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} • {visit.treatments?.duration_minutes} min
+                 </p>
+               </div>
+             </div>
+             
+             <div className="flex flex-col items-end gap-2">
+               <span className={`px-2.5 py-1 rounded-md text-xs font-medium
+                 ${visit.status === 'scheduled' ? 'bg-blue-50 text-blue-700' : ''}
+                 ${visit.status === 'completed' ? 'bg-green-50 text-green-700' : ''}
+                 ${visit.status === 'cancelled' ? 'bg-red-50 text-red-700' : ''}
+                 ${visit.status === 'pending_forms' ? 'bg-orange-50 text-orange-700 border border-orange-100' : ''}
+               `}>
+                 {visit.status === 'pending_forms' ? 'Wymaga ankiety' : 
+                  visit.status === 'scheduled' ? 'Zaplanowana' : 
+                  visit.status === 'completed' ? 'Zakończona' : visit.status}
+               </span>
+               <a href={`/dashboard/visits/${visit.id}`} className="text-sm text-gray-400 hover:text-purple-600">
+                 Szczegóły &rarr;
+               </a>
+             </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -19,6 +19,7 @@ export interface Client {
   phone: string
   birth_date: string | null
   notes: string | null
+  user_id: string | null // Linked auth user
   created_at: string
 }
 
@@ -55,6 +56,38 @@ export interface Submission {
   client_name: string | null
   client_email: string | null
   signature: string | null
+  created_at: string
+}
+
+export interface Treatment {
+  id: string
+  salon_id: string
+  name: string
+  description: string | null
+  duration_minutes: number
+  price: number | null
+  // required_form_id: string | null -- DEPRECATED
+  created_at: string
+}
+
+export interface TreatmentForm {
+  treatment_id: string
+  form_id: string
+  created_at: string
+}
+
+export interface Appointment {
+  id: string
+  salon_id: string
+  client_id: string
+  treatment_id: string
+  treatment_id: string
+  start_time: string
+  status: 'scheduled' | 'completed' | 'cancelled' | 'pending_forms'
+  notes: string | null
+  submission_id: string | null
+  before_photo_path: string | null
+  after_photo_path: string | null
   created_at: string
 }
 
@@ -113,6 +146,7 @@ export type Database = {
           phone: string
           birth_date?: string | null
           notes?: string | null
+          user_id?: string | null
           created_at?: string
         }
         Update: {
@@ -123,6 +157,7 @@ export type Database = {
           phone?: string
           birth_date?: string | null
           notes?: string | null
+          user_id?: string | null
           created_at?: string
         }
       }
@@ -200,6 +235,21 @@ export type Database = {
           signature?: string | null
           created_at?: string
         }
+      }
+      treatments: {
+        Row: Treatment
+        Insert: Omit<Treatment, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Omit<Treatment, 'id' | 'created_at'>>
+      }
+      appointments: {
+        Row: Appointment
+        Insert: Omit<Appointment, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Omit<Appointment, 'id' | 'created_at'>>
+      }
+      treatment_forms: {
+        Row: TreatmentForm
+        Insert: TreatmentForm
+        Update: TreatmentForm
       }
     }
     Views: Record<string, never>

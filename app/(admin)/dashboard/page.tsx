@@ -24,6 +24,11 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('salon_id', salon?.id)
 
+  const { count: appointmentsCount } = await supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .eq('salon_id', salon?.id)
+
   const { count: submissionsCount } = await supabase
     .from('submissions')
     .select('*', { count: 'exact', head: true })
@@ -40,18 +45,22 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(5)
 
+  // Get upcoming appointments (next 3)
+  const now = new Date()
+
+  const { data: upcomingAppointments } = await supabase
+    .from('appointments')
+    .select(`
+      *,
+      treatments (name, duration_minutes),
+      clients (name)
+    `)
+    .eq('salon_id', salon?.id)
+    .gte('start_time', now.toISOString())
+    .order('start_time', { ascending: true })
+    .limit(3)
+
   const stats = [
-    { 
-      name: 'Formularze', 
-      value: formsCount || 0, 
-      href: '/dashboard/forms',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      gradient: 'from-blue-500 to-cyan-500'
-    },
     { 
       name: 'Klienci', 
       value: clientsCount || 0, 
@@ -62,6 +71,28 @@ export default async function DashboardPage() {
         </svg>
       ),
       gradient: 'from-purple-500 to-pink-500'
+    },
+    { 
+      name: 'Wizyty', 
+      value: appointmentsCount || 0, 
+      href: '/dashboard/visits',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+      gradient: 'from-amber-500 to-orange-500'
+    },
+    { 
+      name: 'Formularze', 
+      value: formsCount || 0, 
+      href: '/dashboard/forms',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      gradient: 'from-blue-500 to-cyan-500'
     },
     { 
       name: 'Odpowiedzi', 
@@ -89,7 +120,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <Link
             key={stat.name}
@@ -124,7 +155,7 @@ export default async function DashboardPage() {
             Nowy formularz
           </Link>
           <Link
-            href="/dashboard/clients"
+            href="/dashboard/clients?new=true"
             className="inline-flex items-center gap-2 px-5 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,7 +163,60 @@ export default async function DashboardPage() {
             </svg>
             Dodaj klienta
           </Link>
+          <Link
+            href="/dashboard/visits"
+            className="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-medium rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all"
+          >
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+             </svg>
+             Dodaj wizytę
+          </Link>
         </div>
+      </div>
+
+      {/* Upcoming Appointments */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Nadchodzące wizyty</h2>
+          <Link href="/dashboard/visits" className="text-purple-600 hover:text-purple-700 text-sm font-medium">
+            Zobacz wszystkie →
+          </Link>
+        </div>
+        {upcomingAppointments && upcomingAppointments.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcomingAppointments.map((visit) => {
+              const date = new Date(visit.start_time)
+              return (
+                <Link 
+                  key={visit.id} 
+                  href={`/dashboard/visits/${visit.id}`}
+                  className="flex flex-col p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:border-purple-200 dark:hover:border-purple-800 border border-transparent transition-all"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-bold text-gray-900 dark:text-white text-lg">
+                      {date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}, {date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium
+                       ${visit.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : ''}
+                       ${visit.status === 'completed' ? 'bg-green-100 text-green-700' : ''}
+                       ${visit.status === 'cancelled' ? 'bg-red-100 text-red-700' : ''}
+                       ${visit.status === 'pending_forms' ? 'bg-orange-100 text-orange-700' : ''}
+                    `}>
+                      {visit.status === 'pending_forms' ? 'Wymaga ankiety' : 
+                       visit.status === 'scheduled' ? 'Zaplanowana' : 
+                       visit.status === 'completed' ? 'Zakończona' : visit.status}
+                    </span>
+                  </div>
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-1">{visit.clients.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{visit.treatments?.name}</p>
+                </Link>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">Brak nadchodzących wizyt.</p>
+        )}
       </div>
 
       {/* Recent Submissions */}

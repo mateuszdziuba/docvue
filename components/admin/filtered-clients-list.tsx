@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { ClientsList } from './clients-list'
 
-export async function FilteredClientsList({ query }: { query: string }) {
+export async function FilteredClientsList({ query, isAddingNew }: { query: string; isAddingNew?: boolean }) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,5 +25,5 @@ export async function FilteredClientsList({ query }: { query: string }) {
 
   const { data: clients } = await request
 
-  return <ClientsList clients={clients || []} query={query} />
+  return <ClientsList clients={clients || []} query={query} defaultOpenAdd={isAddingNew} />
 }

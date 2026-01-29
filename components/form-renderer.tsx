@@ -167,10 +167,9 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
       case 'separator':
         return (
           <div className="p-4 rounded-xl border-l-4 border-purple-500 bg-purple-50 dark:bg-purple-900/10 prose dark:prose-invert max-w-none">
-             <div 
-               className="text-gray-900 dark:text-purple-100 font-medium text-base leading-relaxed m-0"
-               dangerouslySetInnerHTML={{ __html: field.label }} 
-             />
+            <p className="text-gray-900 dark:text-purple-100 font-medium whitespace-pre-wrap text-base leading-relaxed m-0">
+              {field.label}
+            </p>
           </div>
         )
 

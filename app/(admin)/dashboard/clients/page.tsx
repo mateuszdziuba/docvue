@@ -8,6 +8,7 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{
     query?: string
+    new?: string
   }>
 }) {
   const resolvedParams = await searchParams
@@ -20,6 +21,8 @@ export default async function ClientsPage({
   const { count } = await supabase
     .from('clients')
     .select('*', { count: 'exact', head: true })
+
+  const isAddingNew = resolvedParams.new === 'true'
 
   return (
     <div className="space-y-6">
@@ -41,7 +44,7 @@ export default async function ClientsPage({
 
       {/* Clients List with Add Form */}
       <Suspense fallback={<ClientsListSkeleton />}>
-        <FilteredClientsList query={query} />
+        <FilteredClientsList query={query} isAddingNew={isAddingNew} />
       </Suspense>
     </div>
   )

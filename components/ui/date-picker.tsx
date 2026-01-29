@@ -47,8 +47,12 @@ export function DatePicker({ date, setDate, disabled, className, placeholder = "
           initialFocus
           locale={pl}
           captionLayout="dropdown-buttons"
-          fromYear={1900}
-          toYear={new Date().getFullYear()}
+          fromYear={1920}
+          toYear={new Date().getFullYear() + 2} // Allow slightly future dates for things like appointment scheduling maybe? Or stick to user request. 
+          // User asked for birth dates mostly, so 1900-202X. 
+          // New form has "Data". Could be anything.
+          // EditClient has birth_date. 
+          // Best to give a wide range. 
         />
       </PopoverContent>
     </Popover>

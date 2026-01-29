@@ -11,10 +11,11 @@ import { SearchInput } from '@/components/ui/search-input'
 interface ClientsListProps {
   clients: Client[]
   query?: string
+  defaultOpenAdd?: boolean
 }
 
-export function ClientsList({ clients, query }: ClientsListProps) {
-  const [showAddForm, setShowAddForm] = useState(false)
+export function ClientsList({ clients, query, defaultOpenAdd = false }: ClientsListProps) {
+  const [showAddForm, setShowAddForm] = useState(defaultOpenAdd)
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 

@@ -8,14 +8,14 @@ import { createForm } from '@/actions/forms'
 import type { FormField } from '@/types/database'
 
 const fieldTypes = [
-  { type: 'text', label: 'Tekst', icon: '📝' },
+  { type: 'text', label: 'Krótka odpowiedź', icon: '📝' },
+  { type: 'textarea', label: 'Długa odpowiedź', icon: '📄' },
+  { type: 'select', label: 'Lista rozwijana', icon: '▼' },
+  { type: 'radio', label: 'Jednokrotny wybór', icon: '◉' },
+  { type: 'checkbox_group', label: 'Wielokrotny wybór', icon: '☑️' },
+  { type: 'date', label: 'Data', icon: '📅' },
   { type: 'email', label: 'Email', icon: '✉️' },
   { type: 'tel', label: 'Telefon', icon: '📱' },
-  { type: 'textarea', label: 'Długi tekst', icon: '📄' },
-  { type: 'select', label: 'Wybór', icon: '📋' },
-  { type: 'checkbox', label: 'Checkbox', icon: '☑️' },
-  { type: 'date', label: 'Data', icon: '📅' },
-  { type: 'signature', label: 'Podpis', icon: '✍️' },
   { type: 'separator', label: 'Opis / Rozdzielacz', icon: '📝' },
 ]
 
@@ -77,10 +77,17 @@ export default function NewFormPage() {
 
     setIsSaving(true)
 
+    // Clean up fields before saving
+    const cleanedFields = fields.map(f => ({
+      ...f,
+      label: f.label.trim(),
+      options: f.options?.filter(o => o.label.trim()).map(o => ({ ...o, label: o.label.trim() }))
+    }))
+
     const result = await createForm({
-      title,
-      description,
-      schema: { fields },
+      title: title.trim(),
+      description: description.trim() || undefined,
+      schema: { fields: cleanedFields },
     })
 
     if (result.error) {
@@ -238,7 +245,7 @@ export default function NewFormPage() {
                             <textarea
                               value={field.label}
                               onChange={(e) => updateField(index, { label: e.target.value })}
-                              placeholder="Treść separatora / opisu (HTML dozwolony)"
+                              placeholder="Treść separatora / opisu"
                               rows={3}
                               className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
                             />
@@ -248,34 +255,43 @@ export default function NewFormPage() {
                                 type="text"
                                 value={field.label}
                                 onChange={(e) => updateField(index, { label: e.target.value })}
-                                placeholder="Etykieta pola (np. Imię i nazwisko)"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                placeholder="Pytanie (np. Czy chorujesz na cukrzycę?)"
                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                               />
                               
-                              <input
-                                type="text"
-                                value={field.placeholder || ''}
-                                onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                                placeholder="Placeholder (opcjonalnie)"
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                              />
+                              {field.type !== 'date' && (
+                                <input
+                                  type="text"
+                                  value={field.placeholder || ''}
+                                  onChange={(e) => updateField(index, { placeholder: e.target.value })}
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  placeholder="Placeholder (opcjonalnie)"
+                                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                />
+                              )}
                             </>
                           )}
 
-                          {(field.type === 'select' || field.type === 'radio') && (
-                            <textarea
-                              placeholder="Opcje (każda w nowej linii)"
-                              value={field.options?.map(o => o.label).join('\n') || ''}
-                              onChange={(e) => {
-                                const opts = e.target.value.split('\n').map(line => ({
-                                  label: line.trim(),
-                                  value: line.trim().toLowerCase().replace(/\s+/g, '_')
-                                })).filter(o => o.label)
-                                updateField(index, { options: opts })
-                              }}
-                              rows={3}
-                              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            />
+                          {(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox_group') && (
+                            <div className="space-y-1">
+                                <p className="text-xs text-gray-500">Opcje wyboru (każda w nowej linii):</p>
+                                <textarea
+                                placeholder="Opcja 1&#10;Opcja 2&#10;Opcja 3"
+                                value={field.options?.map(o => o.label).join('\n') || ''}
+                                onChange={(e) => {
+                                    // Don't filter or trim while editing
+                                    const opts = e.target.value.split('\n').map(line => ({
+                                      label: line,
+                                      value: line.trim().toLowerCase().replace(/\s+/g, '_')
+                                    }))
+                                    updateField(index, { options: opts })
+                                }}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                rows={4}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
+                                />
+                            </div>
                           )}
 
                           <div className="flex items-center justify-between pt-2">
