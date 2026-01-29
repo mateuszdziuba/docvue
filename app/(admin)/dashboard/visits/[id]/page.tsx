@@ -9,6 +9,7 @@ import { VisitNotes } from '@/components/admin/visit-notes'
 import { DeleteVisitButton } from '@/components/admin/delete-visit-button'
 import { PhotoComparison } from '@/components/admin/photo-comparison'
 import { FillVisitFormButton } from '@/components/admin/fill-visit-form-button'
+import { SubmissionPreviewDialog } from '@/components/admin/submission-preview-dialog'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -37,6 +38,13 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
     .single()
 
   if (!appointment) notFound()
+
+  // Fetch client submissions to check status
+  const { data: clientSubmissions } = await supabase
+    .from('submissions')
+    .select('*, forms(id, title, schema)')
+    .eq('client_id', appointment.client_id)
+    .order('created_at', { ascending: false })
 
   return (
     <div className="space-y-6">
@@ -80,19 +88,45 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
               <h3 className="text-lg font-bold mb-4">Wymagane formularze</h3>
               {appointment.treatments?.treatment_forms && appointment.treatments.treatment_forms.length > 0 ? (
                 <ul className="space-y-3">
-                  {appointment.treatments.treatment_forms.map((tf: any) => (
-                    <li key={tf.forms.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  {appointment.treatments.treatment_forms.map((tf: any) => {
+                    const formId = tf.forms.id;
+                    // Find latest submission for this form
+                    const submission = clientSubmissions?.find((s: any) => s.form_id === formId);
+                    
+                    return (
+                    <li key={formId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                       <div className="flex items-center gap-3 text-sm font-medium">
-                        <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                        {tf.forms.title}
+                        {submission ? (
+                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        ) : (
+                             <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                        )}
+                        <span className={submission ? 'text-gray-900 line-through decoration-gray-400' : 'text-gray-900'}>
+                            {tf.forms.title}
+                        </span>
                       </div>
-                      <FillVisitFormButton 
-                        clientId={appointment.client_id}
-                        formId={tf.forms.id}
-                        formTitle={tf.forms.title}
-                      />
+                      
+                      {submission ? (
+                          <div className="flex items-center gap-2">
+                             <span className="text-xs text-green-600 font-medium hidden sm:inline-block">Wypełniono</span>
+                             <SubmissionPreviewDialog 
+                                submission={submission}
+                                trigger={
+                                    <button className="text-xs bg-white border border-gray-200 px-2 py-1 rounded hover:bg-gray-50 text-gray-600">
+                                        Podgląd
+                                    </button>
+                                }
+                             />
+                          </div>
+                      ) : (
+                        <FillVisitFormButton 
+                            clientId={appointment.client_id}
+                            formId={formId}
+                            formTitle={tf.forms.title}
+                        />
+                      )}
                     </li>
-                  ))}
+                  )})}
                 </ul>
               ) : (
                 <p className="text-gray-500 text-sm">Brak wymaganych formularzy.</p>
