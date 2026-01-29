@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ClientDetailClient } from '@/components/admin/client-detail-client'
+import { EditClientDialog } from '@/components/admin/edit-client-dialog'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -96,6 +97,17 @@ export default async function ClientDetailPage({ params }: Props) {
             )}
           </div>
         </div>
+        <EditClientDialog 
+          client={client} 
+          trigger={
+            <button className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30 rounded-lg transition-colors flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Edytuj
+            </button>
+          } 
+        />
       </div>
 
       <ClientDetailClient 

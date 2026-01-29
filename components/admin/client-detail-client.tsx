@@ -16,7 +16,6 @@ interface Props {
 export function ClientDetailClient({ client, clientForms, availableForms, submissions }: Props) {
   const [isAssigning, setIsAssigning] = useState(false)
   const [selectedFormId, setSelectedFormId] = useState('')
-  const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -30,7 +29,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
     })
     
     if (result.error) {
-      alert(`Błąd przypisywania: ${result.error}`)
+      toast.error(`Błąd przypisywania: ${result.error}`)
       setIsAssigning(false)
       return
     }
@@ -38,8 +37,9 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
     if (result.token) {
       const link = `${window.location.origin}/f/${result.token}`
       await navigator.clipboard.writeText(link)
-      setCopiedToken(result.token)
-      setTimeout(() => setCopiedToken(null), 3000)
+      toast.success('Przypisano formularz i skopiowano link', {
+        position: 'bottom-center'
+      })
     }
     
     setSelectedFormId('')
@@ -52,8 +52,6 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
     toast.success('Link został skopiowany do schowka', {
       position: 'bottom-center'
     })
-    setCopiedToken(token)
-    setTimeout(() => setCopiedToken(null), 3000)
   }
 
   const handleDeleteClick = (clientFormId: string) => {
@@ -100,11 +98,6 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
             {isAssigning ? 'Przypisywanie...' : 'Przypisz'}
           </button>
         </div>
-        {copiedToken && (
-          <p className="mt-3 text-sm text-green-600 dark:text-green-400">
-            ✓ Link skopiowany do schowka!
-          </p>
-        )}
       </div>
 
       {/* Assigned Forms */}
@@ -147,13 +140,9 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                     <>
                       <button
                         onClick={() => handleCopyLink(cf.token)}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                          copiedToken === cf.token
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500'
-                        }`}
+                        className="px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 rounded-lg transition-all"
                       >
-                        {copiedToken === cf.token ? '✓ Skopiowano' : 'Kopiuj link'}
+                        Kopiuj link
                       </button>
                       <Link
                         href={`/dashboard/clients/${client.id}/fill/${cf.token}`}
