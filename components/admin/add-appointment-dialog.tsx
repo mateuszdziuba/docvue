@@ -83,8 +83,28 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
         .from('treatment_forms')
         .select('form_id')
         .eq('treatment_id', treatmentId)
+      
+      const requiredFormIds = requiredForms?.map(r => r.form_id) || []
+      
+      let status = 'scheduled'
 
-      const status = (requiredForms && requiredForms.length > 0) ? 'pending_forms' : 'scheduled'
+      if (requiredFormIds.length > 0) {
+         // Check if client has already submitted these forms (either via link or public)
+         const { data: clientSubmissions } = await supabase
+            .from('submissions')
+            .select('form_id')
+            .eq('client_id', selectedClientId)
+            .in('form_id', requiredFormIds)
+         
+         const submittedFormIds = clientSubmissions?.map(s => s.form_id) || []
+         const submittedSet = new Set(submittedFormIds)
+         
+         const allRequirementsMet = requiredFormIds.every(id => submittedSet.has(id))
+         
+         if (!allRequirementsMet) {
+             status = 'pending_forms'
+         }
+      }
 
       const { error } = await supabase.from('appointments').insert({
         salon_id: salonId,
