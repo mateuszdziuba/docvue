@@ -15,8 +15,9 @@ export interface Client {
   id: string
   salon_id: string
   name: string
-  email: string
-  phone: string | null
+  email: string | null
+  phone: string
+  birth_date: string | null
   notes: string | null
   created_at: string
 }
@@ -108,8 +109,9 @@ export type Database = {
           id?: string
           salon_id: string
           name: string
-          email: string
-          phone?: string | null
+          email?: string | null
+          phone: string
+          birth_date?: string | null
           notes?: string | null
           created_at?: string
         }
@@ -117,8 +119,9 @@ export type Database = {
           id?: string
           salon_id?: string
           name?: string
-          email?: string
-          phone?: string | null
+          email?: string | null
+          phone?: string
+          birth_date?: string | null
           notes?: string | null
           created_at?: string
         }

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { updateClient } from '@/actions/clients'
 import type { Client } from '@/types/database'
 import * as Dialog from '@radix-ui/react-dialog'
+import { DatePicker } from "@/components/ui/date-picker"
 
 interface EditClientDialogProps {
   client: Client
@@ -18,10 +19,14 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState({
     name: client.name,
-    email: client.email,
+    email: client.email || '',
     phone: client.phone || '',
+    birth_date: client.birth_date ? new Date(client.birth_date) : undefined,
     notes: client.notes || '',
   })
+  const [date, setDate] = useState<Date | undefined>(
+    client.birth_date ? new Date(client.birth_date) : undefined
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,8 +34,9 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
 
     const result = await updateClient(client.id, {
       name: formData.name,
-      email: formData.email,
-      phone: formData.phone || undefined,
+      email: formData.email || undefined,
+      phone: formData.phone,
+      birth_date: date ? date.toISOString() : undefined,
       notes: formData.notes || undefined,
     })
 
@@ -81,27 +87,38 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email *
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Telefon
+                Telefon *
               </label>
               <input
                 type="tel"
+                required
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email (opcjonalnie)
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Data urodzenia
+                </label>
+                <DatePicker 
+                  date={date} 
+                  setDate={setDate} 
+                />
+              </div>
             </div>
 
             <div>

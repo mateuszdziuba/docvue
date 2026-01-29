@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function createClientAction(data: {
   name: string
-  email: string
-  phone?: string
+  email?: string | null
+  phone: string
+  birth_date?: string
   notes?: string
 }) {
   const supabase = await createClient()
@@ -27,16 +28,18 @@ export async function createClientAction(data: {
     return { error: 'Nie znaleziono gabinetu' }
   }
 
-  // Check if client with this email already exists
-  const { data: existing } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('salon_id', salon.id)
-    .eq('email', data.email)
-    .single()
+  // Check if client with this email already exists ONLY if email is provided
+  if (data.email) {
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('salon_id', salon.id)
+      .eq('email', data.email)
+      .single()
 
-  if (existing) {
-    return { error: 'Klient z tym emailem już istnieje' }
+    if (existing) {
+      return { error: 'Klient z tym emailem już istnieje' }
+    }
   }
 
   const { data: client, error } = await supabase
@@ -44,8 +47,9 @@ export async function createClientAction(data: {
     .insert({
       salon_id: salon.id,
       name: data.name,
-      email: data.email,
-      phone: data.phone || null,
+      email: data.email || null,
+      phone: data.phone,
+      birth_date: data.birth_date || null,
       notes: data.notes || null,
     })
     .select()
@@ -63,9 +67,10 @@ export async function updateClient(
   clientId: string,
   data: {
     name?: string
-    email?: string
+    email?: string | null
     phone?: string
-    notes?: string
+    birth_date?: string | null
+    notes?: string | null
   }
 ) {
   const supabase = await createClient()
