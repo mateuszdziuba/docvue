@@ -248,3 +248,11 @@ $$ LANGUAGE plpgsql;
 -- =============================================
 -- Done! Your database is ready.
 -- =============================================
+
+-- 7. Search Indexes
+-- =============================================
+
+CREATE INDEX IF NOT EXISTS idx_forms_title_search ON forms USING btree (title);
+CREATE INDEX IF NOT EXISTS idx_clients_name_search ON clients USING btree (name);
+CREATE INDEX IF NOT EXISTS idx_clients_email_search ON clients USING btree (email);
+

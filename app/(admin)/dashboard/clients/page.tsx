@@ -1,23 +1,25 @@
+import { Suspense } from 'react'
+import { FilteredClientsList } from '@/components/admin/filtered-clients-list'
+import { SearchInput } from '@/components/ui/search-input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/server'
-import { ClientsList } from '@/components/admin/clients-list'
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams?: {
+    query?: string
+  }
+}) {
+  const query = searchParams?.query || ''
   const supabase = await createClient()
   
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  const { data: salon } = await supabase
-    .from('salons')
-    .select('id')
-    .eq('user_id', user?.id)
-    .single()
-
-  // Get clients from the clients table
-  const { data: clients } = await supabase
+  // Helper to fetch total count quickly
+  // In a real app with search, count might need to match search or not, 
+  // currently treating generic stats as total clients
+  const { count } = await supabase
     .from('clients')
-    .select('*')
-    .eq('salon_id', salon?.id)
-    .order('created_at', { ascending: false })
+    .select('*', { count: 'exact', head: true })
 
   return (
     <div className="space-y-6">
@@ -32,11 +34,31 @@ export default async function ClientsPage() {
       {/* Stats */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
         <p className="text-sm text-gray-500 dark:text-gray-400">Wszystkich klientów</p>
-        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{clients?.length || 0}</p>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{count || 0}</p>
+      </div>
+
+      {/* Search */}
+      <div className="w-full">
+        <SearchInput placeholder="Szukaj klientów (imię, email)..." />
       </div>
 
       {/* Clients List with Add Form */}
-      <ClientsList clients={clients || []} />
+      <Suspense key={query} fallback={<ClientsListSkeleton />}>
+        <FilteredClientsList query={query} />
+      </Suspense>
+    </div>
+  )
+}
+
+function ClientsListSkeleton() {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden h-64 animate-pulse">
+      <div className="bg-gray-50 dark:bg-gray-700/50 h-10 w-full mb-4"></div>
+      <div className="space-y-4 p-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-8 bg-gray-100 dark:bg-gray-700 rounded w-full"></div>
+        ))}
+      </div>
     </div>
   )
 }
