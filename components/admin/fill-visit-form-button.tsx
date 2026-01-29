@@ -28,8 +28,8 @@ export function FillVisitFormButton({ clientId, formId, formTitle }: FillVisitFo
       }
 
       if (result.token) {
-        // Retrieve Token and Redirect
-        router.push(`/dashboard/clients/${clientId}/fill/${result.token}`)
+        // Retrieve Token and Redirect to Public View (Kiosk Mode)
+        router.push(`/f/${result.token}`)
       }
     } catch (error) {
       toast.error('Wystąpił błąd')
