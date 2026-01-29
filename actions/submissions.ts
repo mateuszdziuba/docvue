@@ -100,7 +100,6 @@ export async function deleteSubmission(submissionId: string) {
   const { revalidatePath } = require('next/cache')
   revalidatePath('/dashboard/submissions')
   
-  const { redirect } = require('next/navigation')
-  redirect('/dashboard/submissions')
+  return { success: true }
 }
 

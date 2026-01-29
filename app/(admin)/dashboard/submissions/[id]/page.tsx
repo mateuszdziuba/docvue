@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { deleteSubmission } from '@/actions/submissions'
+import { DeleteSubmissionButton } from '@/components/admin/delete-submission-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -57,22 +57,7 @@ export default async function SubmissionDetailsPage({ params }: Props) {
             {submission.forms?.title}
           </p>
         </div>
-        <form action={async () => {
-          'use server'
-          await deleteSubmission(id)
-        }}>
-          <button
-            type="submit"
-            className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
-            onClick={(e) => {
-               if (!confirm('Czy na pewno chcesz usunąć tę odpowiedź? Tej operacji nie można cofnąć.')) {
-                 e.preventDefault()
-               }
-            }}
-          >
-            Usuń odpowiedź
-          </button>
-        </form>
+        <DeleteSubmissionButton submissionId={id} />
       </div>
 
       {/* Client Info Card */}
