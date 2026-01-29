@@ -8,7 +8,6 @@ export async function createForm(data: {
   title: string
   description?: string
   schema: FormSchema
-  is_public?: boolean
 }) {
   const supabase = await createClient()
   
@@ -35,7 +34,6 @@ export async function createForm(data: {
       title: data.title,
       description: data.description || null,
       schema: data.schema,
-      is_public: data.is_public ?? false,
     })
     .select()
     .single()
@@ -55,7 +53,6 @@ export async function updateForm(
     description?: string
     schema?: FormSchema
     is_active?: boolean
-    is_public?: boolean
   }
 ) {
   const supabase = await createClient()
@@ -91,21 +88,7 @@ export async function deleteForm(formId: string) {
   return { success: true }
 }
 
-export async function toggleFormPublic(formId: string, isPublic: boolean) {
-  const supabase = await createClient()
-  
-  const { error } = await supabase
-    .from('forms')
-    .update({ is_public: isPublic })
-    .eq('id', formId)
 
-  if (error) {
-    return { error: error.message }
-  }
-
-  revalidatePath('/dashboard/forms')
-  return { success: true }
-}
 
 export async function toggleFormActive(formId: string, isActive: boolean) {
   const supabase = await createClient()

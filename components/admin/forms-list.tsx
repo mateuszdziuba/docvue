@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ShareFormModal } from './share-form-modal'
-import { toggleFormActive, toggleFormPublic, deleteForm } from '@/actions/forms'
+import { toggleFormActive, deleteForm } from '@/actions/forms'
 import type { Form } from '@/types/database'
 
 interface FormsListProps {
@@ -11,19 +10,28 @@ interface FormsListProps {
 }
 
 export function FormsList({ forms }: FormsListProps) {
-  const [shareForm, setShareForm] = useState<Form | null>(null)
-
-  const handleTogglePublic = async (form: Form) => {
-    await toggleFormPublic(form.id, !form.is_public)
-  }
+  const [formToDelete, setFormToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleToggleActive = async (form: Form) => {
     await toggleFormActive(form.id, !form.is_active)
   }
 
-  const handleDelete = async (formId: string) => {
-    if (confirm('Czy na pewno chcesz usunąć ten formularz?')) {
-      await deleteForm(formId)
+  const handleDeleteClick = (formId: string) => {
+    setFormToDelete(formId)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!formToDelete) return
+    setIsDeleting(true)
+    try {
+      await deleteForm(formToDelete)
+      setFormToDelete(null)
+    } catch (error) {
+      console.error('Error deleting form:', error)
+      alert('Wystąpił błąd podczas usuwania formularza')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -68,18 +76,11 @@ export function FormsList({ forms }: FormsListProps) {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                     {form.title}
                   </h3>
-                  <div className="flex gap-2">
-                    {form.is_public && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                        Publiczny
-                      </span>
-                    )}
-                    {!form.is_active && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                        Nieaktywny
-                      </span>
-                    )}
-                  </div>
+                  {!form.is_active && (
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                      Nieaktywny
+                    </span>
+                  )}
                 </div>
                 {form.description && (
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-3 line-clamp-2">
@@ -93,41 +94,6 @@ export function FormsList({ forms }: FormsListProps) {
 
               {/* Actions */}
               <div className="flex items-center gap-2">
-                {/* Share Button */}
-                <button
-                  onClick={() => setShareForm(form)}
-                  disabled={!form.is_public}
-                  className={`p-2 rounded-lg transition-colors ${
-                    form.is_public
-                      ? 'text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30'
-                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                  }`}
-                  title={form.is_public ? 'Udostępnij' : 'Najpierw ustaw jako publiczny'}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                </button>
-
-                {/* Toggle Public */}
-                <button
-                  onClick={() => handleTogglePublic(form)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    form.is_public
-                      ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
-                      : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                  title={form.is_public ? 'Ustaw jako prywatny' : 'Ustaw jako publiczny'}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {form.is_public ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    )}
-                  </svg>
-                </button>
-
                 {/* Edit */}
                 <Link
                   href={`/dashboard/forms/${form.id}/edit`}
@@ -141,7 +107,7 @@ export function FormsList({ forms }: FormsListProps) {
 
                 {/* Delete */}
                 <button
-                  onClick={() => handleDelete(form.id)}
+                  onClick={() => handleDeleteClick(form.id)}
                   className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                   title="Usuń"
                 >
@@ -155,13 +121,59 @@ export function FormsList({ forms }: FormsListProps) {
         ))}
       </div>
 
-      {/* Share Modal */}
-      {shareForm && (
-        <ShareFormModal
-          form={shareForm}
-          isOpen={!!shareForm}
-          onClose={() => setShareForm(null)}
-        />
+      {/* Delete Confirmation Modal */}
+      {formToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Usuń formularz</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Czy na pewno chcesz usunąć ten formularz? Ta operacja jest nieodwracalna.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-xl p-4 mb-6">
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium flex gap-2">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Usunięcie formularza spowoduje również usunięcie wszystkich przypisań do klientów oraz ich odpowiedzi!
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setFormToDelete(null)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium disabled:opacity-50"
+                >
+                  Anuluj
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isDeleting && (
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isDeleting ? 'Usuwanie...' : 'Usuń formularz'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

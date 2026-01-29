@@ -27,13 +27,25 @@ export interface Form {
   description: string | null
   schema: FormSchema
   is_active: boolean
-  is_public: boolean
   created_at: string
   updated_at: string
 }
 
+export interface ClientForm {
+  id: string
+  salon_id: string
+  client_id: string
+  form_id: string
+  token: string
+  status: 'pending' | 'completed'
+  filled_at: string | null
+  filled_by: 'client' | 'staff' | null
+  created_at: string
+}
+
 export interface Submission {
   id: string
+  client_form_id: string | null
   form_id: string
   client_id: string | null
   salon_id: string
@@ -117,7 +129,6 @@ export type Database = {
           description?: string | null
           schema: FormSchema
           is_active?: boolean
-          is_public?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -128,15 +139,40 @@ export type Database = {
           description?: string | null
           schema?: FormSchema
           is_active?: boolean
-          is_public?: boolean
           created_at?: string
           updated_at?: string
+        }
+      }
+      client_forms: {
+        Row: ClientForm
+        Insert: {
+          id?: string
+          salon_id: string
+          client_id: string
+          form_id: string
+          token: string
+          status?: 'pending' | 'completed'
+          filled_at?: string | null
+          filled_by?: 'client' | 'staff' | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          salon_id?: string
+          client_id?: string
+          form_id?: string
+          token?: string
+          status?: 'pending' | 'completed'
+          filled_at?: string | null
+          filled_by?: 'client' | 'staff' | null
+          created_at?: string
         }
       }
       submissions: {
         Row: Submission
         Insert: {
           id?: string
+          client_form_id?: string | null
           form_id: string
           client_id?: string | null
           salon_id: string
@@ -148,6 +184,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          client_form_id?: string | null
           form_id?: string
           client_id?: string | null
           salon_id?: string
@@ -164,4 +201,3 @@ export type Database = {
     Enums: Record<string, never>
   }
 }
-

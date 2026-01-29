@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import SignaturePad from '@/components/ui/signature-pad'
 import type { Form, FormField } from '@/types/database'
 
 interface FormRendererProps {
@@ -11,7 +12,7 @@ interface FormRendererProps {
 }
 
 export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm()
+  const { register, handleSubmit, formState: { errors }, control } = useForm()
   const fields = (form.schema as any)?.fields || []
 
   const renderField = (field: FormField) => {
@@ -103,6 +104,23 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
             type="date"
             disabled={field.disabled}
             className={commonClasses}
+          />
+        )
+
+      case 'signature':
+      case 'Signature':
+        return (
+          <Controller
+            name={field.name}
+            control={control}
+            rules={{ required: field.required }}
+            render={({ field: { value, onChange } }) => (
+              <SignaturePad
+                value={value}
+                onChange={onChange}
+                disabled={field.disabled}
+              />
+            )}
           />
         )
 

@@ -67,3 +67,40 @@ export async function getPublicForm(formId: string) {
 
   return { form }
 }
+
+export async function deleteSubmission(submissionId: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Nie jesteś zalogowany' }
+  }
+
+  // Get salon_id to verify ownership
+  const { data: salon } = await supabase
+    .from('salons')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!salon) {
+    return { error: 'Nie znaleziono gabinetu' }
+  }
+
+  const { error } = await supabase
+    .from('submissions')
+    .delete()
+    .eq('id', submissionId)
+    .eq('salon_id', salon.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const { revalidatePath } = require('next/cache')
+  revalidatePath('/dashboard/submissions')
+  
+  const { redirect } = require('next/navigation')
+  redirect('/dashboard/submissions')
+}
+

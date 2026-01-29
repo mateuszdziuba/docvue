@@ -3,14 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FormRenderer } from '@/components/form-renderer'
-import { submitForm } from '@/actions/submissions'
+import { submitClientForm } from '@/actions/client-forms'
 import type { Form } from '@/types/database'
 
-interface PublicFormClientProps {
+interface TokenFormClientProps {
+  token: string
   form: Form
+  clientName?: string
+  filledBy: 'client' | 'staff'
 }
 
-export function PublicFormClient({ form }: PublicFormClientProps) {
+export function TokenFormClient({ token, form, clientName, filledBy }: TokenFormClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,11 +22,11 @@ export function PublicFormClient({ form }: PublicFormClientProps) {
     setIsSubmitting(true)
     setError(null)
 
-    const result = await submitForm({
-      formId: form.id,
+    const result = await submitClientForm({
+      token,
       formData,
-      clientName: formData.name as string || formData.imie as string || undefined,
-      clientEmail: formData.email as string || undefined,
+      filledBy,
+      signature: formData.signature as string || undefined,
     })
 
     if (result.error) {
@@ -32,7 +35,7 @@ export function PublicFormClient({ form }: PublicFormClientProps) {
       return
     }
 
-    router.push(`/f/${form.id}/success`)
+    router.push(`/f/${token}/success`)
   }
 
   return (
