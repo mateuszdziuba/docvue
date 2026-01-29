@@ -7,6 +7,7 @@ export interface Salon {
   name: string
   phone: string | null
   address: string | null
+  pin_code: string | null
   created_at: string
 }
 
@@ -88,6 +89,7 @@ export type Database = {
           name: string
           phone?: string | null
           address?: string | null
+          pin_code?: string | null
           created_at?: string
         }
         Update: {
@@ -96,6 +98,7 @@ export type Database = {
           name?: string
           phone?: string | null
           address?: string | null
+          pin_code?: string | null
           created_at?: string
         }
       }

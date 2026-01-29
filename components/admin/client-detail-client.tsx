@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { assignFormToClient, deleteClientForm } from '@/actions/client-forms'
 import type { Client, ClientForm, Submission } from '@/types/database'
+import { useLock } from '@/components/providers/lock-provider'
 
 interface Props {
   client: Client
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function ClientDetailClient({ client, clientForms, availableForms, submissions }: Props) {
+  const { lock } = useLock()
   const [isAssigning, setIsAssigning] = useState(false)
   const [selectedFormId, setSelectedFormId] = useState('')
   const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null)
@@ -144,12 +146,16 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                       >
                         Kopiuj link
                       </button>
-                      <Link
-                        href={`/dashboard/clients/${client.id}/fill/${cf.token}`}
+                      </button>
+                      <button
+                        onClick={() => {
+                          lock()
+                          window.open(`/f/${cf.token}`, '_blank')
+                        }}
                         className="px-3 py-1.5 text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 rounded-lg transition-all"
                       >
                         Wypełnij w salonie
-                      </Link>
+                      </button>
                     </>
                   )}
                   <button

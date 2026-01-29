@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS salons (
   name TEXT NOT NULL,
   phone TEXT,
   address TEXT,
+  pin_code TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

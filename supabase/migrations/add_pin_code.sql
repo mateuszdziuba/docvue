@@ -1,0 +1,1 @@
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS pin_code TEXT;
