@@ -33,7 +33,6 @@ export default async function PublicFormPage({ params }: Props) {
   }
 
   const clientForm = result.clientForm!
-  const clientForm = result.clientForm!
   const form = clientForm.forms
   
   if (!form) {
