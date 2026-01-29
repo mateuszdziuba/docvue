@@ -7,6 +7,16 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import Cropper from 'react-easy-crop'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 
@@ -72,6 +82,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
   const [aspect, setAspect] = useState(4 / 3)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
   const [isCropping, setIsCropping] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   
   const [preview, setPreview] = useState<string | null>(
@@ -170,8 +181,6 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
   }
 
   const handleDelete = async () => {
-    if (!confirm('Czy na pewno chcesz usunąć to zdjęcie?')) return
-
     try {
         setIsUploading(true)
         
@@ -196,6 +205,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
         setPreview(null)
         setCurrentPath(null)
         toast.success('Zdjęcie usunięte')
+        setIsDeleteDialogOpen(false)
         router.refresh()
 
     } catch (error) {
@@ -229,7 +239,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
             <span>Zdjęcie {type === 'before' ? 'Przed' : 'Po'}</span>
             {preview && (
                 <button 
-                    onClick={handleDelete}
+                    onClick={() => setIsDeleteDialogOpen(true)}
                     className="text-xs text-red-500 hover:text-red-600 font-medium"
                     disabled={isUploading}
                 >
@@ -277,7 +287,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
                     </svg>
                 </button>
                 <button 
-                    onClick={handleDelete}
+                    onClick={() => setIsDeleteDialogOpen(true)}
                     className="p-2 bg-white/90 rounded-full text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
                     title="Usuń zdjęcie"
                 >
@@ -376,6 +386,24 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    </>
-  )
-}
+
+        {/* Delete Confirmation Alert */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Usunąć zdjęcie?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Czy na pewno chcesz usunąć to zdjęcie? Tej operacji nie można cofnąć.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={handleDelete}
+                        className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700 focus:ring-red-600"
+                    >
+                        Usuń
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
