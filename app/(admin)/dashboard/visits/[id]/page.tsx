@@ -29,7 +29,7 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
       treatments (
         *,
         treatment_forms (
-          forms (id, title)
+          forms (id, title, is_active)
         )
       ),
       clients (*)
@@ -122,7 +122,9 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
               <h3 className="text-lg font-bold mb-4">Wymagane formularze</h3>
               {appointment.treatments?.treatment_forms && appointment.treatments.treatment_forms.length > 0 ? (
                 <ul className="space-y-3">
-                  {appointment.treatments.treatment_forms.map((tf: any) => {
+                  {appointment.treatments.treatment_forms
+                    .filter((tf: any) => tf.forms && tf.forms.is_active !== false) // Filter out nulls or inactive
+                    .map((tf: any) => {
                     const formId = tf.forms.id;
                     // Find latest submission for this form
                     const submission = clientSubmissions?.find((s: any) => s.form_id === formId);
