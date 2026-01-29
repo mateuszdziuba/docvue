@@ -38,17 +38,19 @@ export function PhotoComparison({ beforePath, afterPath }: PhotoComparisonProps)
       </DialogTrigger>
       <DialogContent className="max-w-5xl w-full p-0 bg-transparent border-none shadow-none overflow-hidden">
         <DialogTitle className="sr-only">Porównanie efektów</DialogTitle>
-        <div className="relative w-full aspect-[4/3] max-h-[80vh] bg-black/50 rounded-lg overflow-hidden flex items-center justify-center">
-            <ReactCompareSlider
-                itemOne={<ReactCompareSliderImage src={beforeUrl} alt="Przed" />}
-                itemTwo={<ReactCompareSliderImage src={afterUrl} alt="Po" />}
-                className="w-full h-full object-contain"
-            />
-            <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-white text-sm font-medium pointer-events-none">
-              PRZED
-            </div>
-            <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-purple-600/80 backdrop-blur-md rounded-full text-white text-sm font-medium pointer-events-none">
-              PO
+        <div className="flex items-center justify-center">
+            <div className="relative aspect-square h-[70vh] w-auto max-w-full bg-black/50 rounded-lg overflow-hidden shadow-2xl">
+                <ReactCompareSlider
+                    itemOne={<ReactCompareSliderImage src={beforeUrl} alt="Przed" style={{ objectFit: 'contain' }} />}
+                    itemTwo={<ReactCompareSliderImage src={afterUrl} alt="Po" style={{ objectFit: 'contain' }} />}
+                    className="w-full h-full"
+                />
+                <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-white text-sm font-medium pointer-events-none">
+                PRZED
+                </div>
+                <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-purple-600/80 backdrop-blur-md rounded-full text-white text-sm font-medium pointer-events-none">
+                PO
+                </div>
             </div>
         </div>
       </DialogContent>

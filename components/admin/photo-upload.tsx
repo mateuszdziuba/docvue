@@ -294,7 +294,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
                 onDrop={onDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`
-                    relative flex flex-col items-center justify-center w-full aspect-square sm:aspect-video rounded-xl border-2 border-dashed transition-all cursor-pointer
+                    relative flex flex-col items-center justify-center w-full aspect-square rounded-xl border-2 border-dashed transition-all cursor-pointer
                     ${isDragging 
                         ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
                         : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -345,7 +345,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
                             image={imageSrc}
                             crop={crop}
                             zoom={zoom}
-                            aspect={4 / 3}
+                            aspect={1}
                             onCropChange={setCrop}
                             onCropComplete={onCropComplete}
                             onZoomChange={setZoom}

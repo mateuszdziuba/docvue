@@ -20,7 +20,7 @@ export function FillVisitFormButton({ clientId, formId, formTitle }: FillVisitFo
     try {
       setIsLoading(true)
       
-      const result = await assignFormToClient(clientId, formId)
+      const result = await assignFormToClient({ clientId, formId })
       
       if (result.error) {
         toast.error(result.error)
