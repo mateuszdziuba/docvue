@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { AddAppointmentDialog } from '@/components/admin/add-appointment-dialog'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -163,15 +164,19 @@ export default async function DashboardPage() {
             </svg>
             Dodaj klienta
           </Link>
-          <Link
-            href="/dashboard/visits"
-            className="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-medium rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all"
-          >
-             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-             </svg>
-             Dodaj wizytę
-          </Link>
+             <AddAppointmentDialog 
+               salonId={salon.id}
+               trigger={
+                <button
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-medium rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all w-auto"
+                >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                   </svg>
+                   Dodaj wizytę
+                </button>
+               }
+             />
         </div>
       </div>
 

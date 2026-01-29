@@ -28,20 +28,44 @@ export default async function VisitsPage({ searchParams }: Props) {
   // Simple search implementation
   // Note: Complex OR across relations is hard in standard Supabase query without View.
   // For now, if q is present, we'll try to filter by client name using the !inner join hint on clients
-  // Simple search implementation
-  // Note: We are fetching all (limit logic can be added later) and filtering in JS to handle relation search easily without Views.
-  // This ensures searching for "Treatment Name" also works.
-  
+  // Advanced Search Logic (Backend)
+  if (q) {
+      // 1. Find matching Client IDs
+      const { data: matchingClients } = await supabase
+          .from('clients')
+          .select('id')
+          .ilike('name', `%${q}%`)
+
+      const clientIds = matchingClients?.map(c => c.id) || []
+
+      // 2. Find matching Treatment IDs
+      const { data: matchingTreatments } = await supabase
+          .from('treatments')
+          .select('id')
+          .ilike('name', `%${q}%`)
+
+      const treatmentIds = matchingTreatments?.map(t => t.id) || []
+
+      // 3. Filter Appointments
+      if (clientIds.length > 0 || treatmentIds.length > 0) {
+          // Construct explicit OR filter string
+          const conditions = []
+          if (clientIds.length > 0) conditions.push(`client_id.in.(${clientIds.join(',')})`)
+          if (treatmentIds.length > 0) conditions.push(`treatment_id.in.(${treatmentIds.join(',')})`)
+          
+          if (conditions.length > 0) {
+             query = query.or(conditions.join(','))
+          }
+      } else {
+          // If search yielded no IDs, we should return empty (unless partial match logic is desired, but strict matching is safer)
+          // Effectively force empty result
+          query = query.eq('id', '00000000-0000-0000-0000-000000000000') 
+      }
+  }
+
   const { data: visits } = await query
 
-  // Client-side filtering for treatment name (as a fallback for complex OR query constraints)
-  // This is acceptable for smaller datasets, but for production large scale, we should create a View.
-  const filteredVisits = q 
-    ? visits?.filter((v: any) => 
-        v.clients?.name.toLowerCase().includes(q.toLowerCase()) || 
-        v.treatments?.name.toLowerCase().includes(q.toLowerCase())
-      )
-    : visits
+  const filteredVisits = visits
 
   return (
     <div className="space-y-6">

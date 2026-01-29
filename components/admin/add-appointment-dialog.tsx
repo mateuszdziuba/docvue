@@ -15,8 +15,10 @@ import { useRouter } from 'next/navigation'
 import { Treatment } from '@/types/database'
 import { format, addMinutes } from 'date-fns'
 
+import { ClientCombobox } from '@/components/admin/client-combobox'
+
 interface AddAppointmentDialogProps {
-  clientId: string
+  clientId?: string
   salonId: string
   trigger?: React.ReactNode
 }
@@ -25,9 +27,14 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [treatments, setTreatments] = useState<Treatment[]>([])
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(clientId)
   
   const supabase = createClient()
   const router = useRouter()
+
+  useEffect(() => {
+    setSelectedClientId(clientId)
+  }, [clientId, open])
 
   useEffect(() => {
     if (open) {
@@ -54,6 +61,12 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
     const minute = formData.get('minute') as string
     const notes = formData.get('notes') as string
 
+    if (!selectedClientId) {
+        toast.error('Wybierz klienta')
+        setIsLoading(false)
+        return
+    }
+
     if (!treatmentId || !date || !hour || !minute) {
       toast.error('Wypełnij wszystkie wymagane pola')
       setIsLoading(false)
@@ -75,7 +88,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
 
       const { error } = await supabase.from('appointments').insert({
         salon_id: salonId,
-        client_id: clientId,
+        client_id: selectedClientId,
         treatment_id: treatmentId,
         start_time: startTime.toISOString(),
         status: status,
@@ -112,6 +125,18 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
           <DialogTitle>Umów wizytę</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          
+          {!clientId && (
+              <div className="space-y-2">
+                  <label className="text-sm font-medium">Klient</label>
+                  <ClientCombobox 
+                    salonId={salonId} 
+                    onSelect={setSelectedClientId} 
+                  />
+                  {!selectedClientId && <p className="text-xs text-amber-600">Proszę wybrać klienta z listy</p>}
+              </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Zabieg</label>
             <select
