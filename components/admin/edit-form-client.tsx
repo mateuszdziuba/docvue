@@ -8,15 +8,23 @@ import { updateForm, deleteForm } from '@/actions/forms'
 import { checkFormUsage } from '@/actions/form-usage'
 import type { FormField } from '@/types/database'
 
+import dynamic from 'next/dynamic'
+
+// Dynamically import RichTextEditor to avoid SSR issues with BlockNote
+const RichTextEditor = dynamic(
+  () => import('@/components/ui/rich-text-editor').then(mod => mod.RichTextEditor),
+  { ssr: false }
+)
+
 const fieldTypes = [
-  { type: 'text', label: 'Tekst', icon: '📝' },
+  { type: 'text', label: 'Krótka odpowiedź', icon: '📝' },
+  { type: 'textarea', label: 'Długa odpowiedź', icon: '📄' },
+  { type: 'select', label: 'Lista rozwijana', icon: '▼' },
+  { type: 'radio', label: 'Jednokrotny wybór', icon: '◉' },
+  { type: 'checkbox_group', label: 'Wielokrotny wybór', icon: '☑️' },
+  { type: 'date', label: 'Data', icon: '📅' },
   { type: 'email', label: 'Email', icon: '✉️' },
   { type: 'tel', label: 'Telefon', icon: '📱' },
-  { type: 'textarea', label: 'Długi tekst', icon: '📄' },
-  { type: 'select', label: 'Wybór', icon: '📋' },
-  { type: 'checkbox', label: 'Checkbox', icon: '☑️' },
-  { type: 'date', label: 'Data', icon: '📅' },
-  { type: 'signature', label: 'Podpis', icon: '✍️' },
   { type: 'separator', label: 'Opis / Rozdzielacz', icon: '📝' },
 ]
 
@@ -306,47 +314,52 @@ export default function EditFormClient({ form }: EditFormClientProps) {
                           </div>
                           
                           {field.type === 'separator' ? (
-                            <textarea
-                              value={field.label}
-                              onChange={(e) => updateField(index, { label: e.target.value })}
-                              placeholder="Treść separatora / opisu (HTML dozwolony)"
-                              rows={3}
-                              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
-                            />
+                            <div className="space-y-2">
+                               <p className="text-xs text-gray-500">Treść wyświetlana w formularzu:</p>
+                               <RichTextEditor
+                                 value={field.label}
+                                 onChange={(val: string) => updateField(index, { label: val })}
+                               />
+                            </div>
                           ) : (
                             <>
                               <input
                                 type="text"
                                 value={field.label}
                                 onChange={(e) => updateField(index, { label: e.target.value })}
-                                placeholder="Etykieta pola (np. Imię i nazwisko)"
+                                placeholder="Pytanie (np. Czy chorujesz na cukrzycę?)"
                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                               />
                               
-                              <input
-                                type="text"
-                                value={field.placeholder || ''}
-                                onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                                placeholder="Placeholder (opcjonalnie)"
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                              />
+                              {field.type !== 'date' && (
+                                <input
+                                  type="text"
+                                  value={field.placeholder || ''}
+                                  onChange={(e) => updateField(index, { placeholder: e.target.value })}
+                                  placeholder="Placeholder (opcjonalnie)"
+                                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                />
+                              )}
                             </>
                           )}
 
-                          {(field.type === 'select' || field.type === 'radio') && (
-                            <textarea
-                              placeholder="Opcje (każda w nowej linii)"
-                              value={field.options?.map(o => o.label).join('\n') || ''}
-                              onChange={(e) => {
-                                const opts = e.target.value.split('\n').map(line => ({
-                                  label: line.trim(),
-                                  value: line.trim().toLowerCase().replace(/\s+/g, '_')
-                                })).filter(o => o.label)
-                                updateField(index, { options: opts })
-                              }}
-                              rows={3}
-                              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            />
+                          {(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox_group') && (
+                            <div className="space-y-1">
+                                <p className="text-xs text-gray-500">Opcje wyboru (każda w nowej linii):</p>
+                                <textarea
+                                placeholder="Opcja 1&#10;Opcja 2&#10;Opcja 3"
+                                value={field.options?.map(o => o.label).join('\n') || ''}
+                                onChange={(e) => {
+                                    const opts = e.target.value.split('\n').map(line => ({
+                                    label: line.trim(),
+                                    value: line.trim() // Use label as value for simplicity in display, or slugify if needed
+                                    })).filter(o => o.label)
+                                    updateField(index, { options: opts })
+                                }}
+                                rows={4}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
+                                />
+                            </div>
                           )}
 
                           <div className="flex items-center justify-between pt-2">

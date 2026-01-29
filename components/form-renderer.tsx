@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import SignaturePad from '@/components/ui/signature-pad'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { Form, FormField } from '@/types/database'
 
 interface FormRendererProps {
@@ -49,31 +50,61 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
       case 'Select':
       case 'select':
         return (
-          <select
-            {...register(field.name, { required: field.required })}
-            disabled={field.disabled}
-            className={commonClasses}
-          >
-            <option value="">{field.placeholder || 'Wybierz...'}</option>
+          <div className="relative">
+            <select
+              {...register(field.name, { required: field.required })}
+              disabled={field.disabled}
+              className={`${commonClasses} appearance-none`}
+            >
+              <option value="">{field.placeholder || 'Wybierz...'}</option>
+              {field.options?.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        )
+
+      case 'checkbox_group':
+        return (
+          <div className="space-y-2">
             {field.options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
+              <label key={option.value} className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  {...register(field.name, { required: field.required })}
+                  type="checkbox"
+                  value={option.value}
+                  disabled={field.disabled}
+                  className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 transition-all"
+                />
+                <span className="text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+                  {option.label}
+                </span>
+              </label>
             ))}
-          </select>
+          </div>
         )
 
       case 'Checkbox':
       case 'checkbox':
+        // Single boolean checkbox (e.g. for constents)
         return (
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-3 cursor-pointer group">
             <input
-              {...register(field.name)}
+              {...register(field.name, { required: field.required })}
               type="checkbox"
               disabled={field.disabled}
-              className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 transition-all"
             />
-            <span className="text-gray-700 dark:text-gray-300">{field.label}</span>
+            <span className="text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+              {field.label}
+            </span>
           </label>
         )
 
@@ -82,15 +113,17 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
         return (
           <div className="space-y-2">
             {field.options?.map((option) => (
-              <label key={option.value} className="flex items-center gap-3 cursor-pointer">
+              <label key={option.value} className="flex items-center gap-3 cursor-pointer group">
                 <input
                   {...register(field.name, { required: field.required })}
                   type="radio"
                   value={option.value}
                   disabled={field.disabled}
-                  className="w-5 h-5 border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="w-5 h-5 border-gray-300 text-purple-600 focus:ring-purple-500 transition-all"
                 />
-                <span className="text-gray-700 dark:text-gray-300">{option.label}</span>
+                <span className="text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+                  {option.label}
+                </span>
               </label>
             ))}
           </div>
@@ -99,11 +132,18 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
       case 'Date':
       case 'date':
         return (
-          <input
-            {...register(field.name, { required: field.required })}
-            type="date"
-            disabled={field.disabled}
-            className={commonClasses}
+          <Controller
+            control={control}
+            name={field.name}
+            rules={{ required: field.required }}
+            render={({ field: { value, onChange } }) => (
+              <DatePicker
+                date={value ? new Date(value) : undefined}
+                setDate={(date) => onChange(date ? date.toISOString() : '')}
+                placeholder={field.placeholder || "Wybierz datę"}
+                disabled={field.disabled}
+              />
+            )}
           />
         )
 
@@ -127,9 +167,10 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
       case 'separator':
         return (
           <div className="p-4 rounded-xl border-l-4 border-purple-500 bg-purple-50 dark:bg-purple-900/10 prose dark:prose-invert max-w-none">
-            <p className="text-gray-900 dark:text-purple-100 font-medium whitespace-pre-wrap text-base leading-relaxed m-0">
-              {field.label}
-            </p>
+             <div 
+               className="text-gray-900 dark:text-purple-100 font-medium text-base leading-relaxed m-0"
+               dangerouslySetInnerHTML={{ __html: field.label }} 
+             />
           </div>
         )
 
