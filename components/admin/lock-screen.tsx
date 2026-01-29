@@ -91,10 +91,10 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
             autoFocus
           >
             <InputOTPGroup className="gap-2">
-              <InputOTPSlot index={0} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
-              <InputOTPSlot index={1} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
-              <InputOTPSlot index={2} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
-              <InputOTPSlot index={3} className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={0} masked className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={1} masked className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={2} masked className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
+              <InputOTPSlot index={3} masked className="w-12 h-14 text-2xl border-2 border-gray-200 dark:border-gray-700 rounded-lg" />
             </InputOTPGroup>
           </InputOTP>
 

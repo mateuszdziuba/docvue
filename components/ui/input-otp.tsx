@@ -32,8 +32,8 @@ InputOTPGroup.displayName = 'InputOTPGroup'
 
 const InputOTPSlot = React.forwardRef<
   React.ElementRef<'div'>,
-  React.ComponentPropsWithoutRef<'div'> & { index: number }
->(({ index, className, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<'div'> & { index: number; masked?: boolean }
+>(({ index, masked, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext)
   const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index]
 
@@ -47,7 +47,12 @@ const InputOTPSlot = React.forwardRef<
       )}
       {...props}
     >
-      {char}
+      {/* If masked is true and we have a char, show a dot. Otherwise show char. */}
+      {masked && char ? (
+        <div className="w-2.5 h-2.5 rounded-full bg-current animate-in zoom-in-0 duration-200" />
+      ) : (
+        char
+      )}
       {hasFakeCaret && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="h-4 w-px animate-caret-blink bg-foreground duration-1000" />
