@@ -1,17 +1,17 @@
 import { Suspense } from 'react'
 import { FilteredClientsList } from '@/components/admin/filtered-clients-list'
-import { SearchInput } from '@/components/ui/search-input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     query?: string
-  }
+  }>
 }) {
-  const query = searchParams?.query || ''
+  const resolvedParams = await searchParams
+  const query = resolvedParams.query || ''
   const supabase = await createClient()
   
   // Helper to fetch total count quickly
@@ -37,13 +37,10 @@ export default async function ClientsPage({
         <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{count || 0}</p>
       </div>
 
-      {/* Search */}
-      <div className="w-full">
-        <SearchInput placeholder="Szukaj klientów (imię, email)..." />
-      </div>
+
 
       {/* Clients List with Add Form */}
-      <Suspense key={query} fallback={<ClientsListSkeleton />}>
+      <Suspense fallback={<ClientsListSkeleton />}>
         <FilteredClientsList query={query} />
       </Suspense>
     </div>

@@ -1,22 +1,20 @@
 'use client'
 
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useTransition } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 
 export function SearchInput({ placeholder }: { placeholder: string }) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { replace } = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [value, setValue] = useState(searchParams.get('query')?.toString() || '')
-
-  // Update local state when URL changes (e.g. back button)
-  useEffect(() => {
-    setValue(searchParams.get('query')?.toString() || '')
-  }, [searchParams])
-
-  const handleSearch = useCallback((term: string) => {
+  const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams)
+    
+    // Don't update if value hasn't changed (prevents loops)
+    if (term === searchParams.get('query')) return
+    
     if (term) {
       params.set('query', term)
     } else {
@@ -26,16 +24,7 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
     startTransition(() => {
       replace(`${pathname}?${params.toString()}`)
     })
-  }, [searchParams, pathname, replace])
-
-  // Debounce effect
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      handleSearch(value)
-    }, 300)
-    
-    return () => clearTimeout(timeoutId)
-  }, [value, handleSearch])
+  }, 300)
 
   return (
     <div className="relative flex-1 max-w-md">
@@ -54,8 +43,8 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
       </div>
       <input
         type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        defaultValue={searchParams.get('query')?.toString()}
+        onChange={(e) => handleSearch(e.target.value)}
         className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent sm:text-sm transition-all"
         placeholder={placeholder}
       />

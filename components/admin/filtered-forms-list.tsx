@@ -24,5 +24,5 @@ export async function FilteredFormsList({ query }: { query: string }) {
 
   const { data: forms } = await request
 
-  return <FormsList forms={forms || []} />
+  return <FormsList forms={forms || []} query={query} />
 }

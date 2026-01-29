@@ -25,5 +25,5 @@ export async function FilteredClientsList({ query }: { query: string }) {
 
   const { data: clients } = await request
 
-  return <ClientsList clients={clients || []} />
+  return <ClientsList clients={clients || []} query={query} />
 }

@@ -4,14 +4,15 @@ import { FilteredFormsList } from '@/components/admin/filtered-forms-list'
 import { SearchInput } from '@/components/ui/search-input'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function FormsPage({
+export default async function FormsPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     query?: string
-  }
+  }>
 }) {
-  const query = searchParams?.query || ''
+  const resolvedParams = await searchParams
+  const query = resolvedParams.query || ''
 
   return (
     <div className="space-y-6">
@@ -40,7 +41,7 @@ export default function FormsPage({
       </div>
 
       {/* Forms List */}
-      <Suspense key={query} fallback={<FormsListSkeleton />}>
+      <Suspense fallback={<FormsListSkeleton />}>
         <FilteredFormsList query={query} />
       </Suspense>
     </div>

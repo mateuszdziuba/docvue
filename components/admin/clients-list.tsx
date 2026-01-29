@@ -6,11 +6,14 @@ import { AddClientForm } from './add-client-form'
 import { deleteClient } from '@/actions/clients'
 import type { Client } from '@/types/database'
 
+import { SearchInput } from '@/components/ui/search-input'
+
 interface ClientsListProps {
   clients: Client[]
+  query?: string
 }
 
-export function ClientsList({ clients }: ClientsListProps) {
+export function ClientsList({ clients, query }: ClientsListProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -61,6 +64,11 @@ export function ClientsList({ clients }: ClientsListProps) {
               Dodaj klienta
             </button>
           )}
+        </div>
+
+        {/* Search - Moved here as requested */}
+        <div className="w-full">
+          <SearchInput placeholder="Szukaj klientów (imię, email)..." />
         </div>
 
         {/* Clients List */}
@@ -136,17 +144,35 @@ export function ClientsList({ clients }: ClientsListProps) {
           </div>
         ) : (
           <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Brak klientów
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-              Dodaj pierwszego klienta używając przycisku powyżej.
-            </p>
+            {query ? (
+              <>
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                  Brak wyników wyszukiwania
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Nie znaleziono klientów pasujących do zapytania "{query}"
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Brak klientów
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                  Dodaj pierwszego klienta używając przycisku powyżej.
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
