@@ -146,7 +146,6 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                       >
                         Kopiuj link
                       </button>
-                      </button>
                       <button
                         onClick={() => {
                           lock()
