@@ -407,3 +407,6 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+    </>
+  )
+}

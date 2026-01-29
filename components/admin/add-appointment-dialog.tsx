@@ -50,14 +50,17 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
     const formData = new FormData(e.currentTarget)
     const treatmentId = formData.get('treatment_id') as string
     const date = formData.get('date') as string
-    const time = formData.get('time') as string
+    const hour = formData.get('hour') as string
+    const minute = formData.get('minute') as string
     const notes = formData.get('notes') as string
 
-    if (!treatmentId || !date || !time) {
+    if (!treatmentId || !date || !hour || !minute) {
       toast.error('Wypełnij wszystkie wymagane pola')
       setIsLoading(false)
       return
     }
+
+    const time = `${hour}:${minute}`
 
     try {
       const startTime = new Date(`${date}T${time}`)
@@ -100,13 +103,13 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Nowa wizyta
+            Dodaj zabieg
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Umów wizytę</DialogTitle>
+          <DialogTitle>Dodaj zabieg</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
@@ -125,7 +128,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Data</label>
               <input
@@ -138,12 +141,31 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Godzina</label>
-              <input
-                type="time"
-                name="time"
-                required
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-              />
+              <div className="flex gap-2">
+                <select 
+                  name="hour" 
+                  required
+                  className="w-full px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                >
+                    {Array.from({ length: 15 }, (_, i) => i + 7).map(h => (
+                        <option key={h} value={h.toString().padStart(2, '0')}>
+                            {h.toString().padStart(2, '0')}
+                        </option>
+                    ))}
+                </select>
+                <span className="self-center">:</span>
+                <select 
+                  name="minute" 
+                  required
+                  className="w-full px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                >
+                    {Array.from({ length: 12 }, (_, i) => i * 5).map(m => (
+                        <option key={m} value={m.toString().padStart(2, '0')}>
+                            {m.toString().padStart(2, '0')}
+                        </option>
+                    ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -159,7 +181,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
 
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Zapisywanie...' : 'Zapisz wizytę'}
+              {isLoading ? 'Zapisywanie...' : 'Dodaj zabieg'}
             </Button>
           </div>
         </form>
