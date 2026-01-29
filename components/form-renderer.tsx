@@ -1,0 +1,155 @@
+'use client'
+
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import type { Form, FormField } from '@/types/database'
+
+interface FormRendererProps {
+  form: Form
+  onSubmit: (data: Record<string, unknown>) => Promise<void>
+  isSubmitting?: boolean
+}
+
+export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps) {
+  const { register, handleSubmit, formState: { errors } } = useForm()
+  const fields = (form.schema as any)?.fields || []
+
+  const renderField = (field: FormField) => {
+    const commonClasses = "w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+
+    switch (field.type) {
+      case 'Input':
+      case 'text':
+      case 'email':
+      case 'tel':
+      case 'number':
+        return (
+          <input
+            {...register(field.name, { required: field.required })}
+            type={field.type === 'Input' ? 'text' : field.type}
+            placeholder={field.placeholder}
+            disabled={field.disabled}
+            className={commonClasses}
+          />
+        )
+      
+      case 'Textarea':
+      case 'textarea':
+        return (
+          <textarea
+            {...register(field.name, { required: field.required })}
+            placeholder={field.placeholder}
+            disabled={field.disabled}
+            rows={4}
+            className={commonClasses}
+          />
+        )
+
+      case 'Select':
+      case 'select':
+        return (
+          <select
+            {...register(field.name, { required: field.required })}
+            disabled={field.disabled}
+            className={commonClasses}
+          >
+            <option value="">{field.placeholder || 'Wybierz...'}</option>
+            {field.options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )
+
+      case 'Checkbox':
+      case 'checkbox':
+        return (
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              {...register(field.name)}
+              type="checkbox"
+              disabled={field.disabled}
+              className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+            />
+            <span className="text-gray-700 dark:text-gray-300">{field.label}</span>
+          </label>
+        )
+
+      case 'Radio':
+      case 'radio':
+        return (
+          <div className="space-y-2">
+            {field.options?.map((option) => (
+              <label key={option.value} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  {...register(field.name, { required: field.required })}
+                  type="radio"
+                  value={option.value}
+                  disabled={field.disabled}
+                  className="w-5 h-5 border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-gray-700 dark:text-gray-300">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        )
+
+      case 'Date':
+      case 'date':
+        return (
+          <input
+            {...register(field.name, { required: field.required })}
+            type="date"
+            disabled={field.disabled}
+            className={commonClasses}
+          />
+        )
+
+      default:
+        return (
+          <input
+            {...register(field.name, { required: field.required })}
+            type="text"
+            placeholder={field.placeholder}
+            disabled={field.disabled}
+            className={commonClasses}
+          />
+        )
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {fields.map((field: FormField) => (
+        <div key={field.name}>
+          {field.type !== 'checkbox' && (
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+          )}
+          {renderField(field)}
+          {field.description && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {field.description}
+            </p>
+          )}
+          {errors[field.name] && (
+            <p className="mt-1 text-sm text-red-500">
+              To pole jest wymagane
+            </p>
+          )}
+        </div>
+      ))}
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full py-4 px-6 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isSubmitting ? 'Wysyłanie...' : 'Wyślij formularz'}
+      </button>
+    </form>
+  )
+}
