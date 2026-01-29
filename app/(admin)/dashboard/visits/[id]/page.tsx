@@ -101,7 +101,7 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
                         ) : (
                              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
                         )}
-                        <span className={submission ? 'text-gray-900 line-through decoration-gray-400' : 'text-gray-900'}>
+                        <span className={submission ? 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600' : 'text-gray-900 dark:text-white'}>
                             {tf.forms.title}
                         </span>
                       </div>
