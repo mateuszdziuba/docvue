@@ -15,6 +15,9 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function AdminVisitDetailsPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
