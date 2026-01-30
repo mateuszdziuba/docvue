@@ -1,19 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 85" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 90" fill="none">
   <defs>
-    <linearGradient id="oceanGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#009688;stop-opacity:1" /> <stop offset="100%" style="stop-color:#4DB6AC;stop-opacity:1" /> </linearGradient>
+    <linearGradient id="beautyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9333ea;stop-opacity:1" />
+    </linearGradient>
   </defs>
 
-  <g transform="translate(10, 10)">
+  <g transform="translate(10, 15)">
     
-    <path d="M 85 30 C 85 30, 75 5, 45 5 C 15 5, 5 30, 5 30 C 5 30, 15 60, 45 60 C 75 60, 85 30, 85 30 Z" fill="url(#oceanGradient)" opacity="0.15"/>
-    <path d="M 5 30 C 5 30, 15 60, 45 60 C 65 60, 80 45, 85 30" stroke="url(#oceanGradient)" stroke-width="5" stroke-linecap="round" fill="none"/> <path d="M 5 30 C 5 30, 15 5, 45 5 C 75 5, 85 30, 85 30" stroke="url(#oceanGradient)" stroke-width="5" stroke-linecap="round" fill="none"/>  <g transform="translate(32, 22)">
-        <path d="M 0 12 L 10 22 L 30 0" stroke="url(#oceanGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 5 35 C 5 35, 15 65, 45 65 C 65 65, 80 50, 85 35" stroke="url(#beautyGradient)" stroke-width="5" stroke-linecap="round" fill="none"/>
+    
+    <path d="M 5 35 C 5 28, 25 25, 45 25 C 65 25, 85 28, 85 35" stroke="url(#beautyGradient)" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+    <g stroke="url(#beautyGradient)" stroke-width="3" stroke-linecap="round" fill="none">
+        <path d="M 15 31 Q 5 20, 0 15" />
+        <path d="M 28 27 Q 20 15, 15 10" />
+        <path d="M 40 26 Q 38 12, 35 5" />
+        
+        <path d="M 50 26 Q 52 12, 55 5" />
+        <path d="M 62 27 Q 70 15, 75 10" />
+        <path d="M 75 31 Q 85 20, 90 15" />
+    </g>
+
+    <g transform="translate(32, 30)">
+      <path d="M 0 12 L 10 22 L 30 0" stroke="url(#beautyGradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </g>
   </g>
 
-  <g transform="translate(115, 58)" font-family="'Poppins', 'Helvetica Neue', sans-serif" font-size="48" font-weight="700" letter-spacing="-1">
+  <g transform="translate(125, 68)" font-family="'Poppins', 'Helvetica Neue', sans-serif" font-size="48" font-weight="700" letter-spacing="-1">
     <text x="0" y="0" fill="#0A2342">doc</text>
-    <text x="85" y="0" fill="url(#oceanGradient)">vue</text>
+    <text x="85" y="0" fill="url(#beautyGradient)">vue</text>
   </g>
 </svg>
