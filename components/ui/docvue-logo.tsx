@@ -6,14 +6,14 @@ import Image from 'next/image'
  * docvue Logo Icon Component
  * Uses the PNG logo file
  */
-export function DocvueLogo({ className = "w-10 h-10" }: { className?: string }) {
+export function DocvueLogo({ className = "h-10 w-auto" }: { className?: string }) {
   return (
     <Image
       src="/logo-dv.png"
       alt="docvue"
       width={100}
-      height={100}
-      className={className}
+      height={60}
+      className={`${className} object-contain`}
       priority
       unoptimized
     />
@@ -25,13 +25,13 @@ export function DocvueLogo({ className = "w-10 h-10" }: { className?: string }) 
  */
 export function DocvueLogoFull({ className = "h-12" }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-1.5 ${className}`}>
       <Image
         src="/logo-dv.png"
         alt="docvue"
-        width={48}
-        height={48}
-        className="w-12 h-12"
+        width={60}
+        height={36}
+        className="h-10 w-auto object-contain"
         priority
         unoptimized
       />
