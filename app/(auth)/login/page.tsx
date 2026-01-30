@@ -12,7 +12,10 @@ export default function LoginPage() {
             <div className="inline-flex items-center justify-center mb-4">
               <DocvueLogo className="w-16 h-16" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Docvue</h1>
+            <h1 className="text-2xl font-bold">
+              <span className="text-gray-900 dark:text-white">doc</span>
+              <span className="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">vue</span>
+            </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">Zaloguj się do panelu gabinetu</p>
           </div>
 

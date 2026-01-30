@@ -72,8 +72,11 @@ export function Sidebar() {
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 w-64">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-        <DocvueLogo className="w-10 h-10" />
-        <span className="text-xl font-bold text-gray-900 dark:text-white">Docvue</span>
+        <DocvueLogo className="w-12 h-12" />
+        <span className="text-xl font-bold">
+          <span className="text-gray-900 dark:text-white">doc</span>
+          <span className="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">vue</span>
+        </span>
       </div>
 
       {/* Navigation */}
