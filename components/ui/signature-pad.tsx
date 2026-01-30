@@ -232,8 +232,42 @@ export default function SignaturePad({
       holdTimerRef.current = setTimeout(() => {
         const canvas = canvasRef.current
         if (canvas) {
-          const dataUrl = canvas.toDataURL('image/png')
-          onChange(dataUrl)
+          // Create a new canvas with white background for export
+          const exportCanvas = document.createElement('canvas')
+          exportCanvas.width = canvas.width
+          exportCanvas.height = canvas.height
+          const exportCtx = exportCanvas.getContext('2d')
+          
+          if (exportCtx) {
+            // Fill with white background
+            exportCtx.fillStyle = '#ffffff'
+            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
+            
+            // Get the current canvas content
+            const originalCtx = canvas.getContext('2d')
+            if (originalCtx) {
+              // Get image data from original canvas
+              const imageData = originalCtx.getImageData(0, 0, canvas.width, canvas.height)
+              const data = imageData.data
+              
+              // Convert any non-transparent pixels to black (for consistent display)
+              for (let i = 0; i < data.length; i += 4) {
+                const alpha = data[i + 3]
+                if (alpha > 0) {
+                  // Make it black with the same alpha
+                  data[i] = 0     // R
+                  data[i + 1] = 0 // G
+                  data[i + 2] = 0 // B
+                }
+              }
+              
+              // Put the modified image data onto export canvas
+              exportCtx.putImageData(imageData, 0, 0)
+            }
+            
+            const dataUrl = exportCanvas.toDataURL('image/png')
+            onChange(dataUrl)
+          }
           setIsDialogOpen(false)
         }
         setIsHolding(false)
