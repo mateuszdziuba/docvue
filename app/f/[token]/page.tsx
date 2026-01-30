@@ -84,7 +84,7 @@ export default async function PublicFormPage({ params }: Props) {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
-          Powered by <span className="font-semibold text-purple-600">Reservue</span>
+          Powered by <span className="font-semibold text-purple-600">Docvue</span>
         </div>
       </div>
     </div>

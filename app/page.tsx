@@ -21,7 +21,7 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">Reservue</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Docvue</span>
           </div>
           <div className="flex items-center gap-4">
             <Link 
@@ -206,7 +206,7 @@ export default function Home() {
                 Gotowy na cyfrową rewolucję?
               </h2>
               <p className="text-lg text-white/90 mb-8 max-w-xl mx-auto">
-                Dołącz do setek gabinetów, które już korzystają z Reservue. 
+                Dołącz do setek gabinetów, które już korzystają z Docvue. 
                 Zacznij za darmo już dziś!
               </p>
               <Link 
@@ -232,10 +232,10 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <span className="text-gray-600 dark:text-gray-400 font-medium">Reservue</span>
+            <span className="text-gray-600 dark:text-gray-400 font-medium">Docvue</span>
           </div>
           <p className="text-gray-500 dark:text-gray-500 text-sm">
-            © 2026 Reservue. Wszystkie prawa zastrzeżone.
+            © 2026 Docvue. Wszystkie prawa zastrzeżone.
           </p>
         </div>
       </footer>

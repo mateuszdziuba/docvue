@@ -1,5 +1,5 @@
 -- =============================================
--- Reservue App - Supabase Database Schema
+-- Docvue App - Supabase Database Schema
 -- =============================================
 -- Run this script in Supabase Dashboard: SQL Editor
 -- =============================================
