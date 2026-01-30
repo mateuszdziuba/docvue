@@ -2,59 +2,66 @@
 
 /**
  * Docvue Logo Icon Component
- * Beauty eye with 6 eyelashes and checkmark design
+ * Beauty eye with blue iris containing checkmark cutout
  */
 export function DocvueLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
     <svg 
       className={className}
-      viewBox="0 0 95 80" 
+      viewBox="0 0 100 90" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <linearGradient id="beautyGradientIcon" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#ec4899" />
-          <stop offset="100%" stopColor="#9333ea" />
-        </linearGradient>
-      </defs>
-      <g transform="translate(0, 5)">
-        {/* Lower eyelid */}
+      <g transform="translate(5, 5)">
+        {/* Eye shape - white fill */}
         <path 
-          d="M 5 35 C 5 35, 15 65, 45 65 C 65 65, 80 50, 85 35" 
-          stroke="url(#beautyGradientIcon)" 
-          strokeWidth="5" 
+          d="M 85 35 C 85 35, 65 60, 45 60 C 25 60, 5 35, 5 35 C 5 35, 25 10, 45 10 C 65 10, 85 35, 85 35 Z" 
+          fill="white"
+        />
+        {/* Eye outline */}
+        <path 
+          d="M 85 35 C 85 35, 65 60, 45 60 C 25 60, 5 35, 5 35 C 5 35, 25 10, 45 10 C 65 10, 85 35, 85 35 Z" 
+          stroke="black" 
+          strokeWidth="4" 
           strokeLinecap="round" 
+          strokeLinejoin="round" 
           fill="none"
         />
-        {/* Upper eyelid */}
+        
+        {/* Upper eyelashes */}
+        <path d="M 15 17 C 10 5, 0 -5, 0 -5" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 28 12 C 25 0, 15 -10, 15 -10" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 45 10 C 45 -5, 40 -15, 40 -15" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 62 12 C 65 0, 75 -10, 75 -10" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 75 17 C 80 5, 90 -5, 90 -5" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        
+        {/* Lower eyelashes */}
+        <path d="M 20 53 C 15 65, 5 75, 5 75" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M 35 58 C 35 70, 25 80, 25 80" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M 55 58 C 55 70, 65 80, 65 80" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M 70 53 C 75 65, 85 75, 85 75" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        
+        {/* Iris with checkmark cutout */}
+        <g transform="translate(45, 35)">
+          <circle cx="0" cy="0" r="20" fill="#00BFFF"/>
+          <mask id="v-mask-icon">
+            <rect x="-20" y="-20" width="40" height="40" fill="white"/>
+            <path d="M -8 -5 L 0 8 L 12 -12" stroke="black" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          </mask>
+          <circle cx="0" cy="0" r="20" fill="#00BFFF" mask="url(#v-mask-icon)"/>
+          <circle cx="5" cy="-5" r="3" fill="white"/>
+        </g>
+        
+        {/* D flourish */}
         <path 
-          d="M 5 35 C 5 28, 25 25, 45 25 C 65 25, 85 28, 85 35" 
-          stroke="url(#beautyGradientIcon)" 
-          strokeWidth="5" 
+          d="M 0 -5 C -15 -15, -25 10, -20 35 C -15 60, 5 70, 25 70" 
+          stroke="black" 
+          strokeWidth="4" 
           strokeLinecap="round" 
-          fill="none"
+          strokeLinejoin="round" 
+          fill="none" 
+          transform="translate(15, 17)"
         />
-        {/* 6 Eyelashes */}
-        <g stroke="url(#beautyGradientIcon)" strokeWidth="3" strokeLinecap="round" fill="none">
-          <path d="M 15 31 Q 5 20, 0 15" />
-          <path d="M 28 27 Q 20 15, 15 10" />
-          <path d="M 40 26 Q 38 12, 35 5" />
-          <path d="M 50 26 Q 52 12, 55 5" />
-          <path d="M 62 27 Q 70 15, 75 10" />
-          <path d="M 75 31 Q 85 20, 90 15" />
-        </g>
-        {/* Checkmark */}
-        <g transform="translate(32, 30)">
-          <path 
-            d="M 0 12 L 10 22 L 30 0" 
-            stroke="url(#beautyGradientIcon)" 
-            strokeWidth="5" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            fill="none"
-          />
-        </g>
       </g>
     </svg>
   )
@@ -71,55 +78,61 @@ export function DocvueLogoFull({ className = "h-10" }: { className?: string }) {
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <linearGradient id="beautyGradientFull" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#ec4899" />
-          <stop offset="100%" stopColor="#9333ea" />
-        </linearGradient>
-      </defs>
-
-      <g transform="translate(10, 15)">
-        {/* Lower eyelid */}
+      <g transform="translate(10, 10)">
+        {/* Eye shape - white fill */}
         <path 
-          d="M 5 35 C 5 35, 15 65, 45 65 C 65 65, 80 50, 85 35" 
-          stroke="url(#beautyGradientFull)" 
-          strokeWidth="5" 
+          d="M 85 35 C 85 35, 65 60, 45 60 C 25 60, 5 35, 5 35 C 5 35, 25 10, 45 10 C 65 10, 85 35, 85 35 Z" 
+          fill="white"
+        />
+        {/* Eye outline */}
+        <path 
+          d="M 85 35 C 85 35, 65 60, 45 60 C 25 60, 5 35, 5 35 C 5 35, 25 10, 45 10 C 65 10, 85 35, 85 35 Z" 
+          stroke="black" 
+          strokeWidth="4" 
           strokeLinecap="round" 
+          strokeLinejoin="round" 
           fill="none"
         />
-        {/* Upper eyelid */}
+        
+        {/* Upper eyelashes */}
+        <path d="M 15 17 C 10 5, 0 -5, 0 -5" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 28 12 C 25 0, 15 -10, 15 -10" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 45 10 C 45 -5, 40 -15, 40 -15" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 62 12 C 65 0, 75 -10, 75 -10" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M 75 17 C 80 5, 90 -5, 90 -5" stroke="black" strokeWidth="4" strokeLinecap="round"/>
+        
+        {/* Lower eyelashes */}
+        <path d="M 20 53 C 15 65, 5 75, 5 75" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M 35 58 C 35 70, 25 80, 25 80" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M 55 58 C 55 70, 65 80, 65 80" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M 70 53 C 75 65, 85 75, 85 75" stroke="black" strokeWidth="3" strokeLinecap="round"/>
+        
+        {/* Iris with checkmark cutout */}
+        <g transform="translate(45, 35)">
+          <circle cx="0" cy="0" r="20" fill="#00BFFF"/>
+          <mask id="v-mask-full">
+            <rect x="-20" y="-20" width="40" height="40" fill="white"/>
+            <path d="M -8 -5 L 0 8 L 12 -12" stroke="black" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          </mask>
+          <circle cx="0" cy="0" r="20" fill="#00BFFF" mask="url(#v-mask-full)"/>
+          <circle cx="5" cy="-5" r="3" fill="white"/>
+        </g>
+        
+        {/* D flourish */}
         <path 
-          d="M 5 35 C 5 28, 25 25, 45 25 C 65 25, 85 28, 85 35" 
-          stroke="url(#beautyGradientFull)" 
-          strokeWidth="5" 
+          d="M 0 -5 C -15 -15, -25 10, -20 35 C -15 60, 5 70, 25 70" 
+          stroke="black" 
+          strokeWidth="4" 
           strokeLinecap="round" 
-          fill="none"
+          strokeLinejoin="round" 
+          fill="none" 
+          transform="translate(15, 17)"
         />
-        {/* 6 Eyelashes */}
-        <g stroke="url(#beautyGradientFull)" strokeWidth="3" strokeLinecap="round" fill="none">
-          <path d="M 15 31 Q 5 20, 0 15" />
-          <path d="M 28 27 Q 20 15, 15 10" />
-          <path d="M 40 26 Q 38 12, 35 5" />
-          <path d="M 50 26 Q 52 12, 55 5" />
-          <path d="M 62 27 Q 70 15, 75 10" />
-          <path d="M 75 31 Q 85 20, 90 15" />
-        </g>
-        {/* Checkmark */}
-        <g transform="translate(32, 30)">
-          <path 
-            d="M 0 12 L 10 22 L 30 0" 
-            stroke="url(#beautyGradientFull)" 
-            strokeWidth="5" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            fill="none"
-          />
-        </g>
       </g>
 
-      <g transform="translate(125, 68)" fontFamily="'Poppins', 'Helvetica Neue', sans-serif" fontSize="48" fontWeight="700" letterSpacing="-1">
-        <text x="0" y="0" fill="#0A2342">doc</text>
-        <text x="85" y="0" fill="url(#beautyGradientFull)">vue</text>
+      <g transform="translate(125, 58)" fontFamily="Arial, Helvetica, sans-serif" fontSize="48" fontWeight="bold">
+        <text x="0" y="0" fill="black">doc</text>
+        <text x="85" y="0" fill="#00BFFF">vue</text>
       </g>
     </svg>
   )
