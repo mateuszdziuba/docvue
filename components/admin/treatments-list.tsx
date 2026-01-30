@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Treatment, Form } from '@/types/database'
 import { AddTreatmentDialog } from './add-treatment-dialog'
+import { EditTreatmentDialog } from './edit-treatment-dialog'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -81,6 +82,7 @@ export function TreatmentsList({ treatments, forms }: TreatmentsListProps) {
             </div>
 
             <div className="flex items-center gap-2">
+              <EditTreatmentDialog treatment={treatment as any} forms={forms} />
               <button
                 onClick={() => handleDelete(treatment.id)}
                 disabled={isDeleting === treatment.id}
