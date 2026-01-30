@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { syncClientAppointmentsStatus } from '@/actions/appointments-sync'
 
 // Generate random token for client form link
 function generateToken(length: number = 32): string {
@@ -164,63 +165,14 @@ export async function submitClientForm(data: {
 
   revalidatePath('/dashboard/clients')
   revalidatePath('/dashboard/submissions')
+  revalidatePath('/dashboard', 'layout')
   
-  // Check if any pending appointments can now be scheduled
+  // Sync all future appointments for this client to update pending_forms -> scheduled
   try {
-    const { data: pendingAppointments } = await supabase
-      .from('appointments')
-      .select('id, treatment_id')
-      .eq('client_id', clientForm.client_id)
-      .eq('status', 'pending_forms')
-
-    if (pendingAppointments && pendingAppointments.length > 0) {
-      for (const appointment of pendingAppointments) {
-        // Get required forms for this treatment
-        const { data: requiredForms } = await supabase
-          .from('treatment_forms')
-          .select('form_id')
-          .eq('treatment_id', appointment.treatment_id)
-        
-        const requiredFormIds = requiredForms?.map(r => r.form_id) || []
-        
-        // If no forms required (shouldn't happen for pending_forms status but safe to check), 
-        // or if the current form is one of the required ones, check completeness.
-        // Actually we should check completeness regardless, as this form might be the last missing piece.
-        if (requiredFormIds.length === 0) {
-            // If no forms required, update status
-             await supabase
-                .from('appointments')
-                .update({ status: 'scheduled' })
-                .eq('id', appointment.id)
-             continue
-        }
-
-        // Check if all required forms are completed by this client
-        const { data: completedClientForms } = await supabase
-          .from('client_forms')
-          .select('form_id')
-          .eq('client_id', clientForm.client_id)
-          .eq('status', 'completed')
-          .in('form_id', requiredFormIds)
-        
-        const completedFormIds = completedClientForms?.map(c => c.form_id) || []
-        
-        // Use Set to handle potential duplicates if client has multiple filled forms of same type (unlikely but safe)
-        const completedSet = new Set(completedFormIds)
-        
-        const allRequiredCompleted = requiredFormIds.every(id => completedSet.has(id))
-        
-        if (allRequiredCompleted) {
-             await supabase
-                .from('appointments')
-                .update({ status: 'scheduled' })
-                .eq('id', appointment.id)
-        }
-      }
-    }
-  } catch (checkError) {
-    console.error('Error checking appointments status:', checkError)
-    // Don't fail the whole request if this background check fails
+    await syncClientAppointmentsStatus(clientForm.client_id)
+  } catch (syncError) {
+    console.error('Error syncing client appointments status:', syncError)
+    // Don't fail the whole request if sync fails
   }
 
   return { submission }

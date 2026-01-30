@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AddAppointmentDialog } from '@/components/admin/add-appointment-dialog'
+import { syncMultipleAppointmentStatuses } from '@/actions/appointments-sync'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -60,6 +64,28 @@ export default async function DashboardPage() {
     .gte('start_time', now.toISOString())
     .order('start_time', { ascending: true })
     .limit(3)
+
+  // Sync status for upcoming appointments to ensure they reflect current form completion state
+  if (upcomingAppointments && upcomingAppointments.length > 0) {
+    const appointmentIds = upcomingAppointments.map(a => a.id)
+    await syncMultipleAppointmentStatuses(appointmentIds)
+    
+    // Refetch to get updated statuses
+    const { data: refreshedAppointments } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        treatments (name, duration_minutes),
+        clients (name)
+      `)
+      .in('id', appointmentIds)
+      .order('start_time', { ascending: true })
+    
+    // Replace with refreshed data
+    if (refreshedAppointments) {
+      upcomingAppointments.splice(0, upcomingAppointments.length, ...refreshedAppointments)
+    }
+  }
 
   const stats = [
     { 

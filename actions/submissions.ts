@@ -88,6 +88,16 @@ export async function deleteSubmission(submissionId: string) {
     return { error: 'Nie znaleziono gabinetu' }
   }
 
+  // Get submission to retrieve client_id before deletion
+  const { data: submission } = await supabase
+    .from('submissions')
+    .select('client_id')
+    .eq('id', submissionId)
+    .eq('salon_id', salon.id)
+    .single()
+
+  const clientId = submission?.client_id
+
   const { error } = await supabase
     .from('submissions')
     .delete()
@@ -99,6 +109,17 @@ export async function deleteSubmission(submissionId: string) {
   }
 
   revalidatePath('/dashboard', 'layout')
+  
+  // Sync client's appointments if submission had a client_id
+  // This will update status from 'scheduled' to 'pending_forms' if forms are now missing
+  if (clientId) {
+    try {
+      const { syncClientAppointmentsStatus } = await import('@/actions/appointments-sync')
+      await syncClientAppointmentsStatus(clientId)
+    } catch (syncError) {
+      console.error('Error syncing appointments after submission deletion:', syncError)
+    }
+  }
   
   return { success: true }
 }
