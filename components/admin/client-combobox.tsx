@@ -33,6 +33,7 @@ interface ClientComboboxProps {
 export function ClientCombobox({ onSelect, salonId }: ClientComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
+  const [query, setQuery] = React.useState("")
   const [clients, setClients] = React.useState<Client[]>([])
   const [loading, setLoading] = React.useState(false)
   
@@ -40,15 +41,20 @@ export function ClientCombobox({ onSelect, salonId }: ClientComboboxProps) {
 
   // Debounced search
   const handleSearch = React.useCallback(async (search: string) => {
-    if (!search || search.length < 2) return
+    if (!search && search !== '') return // Allow empty search for initial load
     
     setLoading(true)
-    const { data } = await supabase
+    let dbQuery = supabase
         .from('clients')
         .select('id, name')
         .eq('salon_id', salonId)
-        .ilike('name', `%${search}%`)
         .limit(5)
+    
+    if (search) {
+        dbQuery = dbQuery.ilike('name', `%${search}%`)
+    }
+    
+    const { data } = await dbQuery
     
     if (data) setClients(data)
     setLoading(false)
@@ -64,6 +70,7 @@ export function ClientCombobox({ onSelect, salonId }: ClientComboboxProps) {
   // Simple debounce
   const [timer, setTimer] = React.useState<NodeJS.Timeout>()
   const onInputChange = (val: string) => {
+      setQuery(val)
       clearTimeout(timer)
       const newTimer = setTimeout(() => {
         handleSearch(val)
@@ -82,7 +89,7 @@ export function ClientCombobox({ onSelect, salonId }: ClientComboboxProps) {
         >
           {value
             ? clients.find((client) => client.id === value)?.name || (
-                <span className="text-muted-foreground">{value} (Selected)</span> // Fallback
+                <span className="text-muted-foreground">{clients.find(c => c.id === value)?.name || 'Wybrano klienta'}</span> 
             )
             : "Wybierz klienta..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -93,10 +100,11 @@ export function ClientCombobox({ onSelect, salonId }: ClientComboboxProps) {
           <CommandInput 
             placeholder="Szukaj klienta..." 
             onValueChange={onInputChange} 
+            value={query}
           />
           <CommandList>
             {loading && <div className="py-6 text-center text-sm text-muted-foreground">Szukanie...</div>}
-            {!loading && clients.length === 0 && <CommandEmpty>Nie znaleziono klienta.</CommandEmpty>}
+            {!loading && clients.length === 0 && query.length > 0 && <CommandEmpty>Nie znaleziono klienta.</CommandEmpty>}
             <CommandGroup>
                 {clients.map((client) => (
                 <CommandItem

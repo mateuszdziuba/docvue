@@ -22,11 +22,16 @@ export function TokenFormClient({ token, form, clientName, filledBy }: TokenForm
     setIsSubmitting(true)
     setError(null)
 
+    // Find signature field logic
+    const fields = (form.schema as any)?.fields || []
+    const signatureField = fields.find((f: any) => f.type === 'signature' || f.type === 'Signature')
+    const signatureValue = signatureField ? formData[signatureField.name] : formData.signature
+
     const result = await submitClientForm({
       token,
       formData,
       filledBy,
-      signature: formData.signature as string || undefined,
+      signature: signatureValue as string || undefined,
     })
 
     if (result.error) {
