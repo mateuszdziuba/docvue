@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 
 export async function submitForm(data: {
   formId: string
@@ -97,8 +98,7 @@ export async function deleteSubmission(submissionId: string) {
     return { error: error.message }
   }
 
-  const { revalidatePath } = require('next/cache')
-  revalidatePath('/dashboard/submissions')
+  revalidatePath('/dashboard', 'layout')
   
   return { success: true }
 }
