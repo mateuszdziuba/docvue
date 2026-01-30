@@ -3,10 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useDebounce } from '@/hooks/use-debounce'
 
-// Simple debounce hook if not exists, but I'll implement simple save-on-blur or button for now to be safe without external deps
-// Actually, I'll use a "Zapisz" button for clarity.
+// Using a "Zapisz" button for clarity instead of debounce
 
 export function VisitNotes({ id, initialNotes }: { id: string, initialNotes: string | null }) {
   const [notes, setNotes] = useState(initialNotes || '')

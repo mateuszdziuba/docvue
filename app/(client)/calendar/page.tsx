@@ -21,19 +21,30 @@ export default async function ClientCalendarPage() {
     )
   }
 
-  // Get appointments
+  // Get appointments with treatment forms
   const { data: appointments } = await supabase
     .from('appointments')
     .select(`
       id,
       start_time,
       status,
-      treatments (name, duration_minutes, required_form_id),
-      submissions (id)
+      treatments (
+        name, 
+        duration_minutes,
+        treatment_forms (form_id)
+      )
     `)
     .eq('client_id', client.id)
     .gte('start_time', new Date().toISOString()) // Upcoming
     .order('start_time', { ascending: true })
+
+  // Get client submissions to check form completion
+  const { data: submissions } = await supabase
+    .from('submissions')
+    .select('form_id')
+    .eq('client_id', client.id)
+
+  const submittedFormIds = new Set(submissions?.map(s => s.form_id) || [])
 
   return (
     <div className="space-y-6">
@@ -43,7 +54,9 @@ export default async function ClientCalendarPage() {
         <div className="grid gap-4">
           {appointments.map((apt) => {
             const date = new Date(apt.start_time)
-            const needsForm = apt.treatments?.required_form_id && !apt.submission_id
+            const treatmentForms = (apt.treatments as any)?.treatment_forms || []
+            const requiredFormIds = treatmentForms.map((tf: any) => tf.form_id)
+            const needsForm = requiredFormIds.some((id: string) => !submittedFormIds.has(id))
             
             return (
               <Link 
@@ -66,13 +79,13 @@ export default async function ClientCalendarPage() {
                       {format(date, 'd MMMM yyyy', { locale: pl })}
                     </p>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                      {apt.treatments?.name}
+                      {(apt.treatments as any)?.name}
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {format(date, 'HH:mm')} ({apt.treatments?.duration_minutes} min)
+                      {format(date, 'HH:mm')} ({(apt.treatments as any)?.duration_minutes} min)
                     </p>
                   </div>
                   
@@ -81,8 +94,10 @@ export default async function ClientCalendarPage() {
                        ${apt.status === 'scheduled' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : ''}
                        ${apt.status === 'cancelled' ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' : ''}
                        ${apt.status === 'completed' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' : ''}
+                       ${apt.status === 'pending_forms' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : ''}
                      `}>
-                       {apt.status === 'scheduled' ? 'Zaplanowana' : apt.status}
+                       {apt.status === 'scheduled' ? 'Zaplanowana' : 
+                        apt.status === 'pending_forms' ? 'Wymaga ankiety' : apt.status}
                      </span>
                      
                      {needsForm && (
@@ -111,3 +126,4 @@ export default async function ClientCalendarPage() {
     </div>
   )
 }
+

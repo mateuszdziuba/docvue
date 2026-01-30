@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import Link from 'next/link'
+import { ClientFormButton } from './client-form-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -36,33 +37,24 @@ export default async function VisitDetailsPage({ params }: Props) {
   if (!appointment) notFound()
 
   // Verify ownership
-  if (appointment.clients.user_id !== user.id) {
+  if ((appointment.clients as any).user_id !== user.id) {
     return <div>Brak dostępu</div>
   }
 
   // Calculate missing forms
-  const requiredForms = appointment.treatments.treatment_forms?.map(tf => tf.forms) || []
+  const requiredForms = (appointment.treatments as any).treatment_forms?.map((tf: any) => tf.forms) || []
   
-  // Find which ones are NOT in submissions
-  // Note: appointment.submissions is a list of submissions LINKED to this appointment?
-  // Wait, the query `submissions (*)` on generic foreign key might rely on standard naming.
-  // Actually, appointments has `submission_id` (single). That's broken for multi.
-  
-  // We need to check if there are ANY submissions for this client and this form.
-  // Since we didn't fetch all client submissions, let's do a separate check or assume we need to fetch them.
-  // Better: Fetch client's recent submissions for these forms or check `client_forms` status?
-  
-  // Let's do a robust check: Fetch latest submissions for the required forms for this client.
+  // Fetch latest submissions for the required forms for this client
   const { data: latestSubmissions } = await supabase
     .from('submissions')
     .select('form_id, created_at')
-    .eq('client_id', appointment.clients.id)
-    .in('form_id', requiredForms.map(f => f?.id || ''))
+    .eq('client_id', (appointment.clients as any).id)
+    .in('form_id', requiredForms.map((f: any) => f?.id || ''))
     .order('created_at', { ascending: false })
 
   const submittedFormIds = new Set(latestSubmissions?.map(s => s.form_id) || [])
   
-  const missingForms = requiredForms.filter(f => f && !submittedFormIds.has(f.id))
+  const missingForms = requiredForms.filter((f: any) => f && !submittedFormIds.has(f.id))
   const needsForm = missingForms.length > 0
 
   return (
@@ -78,22 +70,22 @@ export default async function VisitDetailsPage({ params }: Props) {
         <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {appointment.treatments.name}
+              {(appointment.treatments as any).name}
             </h1>
             <p className="text-lg text-pink-600 font-medium">
               {format(new Date(appointment.start_time), 'EEEE, d MMMM yyyy, HH:mm', { locale: pl })}
             </p>
           </div>
           <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm font-medium">
-             {appointment.treatments.duration_minutes} min
+             {(appointment.treatments as any).duration_minutes} min
           </span>
         </div>
 
-        {appointment.treatments.description && (
+        {(appointment.treatments as any).description && (
           <div className="mb-8 prose dark:prose-invert">
             <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2">O zabiegu</h3>
             <p className="text-gray-600 dark:text-gray-300">
-              {appointment.treatments.description}
+              {(appointment.treatments as any).description}
             </p>
           </div>
         )}
@@ -123,14 +115,12 @@ export default async function VisitDetailsPage({ params }: Props) {
                  </div>
                  
                  <div className="space-y-3">
-                    {missingForms.map(form => (
+                    {missingForms.map((form: any) => (
                       form && (
                         <div key={form.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-red-100 dark:border-red-900/30">
                           <span className="font-medium text-gray-900 dark:text-white">{form.title}</span>
                           <ClientFormButton 
-                             clientId={appointment.clients.id} 
                              formId={form.id} 
-                             salonId={appointment.salon_id}
                              variant="sm"
                           />
                         </div>
@@ -157,5 +147,3 @@ export default async function VisitDetailsPage({ params }: Props) {
     </div>
   )
 }
-
-import { ClientFormButton } from './client-form-button'

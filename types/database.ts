@@ -81,7 +81,6 @@ export interface Appointment {
   salon_id: string
   client_id: string
   treatment_id: string
-  treatment_id: string
   start_time: string
   status: 'scheduled' | 'completed' | 'cancelled' | 'pending_forms'
   notes: string | null

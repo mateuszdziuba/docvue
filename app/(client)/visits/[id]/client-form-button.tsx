@@ -1,29 +1,36 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createFormAssignment } from '@/actions/client-portal'
 
 export function ClientFormButton({ 
-  clientId, 
   formId, 
-  salonId,
   className = "",
   variant = 'default'
 }: { 
-  clientId: string, 
   formId: string, 
-  salonId: string,
   className?: string,
   variant?: 'default' | 'sm'
 }) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  // ... rest of hook logic stays same ...
-  
-  // Logic ...
+
+  const handleClick = async () => {
+    setIsLoading(true)
+    try {
+      const result = await createFormAssignment(formId)
+      
+      if (result.token) {
+        router.push(`/f/${result.token}`)
+      }
+    } catch (error) {
+      toast.error('Wystąpił błąd')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <button 
