@@ -229,6 +229,21 @@ export async function submitClientForm(data: {
 export async function deleteClientForm(clientFormId: string) {
   const supabase = await createClient()
   
+  // 1. Delete associated submissions first (simulating Cascade Delete)
+  const { error: subError } = await supabase
+    .from('submissions')
+    .delete()
+    .eq('client_form_id', clientFormId)
+
+  if (subError) {
+    console.error('Error deleting submission:', subError)
+    // We continue to delete client_form even if submission delete fails? 
+    // Usually no, but if it fails it might be perms. 
+    // But failing here is safer than leaving data.
+    return { error: 'Błąd podczas usuwania odpowiedzi: ' + subError.message }
+  }
+
+  // 2. Delete the client form assignment
   const { error } = await supabase
     .from('client_forms')
     .delete()
@@ -239,5 +254,8 @@ export async function deleteClientForm(clientFormId: string) {
   }
 
   revalidatePath('/dashboard/clients')
+  // Also revalidate dashboard to update visits statuses
+  revalidatePath('/dashboard', 'layout')
+  
   return { success: true }
 }
