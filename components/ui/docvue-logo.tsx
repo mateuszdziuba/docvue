@@ -2,29 +2,53 @@
 
 /**
  * Docvue Logo Icon Component
- * Rose-gold petal/leaf design
+ * Ocean teal eye/checkmark design
  */
 export function DocvueLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
     <svg 
       className={className}
-      viewBox="0 0 50 50" 
+      viewBox="0 0 90 65" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="roseGoldGradient" x1="0%" y1="0%" x2="100%" y2="50%">
-          <stop offset="0%" stopColor="#E2A47F" />
-          <stop offset="50%" stopColor="#C88A65" />
-          <stop offset="100%" stopColor="#E2A47F" />
+        <linearGradient id="oceanGradientIcon" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#009688" />
+          <stop offset="100%" stopColor="#4DB6AC" />
         </linearGradient>
       </defs>
-      <path 
-        d="M10 22 C 10 22, 16 28, 22 33 C 25 35, 28 32, 31 29 C 40 19, 50 6, 59 3 C 62 2, 65 6, 62 11 C 56 22, 44 35, 34 41 C 25 47, 16 41, 10 35 C 4 29, 0 19, 10 22 Z" 
-        fill="url(#roseGoldGradient)"
-        transform="scale(0.75) translate(5, 8)"
-      />
-      <circle cx="38" cy="12" r="2" fill="white" opacity="0.6"/>
+      <g transform="translate(0, 0)">
+        <path 
+          d="M 85 30 C 85 30, 75 5, 45 5 C 15 5, 5 30, 5 30 C 5 30, 15 60, 45 60 C 75 60, 85 30, 85 30 Z" 
+          fill="url(#oceanGradientIcon)" 
+          opacity="0.15"
+        />
+        <path 
+          d="M 5 30 C 5 30, 15 60, 45 60 C 65 60, 80 45, 85 30" 
+          stroke="url(#oceanGradientIcon)" 
+          strokeWidth="5" 
+          strokeLinecap="round" 
+          fill="none"
+        />
+        <path 
+          d="M 5 30 C 5 30, 15 5, 45 5 C 75 5, 85 30, 85 30" 
+          stroke="url(#oceanGradientIcon)" 
+          strokeWidth="5" 
+          strokeLinecap="round" 
+          fill="none"
+        />
+        <g transform="translate(32, 22)">
+          <path 
+            d="M 0 12 L 10 22 L 30 0" 
+            stroke="url(#oceanGradientIcon)" 
+            strokeWidth="6" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            fill="none"
+          />
+        </g>
+      </g>
     </svg>
   )
 }
@@ -36,29 +60,52 @@ export function DocvueLogoFull({ className = "h-10" }: { className?: string }) {
   return (
     <svg 
       className={className}
-      viewBox="0 0 320 80" 
+      viewBox="0 0 320 85" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="roseGoldGradientFull" x1="0%" y1="0%" x2="100%" y2="50%">
-          <stop offset="0%" stopColor="#E2A47F" />
-          <stop offset="50%" stopColor="#C88A65" />
-          <stop offset="100%" stopColor="#E2A47F" />
+        <linearGradient id="oceanGradientFull" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#009688" />
+          <stop offset="100%" stopColor="#4DB6AC" />
         </linearGradient>
       </defs>
 
-      <g transform="translate(15, 10)">
+      <g transform="translate(10, 10)">
         <path 
-          d="M15 35 C 15 35, 25 45, 35 52 C 40 55, 45 50, 50 45 C 65 30, 80 10, 95 5 C 100 3, 105 10, 100 18 C 90 35, 70 55, 55 65 C 40 75, 25 65, 15 55 C 5 45, 0 30, 15 35 Z" 
-          fill="url(#roseGoldGradientFull)"
+          d="M 85 30 C 85 30, 75 5, 45 5 C 15 5, 5 30, 5 30 C 5 30, 15 60, 45 60 C 75 60, 85 30, 85 30 Z" 
+          fill="url(#oceanGradientFull)" 
+          opacity="0.15"
         />
-        <circle cx="90" cy="15" r="3" fill="white" opacity="0.6"/>
+        <path 
+          d="M 5 30 C 5 30, 15 60, 45 60 C 65 60, 80 45, 85 30" 
+          stroke="url(#oceanGradientFull)" 
+          strokeWidth="5" 
+          strokeLinecap="round" 
+          fill="none"
+        />
+        <path 
+          d="M 5 30 C 5 30, 15 5, 45 5 C 75 5, 85 30, 85 30" 
+          stroke="url(#oceanGradientFull)" 
+          strokeWidth="5" 
+          strokeLinecap="round" 
+          fill="none"
+        />
+        <g transform="translate(32, 22)">
+          <path 
+            d="M 0 12 L 10 22 L 30 0" 
+            stroke="url(#oceanGradientFull)" 
+            strokeWidth="6" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            fill="none"
+          />
+        </g>
       </g>
 
-      <g transform="translate(125, 55)" fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif" fontSize="48" fontWeight="600" letterSpacing="-1">
-        <text x="0" y="0" fill="#33203A">doc</text>
-        <text x="85" y="0" fill="url(#roseGoldGradientFull)">vue</text>
+      <g transform="translate(115, 58)" fontFamily="'Poppins', 'Helvetica Neue', sans-serif" fontSize="48" fontWeight="700" letterSpacing="-1">
+        <text x="0" y="0" fill="#0A2342">doc</text>
+        <text x="85" y="0" fill="url(#oceanGradientFull)">vue</text>
       </g>
     </svg>
   )

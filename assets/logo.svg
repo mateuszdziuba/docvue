@@ -1,20 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 85" fill="none">
   <defs>
-    <linearGradient id="roseGoldGradient" x1="0%" y1="0%" x2="100%" y2="50%">
-      <stop offset="0%" style="stop-color:#E2A47F;stop-opacity:1" /> <stop offset="50%" style="stop-color:#C88A65;stop-opacity:1" /> <stop offset="100%" style="stop-color:#E2A47F;stop-opacity:1" /> </linearGradient>
-    
-    <solidColor id="aubergine">
-        <stop stop-color="#33203A"/>
-    </solidColor>
+    <linearGradient id="oceanGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#009688;stop-opacity:1" /> <stop offset="100%" style="stop-color:#4DB6AC;stop-opacity:1" /> </linearGradient>
   </defs>
 
-  <g transform="translate(15, 10)">
-    <path d="M15 35 C 15 35, 25 45, 35 52 C 40 55, 45 50, 50 45 C 65 30, 80 10, 95 5 C 100 3, 105 10, 100 18 C 90 35, 70 55, 55 65 C 40 75, 25 65, 15 55 C 5 45, 0 30, 15 35 Z" fill="url(#roseGoldGradient)"/>
-    <circle cx="90" cy="15" r="3" fill="white" opacity="0.6"/>
+  <g transform="translate(10, 10)">
+    
+    <path d="M 85 30 C 85 30, 75 5, 45 5 C 15 5, 5 30, 5 30 C 5 30, 15 60, 45 60 C 75 60, 85 30, 85 30 Z" fill="url(#oceanGradient)" opacity="0.15"/>
+    <path d="M 5 30 C 5 30, 15 60, 45 60 C 65 60, 80 45, 85 30" stroke="url(#oceanGradient)" stroke-width="5" stroke-linecap="round" fill="none"/> <path d="M 5 30 C 5 30, 15 5, 45 5 C 75 5, 85 30, 85 30" stroke="url(#oceanGradient)" stroke-width="5" stroke-linecap="round" fill="none"/>  <g transform="translate(32, 22)">
+        <path d="M 0 12 L 10 22 L 30 0" stroke="url(#oceanGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
   </g>
 
-  <g transform="translate(125, 55)" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="48" font-weight="600" letter-spacing="-1">
-    <text x="0" y="0" fill="#33203A">doc</text>
-    <text x="85" y="0" fill="url(#roseGoldGradient)">vue</text>
+  <g transform="translate(115, 58)" font-family="'Poppins', 'Helvetica Neue', sans-serif" font-size="48" font-weight="700" letter-spacing="-1">
+    <text x="0" y="0" fill="#0A2342">doc</text>
+    <text x="85" y="0" fill="url(#oceanGradient)">vue</text>
   </g>
 </svg>
