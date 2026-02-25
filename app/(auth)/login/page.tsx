@@ -4,9 +4,11 @@ import { DocvueLogo } from '@/components/ui/docvue-logo'
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="bg-card rounded-xl border border-border/60 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
+      {/* Subtle background texture */}
+      <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      <div className="w-full max-w-sm relative z-10">
+        <div className="bg-card rounded-2xl border border-border/60 p-8 shadow-sm">
           {/* Logo/Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center mb-4">
@@ -26,7 +28,7 @@ export default function LoginPage() {
                 name="email"
                 type="email"
                 required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
                 placeholder="twoj@email.pl"
               />
             </div>
@@ -40,14 +42,14 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
                 placeholder="••••••••"
               />
             </div>
 
             <button
               formAction={login}
-              className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors text-sm"
+              className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl transition-all duration-300 text-sm hover:shadow-md hover:shadow-primary/20"
             >
               Zaloguj się
             </button>

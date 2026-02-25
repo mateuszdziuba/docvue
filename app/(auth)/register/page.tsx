@@ -4,9 +4,10 @@ import { DocvueLogo } from '@/components/ui/docvue-logo'
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="bg-card rounded-xl border border-border/60 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      <div className="w-full max-w-sm relative z-10">
+        <div className="bg-card rounded-2xl border border-border/60 p-8 shadow-sm">
           {/* Logo/Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
@@ -43,7 +44,7 @@ export default function RegisterPage() {
                 name="email"
                 type="email"
                 required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
                 placeholder="kontakt@beautystudio.pl"
               />
             </div>
@@ -56,7 +57,7 @@ export default function RegisterPage() {
                 id="phone"
                 name="phone"
                 type="tel"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
                 placeholder="+48 123 456 789"
               />
             </div>
@@ -71,14 +72,14 @@ export default function RegisterPage() {
                 type="password"
                 required
                 minLength={6}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
                 placeholder="Minimum 6 znaków"
               />
             </div>
 
             <button
               formAction={signup}
-              className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors text-sm"
+              className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl transition-all duration-300 text-sm hover:shadow-md hover:shadow-primary/20"
             >
               Zarejestruj gabinet
             </button>
