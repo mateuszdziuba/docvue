@@ -1,33 +1,31 @@
-import Link from 'next/link'
+import { DocvueLogo } from '@/components/ui/docvue-logo'
 
 export default function FormSuccessPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900/20 flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="max-w-sm w-full text-center">
         {/* Success Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 mb-6 shadow-lg">
-          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[hsl(150,45%,45%)]/10 text-[hsl(150,45%,45%)] mb-6">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        <h1 className="text-2xl font-bold text-foreground mb-3">
           Dziękujemy!
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+        <p className="text-muted-foreground mb-8">
           Formularz został pomyślnie wypełniony i zapisany.
         </p>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground/60">
           Możesz teraz zamknąć tę stronę.
         </p>
 
         {/* Footer */}
-        <div className="mt-12 text-sm text-gray-500 dark:text-gray-400">
-          Powered by <span className="font-semibold">
-            <span className="text-gray-700">doc</span>
-            <span className="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">vue</span>
-          </span>
+        <div className="mt-12 text-xs text-muted-foreground">
+          Powered by{' '}
+          <DocvueLogo className="text-xs inline-flex" />
         </div>
       </div>
     </div>

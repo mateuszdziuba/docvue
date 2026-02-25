@@ -10,7 +10,7 @@ export default async function ClientProfilePage() {
 
   const { data: client } = await supabase.from('clients').select('*').eq('user_id', user.id).single()
 
-  if (!client) return <div>Nie znaleziono profilu</div>
+  if (!client) return <div className="text-foreground">Nie znaleziono profilu</div>
 
   const { data: history } = await supabase
     .from('appointments')
@@ -24,33 +24,33 @@ export default async function ClientProfilePage() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-        <div className="h-16 w-16 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+      <div className="bg-card rounded-xl p-6 border border-border/60 flex items-center gap-4">
+        <div className="h-14 w-14 bg-primary/10 rounded-full flex items-center justify-center text-primary text-xl font-bold">
           {client.name.charAt(0)}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{client.name}</h1>
-          <p className="text-gray-500">{client.email}</p>
-          <p className="text-gray-500">{client.phone}</p>
+          <h1 className="text-xl font-bold text-foreground">{client.name}</h1>
+          <p className="text-muted-foreground text-sm">{client.email}</p>
+          <p className="text-muted-foreground text-sm">{client.phone}</p>
         </div>
       </div>
 
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Historia wizyt</h2>
-        <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-3">Historia wizyt</h2>
+        <div className="bg-card rounded-xl overflow-hidden border border-border/60">
           {history && history.length > 0 ? (
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="divide-y divide-border/60">
               {history.map((apt) => (
                 <div key={apt.id} className="p-4 flex justify-between items-center">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{apt.treatments?.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-foreground text-sm">{apt.treatments?.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {format(new Date(apt.start_time), 'd MMMM yyyy, HH:mm', { locale: pl })}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    apt.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                    apt.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                    apt.status === 'completed' ? 'bg-[hsl(150,45%,45%)]/10 text-[hsl(150,45%,45%)]' : 
+                    apt.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground'
                   }`}>
                     {apt.status}
                   </span>
@@ -58,7 +58,7 @@ export default async function ClientProfilePage() {
               ))}
             </div>
           ) : (
-             <div className="p-6 text-center text-gray-500">Brak historii wizyt</div>
+             <div className="p-6 text-center text-muted-foreground text-sm">Brak historii wizyt</div>
           )}
         </div>
       </div>

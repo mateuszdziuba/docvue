@@ -20,27 +20,13 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Shadcn Form Builder',
-  description: 'Shadcn Form Builder',
+  title: 'docvue — Formularze dla gabinetów beauty',
+  description: 'Twórz profesjonalne formularze zgód i ankiety dla Twojego gabinetu kosmetycznego.',
   openGraph: {
-    images: [
-      {
-        url: 'https://www.shadcn-form.com/meta.png',
-        width: 600,
-        height: 315,
-      },
-    ],
     type: 'website',
-    siteName: 'Shadcn Form Builder',
+    siteName: 'docvue',
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Shadcn Form Builder',
-    description: 'Shadcn Form Builder',
-    images: ['https://www.shadcn-form.com/meta.png'],
-    creator: '@strad3r',
-  },
-  keywords: ['form', 'builder', 'shadcn', 'react'],
+  keywords: ['formularze', 'gabinet', 'beauty', 'zgody', 'ankiety', 'docvue'],
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
@@ -79,7 +65,7 @@ export default function RootLayout({
         >
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || ''} />
           <div>
-            <NextTopLoader color="#FF9432" showSpinner={false} />
+            <NextTopLoader color="hsl(172, 50%, 36%)" showSpinner={false} />
             <Toaster />
             <AllProviders>
               <main className="min-h-[70vh]">{children}</main>

@@ -15,8 +15,8 @@ export default async function TreatmentsPage({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Zabiegi</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Zabiegi</h1>
+        <p className="text-muted-foreground text-sm mt-1">
           Zarządzaj ofertą zabiegów i wymaganiami dotyczącymi formularzy
         </p>
       </div>
@@ -30,7 +30,7 @@ export default async function TreatmentsPage({
 
 function TreatmentsListSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {[1, 2, 3].map((i) => (
         <Skeleton key={i} className="h-24 w-full rounded-xl" />
       ))}
@@ -61,7 +61,6 @@ async function FilteredTreatmentsList({ query }: { query: string }) {
 
   const { data: treatments } = await request
 
-  // Fetch available forms for the dropdown in add/edit dialog
   const { data: forms } = await supabase
     .from('forms')
     .select('id, title')

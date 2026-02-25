@@ -1,13 +1,14 @@
 'use client'
 
 /**
- * docvue Logo - Text Only
+ * docvue Logo — Text-based brand mark
+ * Uses brand teal for "vue" instead of generic gradients
  */
 export function DocvueLogo({ className = "text-xl" }: { className?: string }) {
   return (
-    <span className={`font-bold ${className}`}>
-      <span className="text-gray-900 dark:text-white">doc</span>
-      <span className="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">vue</span>
+    <span className={`font-bold tracking-tight ${className}`}>
+      <span className="text-foreground">doc</span>
+      <span className="text-primary">vue</span>
     </span>
   )
 }

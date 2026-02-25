@@ -18,7 +18,7 @@ export default async function AdminLayout({
 
   return (
     <LockProvider>
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex h-screen bg-background">
         {/* Desktop Sidebar */}
         <Sidebar />
         

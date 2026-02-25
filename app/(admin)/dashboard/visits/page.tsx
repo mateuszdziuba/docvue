@@ -11,7 +11,6 @@ export default async function VisitsPage({ searchParams }: Props) {
   const { q } = await searchParams
   const supabase = await createClient()
 
-  // Get current user's salon
   const { data: { user } } = await supabase.auth.getUser()
   const { data: salon } = await supabase.from('salons').select('id').eq('user_id', user?.id).single()
 
@@ -25,12 +24,7 @@ export default async function VisitsPage({ searchParams }: Props) {
     .eq('salon_id', salon?.id)
     .order('start_time', { ascending: false })
 
-  // Simple search implementation
-  // Note: Complex OR across relations is hard in standard Supabase query without View.
-  // For now, if q is present, we'll try to filter by client name using the !inner join hint on clients
-  // Advanced Search Logic (Backend)
   if (q) {
-      // 1. Find matching Client IDs
       const { data: matchingClients } = await supabase
           .from('clients')
           .select('id')
@@ -38,7 +32,6 @@ export default async function VisitsPage({ searchParams }: Props) {
 
       const clientIds = matchingClients?.map(c => c.id) || []
 
-      // 2. Find matching Treatment IDs
       const { data: matchingTreatments } = await supabase
           .from('treatments')
           .select('id')
@@ -46,9 +39,7 @@ export default async function VisitsPage({ searchParams }: Props) {
 
       const treatmentIds = matchingTreatments?.map(t => t.id) || []
 
-      // 3. Filter Appointments
       if (clientIds.length > 0 || treatmentIds.length > 0) {
-          // Construct explicit OR filter string
           const conditions = []
           if (clientIds.length > 0) conditions.push(`client_id.in.(${clientIds.join(',')})`)
           if (treatmentIds.length > 0) conditions.push(`treatment_id.in.(${treatmentIds.join(',')})`)
@@ -57,8 +48,6 @@ export default async function VisitsPage({ searchParams }: Props) {
              query = query.or(conditions.join(','))
           }
       } else {
-          // If search yielded no IDs, we should return empty (unless partial match logic is desired, but strict matching is safer)
-          // Effectively force empty result
           query = query.eq('id', '00000000-0000-0000-0000-000000000000') 
       }
   }
@@ -70,68 +59,68 @@ export default async function VisitsPage({ searchParams }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Wszystkie wizyty</h1>
+        <h1 className="text-2xl font-bold text-foreground">Wszystkie wizyty</h1>
       </div>
 
       {/* Search & Filter */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="bg-card p-4 rounded-xl border border-border/60">
         <form className="flex gap-2">
           <input 
             name="q" 
             defaultValue={q}
             placeholder="Szukaj po nazwisku klienta lub nazwie zabiegu..." 
-            className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
+            className="flex-1 px-3.5 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all"
           />
-          <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700">
+          <button type="submit" className="px-5 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
             Szukaj
           </button>
         </form>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredVisits && filteredVisits.length > 0 ? filteredVisits.map((visit: any) => {
            const date = new Date(visit.start_time)
            return (
              <Link 
                key={visit.id} 
                href={`/dashboard/visits/${visit.id}`}
-               className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all group"
+               className="flex items-center justify-between p-4 bg-card rounded-xl border border-border/60 hover:border-border transition-colors group"
              >
                 <div className="flex items-center gap-4">
-                  <div className="flex flex-col items-center justify-center w-14 h-14 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-700 dark:text-purple-300 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40 transition-colors">
-                    <span className="text-xs font-bold uppercase">{format(date, 'MMM', { locale: pl })}</span>
-                    <span className="text-xl font-bold">{date.getDate()}</span>
+                  <div className="flex flex-col items-center justify-center w-12 h-12 bg-primary/8 rounded-lg text-primary">
+                    <span className="text-[10px] font-bold uppercase">{format(date, 'MMM', { locale: pl })}</span>
+                    <span className="text-lg font-bold leading-none">{date.getDate()}</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg">{visit.clients.name}</h3>
-                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <h3 className="font-semibold text-foreground">{visit.clients.name}</h3>
+                    <p className="text-muted-foreground text-sm flex items-center gap-2">
                        <span>{visit.treatments?.name}</span>
-                       <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                       <span className="w-1 h-1 rounded-full bg-border" />
                        <span>{format(date, 'HH:mm')}</span>
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium
-                    ${visit.status === 'scheduled' ? 'bg-blue-50 text-blue-700' : ''}
-                    ${visit.status === 'completed' ? 'bg-green-50 text-green-700' : ''}
-                    ${visit.status === 'cancelled' ? 'bg-red-50 text-red-700' : ''}
-                    ${visit.status === 'pending_forms' ? 'bg-orange-50 text-orange-700' : ''}
+                <div className="flex items-center gap-3">
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide
+                    ${visit.status === 'scheduled' ? 'bg-[hsl(220,50%,50%)]/10 text-[hsl(220,50%,50%)]' : ''}
+                    ${visit.status === 'completed' ? 'bg-[hsl(150,45%,45%)]/10 text-[hsl(150,45%,45%)]' : ''}
+                    ${visit.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : ''}
+                    ${visit.status === 'pending_forms' ? 'bg-accent/10 text-accent-foreground' : ''}
                   `}>
                     {visit.status === 'pending_forms' ? 'Wymaga ankiety' : 
                      visit.status === 'scheduled' ? 'Zaplanowana' : 
                      visit.status === 'completed' ? 'Zakończona' : visit.status}
                   </span>
-                  <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
              </Link>
            )
         }) : (
-          <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-             <p className="text-gray-500">Brak wizyt spełniających kryteria.</p>
+          <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
+             <p className="text-muted-foreground text-sm">Brak wizyt spełniających kryteria.</p>
           </div>
         )}
       </div>
