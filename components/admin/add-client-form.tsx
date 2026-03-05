@@ -69,7 +69,7 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
       
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Imię i nazwisko *
           </label>
           <input
@@ -77,11 +77,11 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Anna Kowalska"
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Telefon *
           </label>
           <input
@@ -89,14 +89,14 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+48 123 456 789"
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all"
           />
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Email (opcjonalnie)
           </label>
           <input
@@ -104,11 +104,11 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="anna@example.com"
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Data urodzenia
           </label>
           <DatePicker 
@@ -120,7 +120,7 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-foreground mb-1">
           Notatki
         </label>
         <textarea
@@ -128,7 +128,7 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Dodatkowe informacje o kliencie..."
           rows={2}
-          className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all"
         />
       </div>
 
@@ -137,7 +137,7 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            className="px-4 py-2 text-muted-foreground hover:text-foreground"
           >
             Anuluj
           </button>
@@ -145,7 +145,7 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+          className="px-6 py-2 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors disabled:opacity-50"
         >
           {isSubmitting ? 'Dodawanie...' : 'Dodaj klienta'}
         </button>

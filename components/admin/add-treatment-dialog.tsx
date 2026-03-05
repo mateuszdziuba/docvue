@@ -74,7 +74,7 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0">
+        <Button>
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -87,32 +87,32 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <label className="text-sm font-medium text-foreground">
               Nazwa zabiegu
             </label>
             <input
               name="name"
               required
               placeholder="np. Konsultacja dermatologiczna"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <label className="text-sm font-medium text-foreground">
               Opis (opcjonalnie)
             </label>
             <textarea
               name="description"
               rows={3}
               placeholder="Krótki opis zabiegu..."
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <label className="text-sm font-medium text-foreground">
                 Czas trwania (min)
               </label>
               <input
@@ -121,11 +121,11 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
                 defaultValue={60}
                 required
                 min={1}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <label className="text-sm font-medium text-foreground">
                 Cena (PLN)
               </label>
               <input
@@ -133,18 +133,18 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
                 type="number"
                 step="0.01"
                 placeholder="0.00"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background"
               />
             </div>
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <label className="text-sm font-medium text-foreground">
               Wymagane formularze
             </label>
             <div className="space-y-2 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-40 overflow-y-auto">
               {forms.length === 0 ? (
-                <p className="text-sm text-gray-500">Brak dostępnych formularzy.</p>
+                <p className="text-sm text-muted-foreground">Brak dostępnych formularzy.</p>
               ) : (
                 forms.map((form) => (
                   <div key={form.id} className="flex items-center space-x-2">
@@ -153,16 +153,16 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
                       name="form_ids"
                       value={form.id}
                       id={`form-${form.id}`}
-                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      className="rounded border-border text-primary focus:ring-ring"
                     />
-                    <label htmlFor={`form-${form.id}`} className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <label htmlFor={`form-${form.id}`} className="text-sm text-foreground cursor-pointer">
                       {form.title}
                     </label>
                   </div>
                 ))
               )}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Zaznacz formularze, które klient musi wypełnić przed wizytą.
             </p>
           </div>

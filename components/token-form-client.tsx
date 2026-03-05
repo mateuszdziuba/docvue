@@ -25,11 +25,21 @@ export function TokenFormClient({ token, form, clientName, filledBy }: TokenForm
     // Find signature field logic
     const fields = (form.schema as any)?.fields || []
     const signatureField = fields.find((f: any) => f.type === 'signature' || f.type === 'Signature')
-    const signatureValue = signatureField ? formData[signatureField.name] : formData.signature
+    
+    // Extract signature from either the custom field or the global fallback field
+    const signatureValue = signatureField && formData[signatureField.name] 
+      ? formData[signatureField.name] 
+      : formData.signature
+
+    // Remove the global signature from formData JSON if it exists there
+    const cleanFormData = { ...formData }
+    if (cleanFormData.signature !== undefined && !signatureField) {
+      delete cleanFormData.signature
+    }
 
     const result = await submitClientForm({
       token,
-      formData,
+      formData: cleanFormData,
       filledBy,
       signature: signatureValue as string || undefined,
     })

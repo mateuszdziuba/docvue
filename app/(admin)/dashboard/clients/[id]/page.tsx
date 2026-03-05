@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ClientDetailClient } from '@/components/admin/client-detail-client'
 import { EditClientDialog } from '@/components/admin/edit-client-dialog'
 import { AddAppointmentDialog } from '@/components/admin/add-appointment-dialog'
+import { BeautyPlanSection } from '@/components/admin/beauty-plan-section'
 import { Suspense } from 'react'
 
 interface Props {
@@ -160,6 +161,12 @@ export default async function ClientDetailPage({ params }: Props) {
         availableForms={availableForms || []}
         submissions={submissions || []}
       />
+
+      <div className="mt-8">
+        <Suspense fallback={<div className="h-48 rounded-2xl bg-muted animate-pulse" />}>
+          <BeautyPlanSection clientId={client.id} salonId={client.salon_id} />
+        </Suspense>
+      </div>
 
       <div className="mt-8">
          <div className="flex items-center justify-between mb-4">

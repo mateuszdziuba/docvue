@@ -4,22 +4,67 @@ import { DocvueLogo } from '@/components/ui/docvue-logo'
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-      <div className="w-full max-w-sm relative z-10">
-        <div className="bg-card rounded-2xl border border-border/60 p-8 shadow-sm">
-          {/* Logo/Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <h1 className="text-xl font-bold text-foreground">Zarejestruj Gabinet</h1>
-            <p className="text-muted-foreground text-sm mt-1">Utwórz konto dla swojego salonu</p>
+    <div className="min-h-screen flex bg-background">
+      {/* Left brand panel — desktop only */}
+      <div className="hidden lg:flex lg:w-[45%] bg-foreground flex-col justify-between p-12 relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="relative">
+          <DocvueLogo className="text-2xl" />
+          <p className="text-white/40 text-xs mt-1">dla gabinetów kosmetycznych</p>
+        </div>
+
+        <div className="relative space-y-6">
+          <div className="space-y-3">
+            {[
+              { icon: '✓', text: 'Formularze zgód i ankiety online' },
+              { icon: '✓', text: 'Podpisy cyfrowe na telefonie klienta' },
+              { icon: '✓', text: 'Harmonogram wizyt i zarządzanie klientami' },
+              { icon: '✓', text: 'Zdjęcia przed/po zabiegu' },
+            ].map((item) => (
+              <div key={item.text} className="flex items-start gap-3">
+                <span className="text-primary text-sm font-bold mt-0.5">{item.icon}</span>
+                <span className="text-white/80 text-sm leading-relaxed">{item.text}</span>
+              </div>
+            ))}
           </div>
 
-          {/* Register Form */}
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-white/90 text-sm font-medium">14 dni Pro za darmo</p>
+            <p className="text-white/40 text-xs mt-0.5">Bez karty kredytowej. Anuluj kiedy chcesz.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 relative">
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+
+        <div className="w-full max-w-sm relative">
+          {/* Mobile logo */}
+          <div className="lg:hidden text-center mb-8">
+            <DocvueLogo className="text-2xl" />
+          </div>
+
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Zarejestruj gabinet</h1>
+            <p className="text-muted-foreground text-sm mt-1.5">Konfiguracja zajmie 2 minuty</p>
+          </div>
+
           <form className="space-y-4">
             <div>
               <label htmlFor="salonName" className="block text-sm font-medium text-foreground mb-1.5">
@@ -30,7 +75,8 @@ export default function RegisterPage() {
                 name="salonName"
                 type="text"
                 required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all text-sm"
+                autoComplete="organization"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200 text-sm placeholder:text-muted-foreground/60"
                 placeholder="Beauty Studio Anna"
               />
             </div>
@@ -44,20 +90,23 @@ export default function RegisterPage() {
                 name="email"
                 type="email"
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
+                autoComplete="email"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200 text-sm placeholder:text-muted-foreground/60"
                 placeholder="kontakt@beautystudio.pl"
               />
             </div>
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-1.5">
-                Telefon <span className="text-muted-foreground font-normal">(opcjonalnie)</span>
+                Telefon{' '}
+                <span className="text-muted-foreground font-normal text-xs">(opcjonalnie)</span>
               </label>
               <input
                 id="phone"
                 name="phone"
                 type="tel"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
+                autoComplete="tel"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200 text-sm placeholder:text-muted-foreground/60"
                 placeholder="+48 123 456 789"
               />
             </div>
@@ -72,28 +121,26 @@ export default function RegisterPage() {
                 type="password"
                 required
                 minLength={6}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 text-sm"
+                autoComplete="new-password"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200 text-sm placeholder:text-muted-foreground/60"
                 placeholder="Minimum 6 znaków"
               />
             </div>
 
             <button
               formAction={signup}
-              className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl transition-all duration-300 text-sm hover:shadow-md hover:shadow-primary/20"
+              className="w-full py-2.5 bg-foreground text-background font-semibold rounded-xl hover:bg-foreground/90 transition-all duration-200 text-sm mt-2"
             >
               Zarejestruj gabinet
             </button>
           </form>
 
-          {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-muted-foreground text-sm">
-              Masz już konto?{' '}
-              <Link href="/login" className="text-primary hover:text-primary/80 font-medium">
-                Zaloguj się
-              </Link>
-            </p>
-          </div>
+          <p className="text-muted-foreground text-sm text-center mt-6">
+            Masz już konto?{' '}
+            <Link href="/login" className="text-primary hover:text-primary/80 font-medium transition-colors">
+              Zaloguj się
+            </Link>
+          </p>
         </div>
       </div>
     </div>

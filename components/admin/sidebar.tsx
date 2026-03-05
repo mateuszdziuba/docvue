@@ -2,25 +2,25 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { logout } from '@/actions/auth'
-import { createClient } from '@/lib/supabase/client'
 import { SettingsDialog } from '@/components/admin/settings-dialog'
 import { DocvueLogo } from '@/components/ui/docvue-logo'
+import type { Salon } from '@/types/database'
 
 const navigation = [
-  { 
-    label: 'Dashboard', 
-    href: '/dashboard', 
+  {
+    label: 'Dashboard',
+    href: '/dashboard',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
     )
   },
-  { 
-    label: 'Klienci', 
-    href: '/dashboard/clients', 
+  {
+    label: 'Klienci',
+    href: '/dashboard/clients',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -45,18 +45,18 @@ const navigation = [
     ),
     href: '/dashboard/treatments',
   },
-  { 
-    label: 'Formularze', 
-    href: '/dashboard/forms', 
+  {
+    label: 'Formularze',
+    href: '/dashboard/forms',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     )
   },
-  { 
-    label: 'Odpowiedzi', 
-    href: '/dashboard/submissions', 
+  {
+    label: 'Odpowiedzi',
+    href: '/dashboard/submissions',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -66,7 +66,7 @@ const navigation = [
 ]
 
 // Desktop Sidebar
-export function Sidebar() {
+export function Sidebar({ salon }: { salon: Salon | null }) {
   const pathname = usePathname()
 
   return (
@@ -79,8 +79,8 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navigation.map((item) => {
-          const isActive = item.href === '/dashboard' 
-            ? pathname === '/dashboard' 
+          const isActive = item.href === '/dashboard'
+            ? pathname === '/dashboard'
             : pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
@@ -101,39 +101,22 @@ export function Sidebar() {
 
       {/* User Menu */}
       <div className="p-3 border-t border-border">
-        <UserMenu />
+        <UserMenu salon={salon} />
       </div>
     </div>
   )
 }
 
 // Mobile Top Header
-export function MobileHeader() {
-  const [salon, setSalon] = useState<any>(null)
+export function MobileHeader({ salon }: { salon: Salon | null }) {
   const [menuOpen, setMenuOpen] = useState(false)
-
-  useEffect(() => {
-    const fetchSalon = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase
-          .from('salons')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-        setSalon(data)
-      }
-    }
-    fetchSalon()
-  }, [])
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border md:hidden safe-area-pt">
         <div className="flex items-center justify-between h-14 px-4">
           <DocvueLogo className="text-xl" />
-          <button 
+          <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="p-2 rounded-lg text-muted-foreground hover:bg-secondary"
           >
@@ -165,7 +148,7 @@ export function MobileHeader() {
 
             <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border">
               {salon && (
-                <SettingsDialog 
+                <SettingsDialog
                   salon={salon}
                   trigger={
                     <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-muted-foreground hover:bg-secondary rounded-lg">
@@ -197,29 +180,12 @@ export function MobileHeader() {
   )
 }
 
-function UserMenu() {
-  const [salon, setSalon] = useState<any>(null)
+function UserMenu({ salon }: { salon: Salon | null }) {
   const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    const fetchSalon = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase
-          .from('salons')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-        setSalon(data)
-      }
-    }
-    fetchSalon()
-  }, [])
 
   return (
     <div className="relative">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors text-sm"
       >
@@ -228,7 +194,7 @@ function UserMenu() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         </div>
-        <span className="flex-1 text-left truncate">Moje konto</span>
+        <span className="flex-1 text-left truncate">{salon?.name || 'Moje konto'}</span>
         <svg className={`w-4 h-4 text-muted-foreground/60 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -239,7 +205,7 @@ function UserMenu() {
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
           <div className="absolute bottom-full left-0 mb-2 w-full bg-card rounded-lg border border-border overflow-hidden z-20 animate-in slide-in-from-bottom-2 duration-200">
             {salon && (
-              <SettingsDialog 
+              <SettingsDialog
                 salon={salon}
                 trigger={
                   <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-left">
@@ -252,7 +218,7 @@ function UserMenu() {
                 }
               />
             )}
-            
+
             <form action={logout}>
               <button
                 type="submit"

@@ -39,16 +39,16 @@ export function FormsList({ forms, query }: FormsListProps) {
   if (forms.length === 0) {
     if (query) {
       return (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+        <div className="text-center py-12 bg-card rounded-xl border border-border/60">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+          <h3 className="text-lg font-medium text-foreground mb-1">
             Brak wyników wyszukiwania
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Nie znaleziono formularzy pasujących do zapytania "{query}"
           </p>
         </div>
@@ -62,15 +62,15 @@ export function FormsList({ forms, query }: FormsListProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <h3 className="text-lg font-medium text-foreground mb-2">
           Brak formularzy
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">
+        <p className="text-muted-foreground mb-6">
           Utwórz swój pierwszy formularz, aby rozpocząć zbieranie danych od klientów.
         </p>
         <Link
           href="/dashboard/forms/new"
-          className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all"
+          className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -87,12 +87,12 @@ export function FormsList({ forms, query }: FormsListProps) {
         {forms.map((form) => (
           <div
             key={form.id}
-            className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
+            className="bg-card rounded-xl p-5 border border-border/60 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                  <h3 className="text-lg font-semibold text-foreground truncate">
                     {form.title}
                   </h3>
                   {!form.is_active && (
@@ -102,7 +102,7 @@ export function FormsList({ forms, query }: FormsListProps) {
                   )}
                 </div>
                 {form.description && (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-3 line-clamp-2">
+                  <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
                     {form.description}
                   </p>
                 )}
@@ -143,7 +143,7 @@ export function FormsList({ forms, query }: FormsListProps) {
       {/* Delete Confirmation Modal */}
       {formToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
@@ -152,8 +152,8 @@ export function FormsList({ forms, query }: FormsListProps) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Usuń formularz</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <h3 className="text-lg font-bold text-foreground">Usuń formularz</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Czy na pewno chcesz usunąć ten formularz? Ta operacja jest nieodwracalna.
                   </p>
                 </div>
@@ -172,7 +172,7 @@ export function FormsList({ forms, query }: FormsListProps) {
                 <button
                   onClick={() => setFormToDelete(null)}
                   disabled={isDeleting}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium disabled:opacity-50"
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium disabled:opacity-50"
                 >
                   Anuluj
                 </button>

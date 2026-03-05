@@ -64,7 +64,7 @@ interface IconRefProps {
 }
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'variant' | 'size'>,
   VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }

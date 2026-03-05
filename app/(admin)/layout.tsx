@@ -16,23 +16,28 @@ export default async function AdminLayout({
     redirect('/login')
   }
 
+  const { data: salon } = await supabase
+    .from('salons')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+
   return (
     <LockProvider>
       <div className="flex h-screen bg-background">
         {/* Desktop Sidebar */}
-        <Sidebar />
-        
+        <Sidebar salon={salon} />
+
         {/* Mobile Header */}
-        <MobileHeader />
-        
+        <MobileHeader salon={salon} />
+
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          {/* Add padding for mobile header and bottom nav */}
           <div className="p-4 md:p-8 pt-[4.5rem] md:pt-8 pb-20 md:pb-8">
             {children}
           </div>
         </main>
-        
+
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
       </div>

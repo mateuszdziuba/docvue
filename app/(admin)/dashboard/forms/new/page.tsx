@@ -338,7 +338,7 @@ export default function NewFormPage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+          className="px-8 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {isSaving ? 'Zapisywanie...' : 'Zapisz formularz'}
         </button>

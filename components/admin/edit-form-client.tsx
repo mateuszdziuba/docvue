@@ -409,7 +409,7 @@ export default function EditFormClient({ form }: EditFormClientProps) {
         <button
           onClick={handleSave}
           disabled={isSaving || isLocked}
-          className="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLocked ? 'Edycja zablokowana' : (isSaving ? 'Zapisywanie...' : 'Zapisz zmiany')}
         </button>

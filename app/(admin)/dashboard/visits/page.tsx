@@ -103,8 +103,8 @@ export default async function VisitsPage({ searchParams }: Props) {
                 
                 <div className="flex items-center gap-3">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide
-                    ${visit.status === 'scheduled' ? 'bg-[hsl(220,50%,50%)]/10 text-[hsl(220,50%,50%)]' : ''}
-                    ${visit.status === 'completed' ? 'bg-[hsl(150,45%,45%)]/10 text-[hsl(150,45%,45%)]' : ''}
+                    ${visit.status === 'scheduled' ? 'bg-info/10 text-info' : ''}
+                    ${visit.status === 'completed' ? 'bg-success/10 text-success' : ''}
                     ${visit.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : ''}
                     ${visit.status === 'pending_forms' ? 'bg-accent/10 text-accent-foreground' : ''}
                   `}>

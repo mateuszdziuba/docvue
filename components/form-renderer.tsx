@@ -15,6 +15,7 @@ interface FormRendererProps {
 export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps) {
   const { register, handleSubmit, formState: { errors }, control } = useForm()
   const fields = (form.schema as any)?.fields || []
+  const hasCustomSignatureField = fields.some((f: FormField) => f.type === 'signature' || f.type === 'Signature')
 
   const renderField = (field: FormField) => {
     const commonClasses = "w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
@@ -210,10 +211,36 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
         </div>
       ))}
 
+      {!hasCustomSignatureField && (
+        <div className="mt-8 pt-6 border-t border-border mt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Podpis klienta
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <Controller
+            name="signature"
+            control={control}
+            rules={{ required: true }}
+            render={({ field: { value, onChange } }) => (
+              <SignaturePad
+                value={value}
+                onChange={onChange}
+                disabled={isSubmitting}
+              />
+            )}
+          />
+          {errors.signature && (
+            <p className="mt-1 text-sm text-red-500">
+              Podpis przed przystąpieniem do zabiegu jest wymagany.
+            </p>
+          )}
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-4 px-6 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-4 px-6 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? 'Wysyłanie...' : 'Wyślij formularz'}
       </button>

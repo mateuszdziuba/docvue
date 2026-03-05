@@ -77,15 +77,15 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
   return (
     <div className="space-y-6">
       {/* Assign New Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-card rounded-xl p-6 border border-border/60">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Przypisz formularz
         </h2>
         <div className="flex items-center gap-4">
           <select
             value={selectedFormId}
             onChange={(e) => setSelectedFormId(e.target.value)}
-            className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            className="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
           >
             <option value="">Wybierz formularz...</option>
             {availableForms.map((form) => (
@@ -95,7 +95,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
           <button
             onClick={handleAssignForm}
             disabled={!selectedFormId || isAssigning}
-            className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium rounded-lg disabled:opacity-50 transition-all"
+            className="px-6 py-2 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg disabled:opacity-50 transition-colors"
           >
             {isAssigning ? 'Przypisywanie...' : 'Przypisz'}
           </button>
@@ -103,18 +103,18 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
       </div>
 
       {/* Assigned Forms */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-card rounded-xl p-6 border border-border/60">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Przypisane formularze
-          <span className="ml-2 text-sm font-normal text-gray-500">({clientForms.length})</span>
+          <span className="ml-2 text-sm font-normal text-muted-foreground">({clientForms.length})</span>
         </h2>
         
         {clientForms.length > 0 ? (
           <div className="space-y-3">
             {clientForms.map((cf) => (
-              <div key={cf.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div key={cf.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
                 <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 dark:text-white">
+                  <h3 className="font-medium text-foreground">
                     {cf.forms?.title}
                   </h3>
                   <div className="flex items-center gap-3 mt-1">
@@ -126,12 +126,12 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                       {cf.status === 'completed' ? 'Wypełniony' : 'Oczekuje'}
                     </span>
                     {cf.filled_at && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(cf.filled_at).toLocaleDateString('pl-PL')}
                         {cf.filled_by === 'staff' && ' (salon)'}
                       </span>
                     )}
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground/60">
                       Dodano: {new Date(cf.created_at).toLocaleDateString('pl-PL')}
                     </span>
                   </div>
@@ -142,7 +142,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                     <>
                       <button
                         onClick={() => handleCopyLink(cf.token)}
-                        className="px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 rounded-lg transition-all"
+                        className="px-3 py-1.5 text-sm font-medium bg-secondary text-foreground hover:bg-secondary/80 rounded-lg transition-colors"
                       >
                         Kopiuj link
                       </button>
@@ -151,7 +151,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                           lock()
                           window.open(`/f/${cf.token}`, '_blank')
                         }}
-                        className="px-3 py-1.5 text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 rounded-lg transition-all"
+                        className="px-3 py-1.5 text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
                       >
                         Wypełnij w salonie
                       </button>
@@ -171,17 +171,17 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+          <p className="text-muted-foreground text-center py-8">
             Brak przypisanych formularzy. Wybierz formularz powyżej i kliknij &#34;Przypisz&#34;.
           </p>
         )}
       </div>
 
       {/* Recent Submissions */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-card rounded-xl p-6 border border-border/60">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Historia wypełnień
-          <span className="ml-2 text-sm font-normal text-gray-500">({submissions.length})</span>
+          <span className="ml-2 text-sm font-normal text-muted-foreground">({submissions.length})</span>
         </h2>
         
         {submissions.length > 0 ? (
@@ -190,13 +190,13 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
               <Link 
                 key={sub.id} 
                 href={`/dashboard/submissions/${sub.id}`}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/60 transition-colors"
               >
                 <div>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-foreground">
                     {sub.forms?.title}
                   </span>
-                  <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="ml-3 text-sm text-muted-foreground">
                     {new Date(sub.created_at).toLocaleDateString('pl-PL', {
                       day: 'numeric',
                       month: 'long',
@@ -207,7 +207,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                   </span>
                 </div>
                 {sub.signature && (
-                  <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">
+                  <span className="text-xs bg-success/10 text-success px-2 py-1 rounded">
                     Z podpisem
                   </span>
                 )}
@@ -215,7 +215,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+          <p className="text-muted-foreground text-center py-8">
             Brak wypełnionych formularzy.
           </p>
         )}
@@ -224,7 +224,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
       {/* Delete Confirmation Modal */}
       {assignmentToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
@@ -233,8 +233,8 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Usuń przypisanie</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <h3 className="text-lg font-bold text-foreground">Usuń przypisanie</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Czy na pewno chcesz usunąć ten formularz z konta klienta?
                   </p>
                 </div>
@@ -253,7 +253,7 @@ export function ClientDetailClient({ client, clientForms, availableForms, submis
                 <button
                   onClick={() => setAssignmentToDelete(null)}
                   disabled={isDeleting}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium disabled:opacity-50"
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium disabled:opacity-50"
                 >
                   Anuluj
                 </button>
