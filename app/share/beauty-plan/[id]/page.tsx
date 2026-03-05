@@ -15,8 +15,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       return { title: 'Błąd - Nie znaleziono planu | Docvue' }
   }
 
+  const clientData = plan.clients as any
+  const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
+
   return {
-    title: `Twój Plan Pielęgnacyjny${plan?.clients?.name ? ` - ${plan.clients.name}` : ''} | Docvue`,
+    title: `Twój Plan Pielęgnacyjny${clientName ? ` - ${clientName}` : ''} | Docvue`,
     description: 'Bądź piękna każdego dnia dzięki wyselekcjonowanej pielęgnacji.',
   }
 }
@@ -51,6 +54,12 @@ export default async function SharedBeautyPlanPage({ params }: { params: Promise
   const morningTotal = calculateTotal(morningProducts)
   const eveningTotal = calculateTotal(eveningProducts)
   const totalCost = morningTotal + eveningTotal
+
+  const clientData = plan.clients as any
+  const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
+
+  const salonData = plan.salons as any
+  const salonName = Array.isArray(salonData) ? salonData[0]?.name : salonData?.name
 
   const renderProduct = (product: any, index: number) => {
      return (
@@ -127,14 +136,14 @@ export default async function SharedBeautyPlanPage({ params }: { params: Promise
           <header className="mb-16 text-center">
              <div className="inline-flex items-center justify-center space-x-2 mb-6 w-16 h-16 rounded-2xl bg-white dark:bg-zinc-900 border border-border/60 shadow-xl shadow-black/5 rotate-3 hover:rotate-0 transition-transform duration-300">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold">
-                    {plan.salons?.name?.charAt(0) || 'S'}
+                    {salonName?.charAt(0) || 'S'}
                 </div>
              </div>
              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4">
                Twój Plan Pielęgnacyjny
              </h1>
              <p className="text-lg text-muted-foreground font-medium max-w-lg mx-auto leading-relaxed">
-               Skrojona na miarę rutyna dla <span className="text-emerald-600 dark:text-emerald-400 font-bold">{plan.clients?.name}</span> odłożona w czasie, stworzona w <span className="font-semibold text-foreground">{plan.salons?.name}</span>.
+               Skrojona na miarę rutyna dla <span className="text-emerald-600 dark:text-emerald-400 font-bold">{clientName}</span> odłożona w czasie, stworzona w <span className="font-semibold text-foreground">{salonName}</span>.
              </p>
           </header>
 
