@@ -4,9 +4,20 @@ chromium.use(stealth);
 
 async function scrape(url) {
   let browser = null;
+  const browserlessToken = process.env.BROWSERLESS_TOKEN;
+  
   try {
-    // We use chromium headless mode
-    browser = await chromium.launch({ headless: true });
+    if (browserlessToken) {
+      console.log('Connecting to Browserless.io...');
+      browser = await chromium.connectOverCDP(`wss://chrome.browserless.io?token=${browserlessToken}`);
+    } else {
+      console.log('Launching local Chromium...');
+      browser = await chromium.launch({ 
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+    }
+
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
       viewport: { width: 1280, height: 720 }

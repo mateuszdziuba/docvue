@@ -122,7 +122,13 @@ export async function POST(req: Request) {
     try {
         // Run Playwright script securely outside Next.js process to bypass Webpack bundling issues
         console.log(`Executing Playwright for: ${url}`);
-        const { stdout } = await execFileAsync('node', [scriptPath, url], { timeout: 45000 });
+        const { stdout } = await execFileAsync('node', [scriptPath, url], { 
+            timeout: 45000,
+            env: {
+                ...process.env,
+                BROWSERLESS_TOKEN: process.env.BROWSERLESS_TOKEN
+            }
+        });
         
         console.log("Playwright output:", stdout);
         
