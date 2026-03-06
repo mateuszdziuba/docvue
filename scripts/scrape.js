@@ -8,8 +8,16 @@ async function scrape(url) {
   
   try {
     if (browserlessToken) {
-      console.log('Connecting to Browserless.io...');
-      browser = await chromium.connectOverCDP(`wss://chrome.browserless.io?token=${browserlessToken}`);
+      console.log('Connecting to Browserless.io via WebSocket...');
+      try {
+        browser = await chromium.connect({ 
+          wsEndpoint: `wss://chrome.browserless.io?token=${browserlessToken}` 
+        });
+        console.log('Connected to Browserless.io successfully.');
+      } catch (connError) {
+        console.error('Failed to connect to Browserless.io:', connError.message);
+        throw connError;
+      }
     } else {
       console.log('Launching local Chromium...');
       browser = await chromium.launch({ 
