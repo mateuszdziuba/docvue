@@ -4,18 +4,8 @@ import { promisify } from 'util';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright-core';
-// @ts-ignore
-import stealthPlugin from 'puppeteer-extra-plugin-stealth';
-import { chromium as playwrightExtra } from 'playwright-extra';
 
 const execFileAsync = promisify(execFile);
-
-// Configure stealth for playwright-extra (fallback)
-try {
-  playwrightExtra.use(stealthPlugin());
-} catch (e) {
-  console.error("Error setting up stealth plugin:", e);
-}
 
 // Initialize Supabase admin client for caching
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
