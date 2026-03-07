@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { startOfWeek, endOfWeek, parseISO, isValid } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { getCalendarAppointments } from '@/actions/appointments'
+import { getTimeBlocks } from '@/actions/time-blocks'
 import { CalendarView } from '@/components/admin/calendar/calendar-view'
 
 export const dynamic = 'force-dynamic'
@@ -33,21 +34,23 @@ export default async function CalendarPage({
   const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 })
   const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 })
 
-  const [appointments, treatmentsResult] = await Promise.all([
+  const [appointments, treatmentsResult, timeBlocks] = await Promise.all([
     getCalendarAppointments(salon?.id ?? '', weekStart, weekEnd),
     supabase
       .from('treatments')
       .select('id, name, duration_minutes, price')
       .eq('salon_id', salon?.id ?? '')
       .order('name'),
+    getTimeBlocks(salon?.id ?? '', weekStart, weekEnd),
   ])
 
   const treatments = treatmentsResult.data ?? []
 
   return (
-    <div className="h-full flex flex-col overflow-hidden -m-4 md:-m-8 md:-mt-8 mt-0">
+    <div className="h-full flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
       <CalendarView
         initialAppointments={appointments}
+        initialTimeBlocks={timeBlocks}
         treatments={treatments}
         salonId={salon?.id ?? ''}
         initialWeekStart={weekStart.toISOString()}

@@ -12,72 +12,40 @@ import {
   PIXELS_PER_MINUTE,
 } from './constants'
 import type { CalendarAppointment } from '@/actions/appointments'
-
-// ── Current time indicator ───────────────────────────────────────────────────
-
-function CurrentTimeLine() {
-  const [top, setTop] = useState<number | null>(null)
-  const [timeLabel, setTimeLabel] = useState('')
-
-  useEffect(() => {
-    const update = () => {
-      const now = new Date()
-      const h = now.getHours()
-      const m = now.getMinutes()
-      if (h < START_HOUR || h >= END_HOUR) {
-        setTop(null)
-        return
-      }
-      const mins = h * 60 + m - START_HOUR * 60
-      setTop(mins * PIXELS_PER_MINUTE)
-      setTimeLabel(format(now, 'HH:mm'))
-    }
-    update()
-    const t = setInterval(update, 30_000)
-    return () => clearInterval(t)
-  }, [])
-
-  if (top === null) return null
-
-  return (
-    <div
-      className="absolute left-0 right-0 z-20 pointer-events-none"
-      style={{ top: `${top}px` }}
-    >
-      <div className="flex items-center">
-        <span className="text-[9px] tabular-nums text-destructive font-semibold bg-background pr-1 leading-none">
-          {timeLabel}
-        </span>
-        <div className="w-2 h-2 rounded-full bg-destructive shrink-0 -ml-1" />
-        <div className="flex-1 h-px bg-destructive" />
-      </div>
-    </div>
-  )
-}
+import type { TimeBlock } from '@/actions/time-blocks'
 
 // ── Time gutter ──────────────────────────────────────────────────────────────
 
-function TimeGutter() {
+function TimeGutter({ currentTimeTop }: { currentTimeTop: number | null }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR)
   return (
     <div
-      className="shrink-0 select-none"
+      className="shrink-0 select-none relative"
       style={{ width: TIME_LABEL_WIDTH, minWidth: TIME_LABEL_WIDTH }}
     >
-      {/* Spacer matching day-header height */}
-      <div className="h-[52px] border-b border-border/50" />
-      {/* Hour rows */}
+      <div className="h-[52px] border-b border-border/40" />
       {hours.map((hour) => (
         <div
           key={hour}
           className="relative border-t border-transparent"
           style={{ height: HOUR_HEIGHT }}
         >
-          <span className="absolute -top-[9px] right-2 text-[10px] font-medium text-muted-foreground/60 tabular-nums leading-none select-none">
+          <span className="absolute -top-[9px] right-2 text-[10px] font-medium text-muted-foreground/50 tabular-nums leading-none select-none">
             {String(hour).padStart(2, '0')}:00
           </span>
         </div>
       ))}
+      {/* Current time label aligned with hour labels */}
+      {currentTimeTop !== null && (
+        <div
+          className="absolute right-0 left-0 pointer-events-none z-30 flex items-center justify-end pr-1.5"
+          style={{ top: `${52 + currentTimeTop}px` }}
+        >
+          <span className="text-[9px] tabular-nums text-destructive font-bold leading-none bg-background/90 px-0.5 rounded-sm -translate-y-[5px]">
+            {format(new Date(), 'HH:mm')}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -90,33 +58,44 @@ function GridLines() {
     <div className="absolute inset-0 pointer-events-none">
       {hours.map((_, i) => (
         <div key={i}>
-          {/* Hour line — solid, medium */}
           <div
-            className="absolute left-0 right-0 border-t border-border/50"
+            className="absolute left-0 right-0 border-t border-border/40"
             style={{ top: `${i * HOUR_HEIGHT}px` }}
           />
-          {/* 15-min mark */}
           <div
-            className="absolute left-0 right-0 border-t border-dashed border-border/20"
+            className="absolute left-0 right-0 border-t border-dashed border-border/15"
             style={{ top: `${i * HOUR_HEIGHT + HOUR_HEIGHT * 0.25}px` }}
           />
-          {/* 30-min mark — slightly more visible */}
           <div
-            className="absolute left-0 right-0 border-t border-border/30"
+            className="absolute left-0 right-0 border-t border-border/25"
             style={{ top: `${i * HOUR_HEIGHT + HOUR_HEIGHT * 0.5}px` }}
           />
-          {/* 45-min mark */}
           <div
-            className="absolute left-0 right-0 border-t border-dashed border-border/20"
+            className="absolute left-0 right-0 border-t border-dashed border-border/15"
             style={{ top: `${i * HOUR_HEIGHT + HOUR_HEIGHT * 0.75}px` }}
           />
         </div>
       ))}
-      {/* Bottom boundary */}
       <div
-        className="absolute left-0 right-0 border-t border-border/50"
+        className="absolute left-0 right-0 border-t border-border/40"
         style={{ top: `${(END_HOUR - START_HOUR) * HOUR_HEIGHT}px` }}
       />
+    </div>
+  )
+}
+
+// ── Current time line (days area only) ────────────────────────────────────────
+
+function CurrentTimeLine({ top }: { top: number }) {
+  return (
+    <div
+      className="absolute left-0 right-0 z-20 pointer-events-none"
+      style={{ top: `${top}px` }}
+    >
+      <div className="flex items-center">
+        <div className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+        <div className="flex-1 h-px bg-destructive" />
+      </div>
     </div>
   )
 }
@@ -126,26 +105,55 @@ function GridLines() {
 interface CalendarGridProps {
   weekStart: Date
   appointments: CalendarAppointment[]
-  onSlotClick: (date: Date, hour: number, minute: number) => void
+  timeBlocks: TimeBlock[]
+  snapMinutes: number
+  isBlockMode: boolean
+  dragGuideMinutes: number | null
+  onSlotClick: (date: Date, hour: number, minute: number, durationMinutes?: number, isBlock?: boolean) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CalendarAppointment['status']) => void
   onResizeBottomStart: (id: string, e: React.PointerEvent) => void
   onResizeTopStart: (id: string, e: React.PointerEvent) => void
+  onDeleteTimeBlock: (id: string) => void
+  onDrawGuide: (minutes: number | null) => void
 }
 
 export function CalendarGrid({
   weekStart,
   appointments,
+  timeBlocks,
+  snapMinutes,
+  isBlockMode,
+  dragGuideMinutes,
   onSlotClick,
   onDelete,
   onStatusChange,
   onResizeBottomStart,
   onResizeTopStart,
+  onDeleteTimeBlock,
+  onDrawGuide,
 }: CalendarGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
-  // Per-column hover slot state
+  const [currentTimeTop, setCurrentTimeTop] = useState<number | null>(null)
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date()
+      const h = now.getHours()
+      const m = now.getMinutes()
+      if (h < START_HOUR || h >= END_HOUR) {
+        setCurrentTimeTop(null)
+        return
+      }
+      setCurrentTimeTop((h * 60 + m - START_HOUR * 60) * PIXELS_PER_MINUTE)
+    }
+    update()
+    const t = setInterval(update, 30_000)
+    return () => clearInterval(t)
+  }, [])
+
   const [hoverStates, setHoverStates] = useState<Array<{ hour: number; minute: number } | null>>(
     () => Array(7).fill(null),
   )
@@ -158,7 +166,6 @@ export function CalendarGrid({
     })
   }
 
-  // Scroll to current time (or 8:00) on mount
   useEffect(() => {
     if (!scrollRef.current) return
     const now = new Date()
@@ -176,24 +183,46 @@ export function CalendarGrid({
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Time gutter (sticky left) */}
-      <div className="shrink-0 sticky left-0 z-10 bg-card border-r border-border/50">
-        <TimeGutter />
+      <div className="shrink-0 sticky left-0 z-10 bg-card border-r border-border/40">
+        <TimeGutter currentTimeTop={currentTimeTop} />
       </div>
 
       {/* Scrollable days area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overflow-x-auto"
+        className="flex-1 overflow-y-auto overflow-x-auto relative"
         style={{ scrollbarGutter: 'stable' }}
       >
-        <div className="flex" style={{ minWidth: `${weekDays.length * 100}px` }}>
+        {/* Cross-column alignment guide */}
+        {dragGuideMinutes !== null && (
+          <div
+            className="absolute left-0 right-0 pointer-events-none z-40"
+            style={{ top: `${52 + dragGuideMinutes * PIXELS_PER_MINUTE}px` }}
+          >
+            <div className="flex items-center">
+              <div className="flex-1 border-t-2 border-dashed border-primary/60" />
+            </div>
+          </div>
+        )}
+
+        <div className="flex relative" style={{ minWidth: `${weekDays.length * 100}px` }}>
           {weekDays.map((day, dayIndex) => {
             const dayAppointments = appointments.filter((a) =>
               isSameDay(new Date(a.start_time), day),
             )
+            const dayBlocks = timeBlocks.filter((b) => {
+              const bStart = new Date(b.start_time)
+              const bEnd = new Date(b.end_time)
+              // Show block if it overlaps with this day
+              const dayStart = new Date(day)
+              dayStart.setHours(0, 0, 0, 0)
+              const dayEnd = new Date(day)
+              dayEnd.setHours(23, 59, 59, 999)
+              return bStart < dayEnd && bEnd > dayStart
+            })
+
             return (
               <div key={dayIndex} className="flex-1 relative">
-                {/* Grid lines — only render once per day, behind day column content */}
                 {dayIndex === 0 && (
                   <div className="absolute inset-0 pointer-events-none">
                     <div style={{ height: '52px' }} />
@@ -207,11 +236,16 @@ export function CalendarGrid({
                   date={day}
                   dayIndex={dayIndex}
                   appointments={dayAppointments}
+                  timeBlocks={dayBlocks}
+                  snapMinutes={snapMinutes}
+                  isBlockMode={isBlockMode}
                   onSlotClick={onSlotClick}
                   onDelete={onDelete}
                   onStatusChange={onStatusChange}
                   onResizeBottomStart={onResizeBottomStart}
                   onResizeTopStart={onResizeTopStart}
+                  onDeleteTimeBlock={onDeleteTimeBlock}
+                  onDrawGuide={onDrawGuide}
                   hoverSlot={hoverStates[dayIndex]}
                   onHoverSlotChange={(slot) => setHoverSlot(dayIndex, slot)}
                 />
@@ -220,17 +254,15 @@ export function CalendarGrid({
           })}
         </div>
 
-        {/* Current time line — spans entire width, inside scroll area */}
-        <div
-          className="absolute pointer-events-none z-20"
-          style={{
-            top: '52px', // below headers
-            left: TIME_LABEL_WIDTH,
-            right: 0,
-          }}
-        >
-          <CurrentTimeLine />
-        </div>
+        {/* Current time line */}
+        {currentTimeTop !== null && (
+          <div
+            className="absolute pointer-events-none z-20"
+            style={{ top: `${52 + currentTimeTop}px`, left: 0, right: 0 }}
+          >
+            <CurrentTimeLine top={0} />
+          </div>
+        )}
       </div>
     </div>
   )

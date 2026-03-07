@@ -136,16 +136,18 @@ export function EditTreatmentDialog({ treatment, forms }: EditTreatmentDialogPro
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Czas trwania (min)
+                Domyślny czas (min)
               </label>
               <input
                 name="duration"
                 type="number"
                 defaultValue={treatment.duration_minutes}
                 required
-                min={1}
+                min={5}
+                step={5}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
               />
+              <p className="text-xs text-gray-500">Można zmienić przy tworzeniu wizyty</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900 dark:text-gray-100">

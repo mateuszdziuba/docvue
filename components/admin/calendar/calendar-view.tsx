@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import {
   DndContext,
   DragEndEvent,
+  DragMoveEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
@@ -37,11 +38,18 @@ import {
   deleteCalendarAppointment,
   type CalendarAppointment,
 } from '@/actions/appointments'
-import { PIXELS_PER_MINUTE, SNAP_MINUTES, START_HOUR, END_HOUR } from './constants'
+import {
+  getTimeBlocks,
+  createTimeBlock,
+  deleteTimeBlock,
+  type TimeBlock,
+} from '@/actions/time-blocks'
+import { PIXELS_PER_MINUTE, START_HOUR, END_HOUR } from './constants'
 import type { Treatment } from '@/types/database'
 
 interface CalendarViewProps {
   initialAppointments: CalendarAppointment[]
+  initialTimeBlocks: TimeBlock[]
   treatments: Pick<Treatment, 'id' | 'name' | 'duration_minutes' | 'price'>[]
   salonId: string
   initialWeekStart: string
@@ -49,18 +57,24 @@ interface CalendarViewProps {
 
 export function CalendarView({
   initialAppointments,
+  initialTimeBlocks,
   treatments,
   salonId,
   initialWeekStart,
 }: CalendarViewProps) {
   const [appointments, setAppointments] = useState<CalendarAppointment[]>(initialAppointments)
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>(initialTimeBlocks)
   const [weekStart, setWeekStart] = useState<Date>(() => parseISO(initialWeekStart))
   const [isLoading, setIsLoading] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [snapMinutes, setSnapMinutes] = useState(15)
+  const [isBlockMode, setIsBlockMode] = useState(false)
+  const [dragGuideMinutes, setDragGuideMinutes] = useState<number | null>(null)
   const [createSheet, setCreateSheet] = useState<{
     date: Date
     hour: number
     minute: number
+    durationMinutes?: number
   } | null>(null)
 
   const activeAppointment = activeId
@@ -85,12 +99,13 @@ export function CalendarView({
       }
       setWeekStart(next)
       setIsLoading(true)
-      const fresh = await getCalendarAppointments(
-        salonId,
-        next,
-        endOfWeek(next, { weekStartsOn: 1 }),
-      )
+      const weekEnd = endOfWeek(next, { weekStartsOn: 1 })
+      const [fresh, freshBlocks] = await Promise.all([
+        getCalendarAppointments(salonId, next, weekEnd),
+        getTimeBlocks(salonId, next, weekEnd),
+      ])
       setAppointments(fresh)
+      setTimeBlocks(freshBlocks)
       setIsLoading(false)
     },
     [weekStart, salonId],
@@ -102,10 +117,24 @@ export function CalendarView({
     setActiveId(event.active.id as string)
   }
 
+  const handleDragMove = useCallback(
+    (event: DragMoveEvent) => {
+      const apt = appointments.find((a) => a.id === event.active.id)
+      if (!apt) return
+      const origStart = parseISO(apt.start_time)
+      const origMins = getHours(origStart) * 60 + getMinutes(origStart)
+      const deltaMins = event.delta.y / PIXELS_PER_MINUTE
+      const gridMins = origMins + deltaMins - START_HOUR * 60
+      setDragGuideMinutes(Math.max(0, gridMins))
+    },
+    [appointments],
+  )
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, delta, over } = event
       setActiveId(null)
+      setDragGuideMinutes(null)
 
       if (!over) return
       const appointmentId = active.id as string
@@ -117,20 +146,21 @@ export function CalendarView({
 
       const originalStart = parseISO(appointment.start_time)
       const originalMins = getHours(originalStart) * 60 + getMinutes(originalStart)
-      const deltaMins = Math.round((delta.y / PIXELS_PER_MINUTE) / SNAP_MINUTES) * SNAP_MINUTES
+      const deltaMins = Math.round((delta.y / PIXELS_PER_MINUTE) / snapMinutes) * snapMinutes
       const newTotalMins = originalMins + deltaMins
 
-      // Clamp to grid bounds
       const clamped = Math.max(
         START_HOUR * 60,
         Math.min(END_HOUR * 60 - appointment.duration_minutes, newTotalMins),
       )
-      const newStart = setMinutes(setHours(startOfDay(targetDate), Math.floor(clamped / 60)), clamped % 60)
+      const newStart = setMinutes(
+        setHours(startOfDay(targetDate), Math.floor(clamped / 60)),
+        clamped % 60,
+      )
       const newStartISO = newStart.toISOString()
 
       if (newStartISO === appointment.start_time) return
 
-      // Optimistic
       setAppointments((prev) =>
         prev.map((a) => (a.id === appointmentId ? { ...a, start_time: newStartISO } : a)),
       )
@@ -144,10 +174,10 @@ export function CalendarView({
         )
       }
     },
-    [appointments],
+    [appointments, snapMinutes],
   )
 
-  // ── Drag bottom edge — resize end time ──────────────────────────────────────
+  // ── Drag bottom edge ──────────────────────────────────────────────────────────
 
   const handleResizeBottomStart = useCallback(
     (appointmentId: string, e: React.PointerEvent) => {
@@ -163,8 +193,8 @@ export function CalendarView({
 
       const onMove = (ev: PointerEvent) => {
         const dy = ev.clientY - startY
-        const dMin = Math.round((dy / PIXELS_PER_MINUTE) / SNAP_MINUTES) * SNAP_MINUTES
-        curDuration = Math.max(15, origDuration + dMin)
+        const dMin = Math.round((dy / PIXELS_PER_MINUTE) / snapMinutes) * snapMinutes
+        curDuration = Math.max(snapMinutes, origDuration + dMin)
         setAppointments((prev) =>
           prev.map((a) =>
             a.id === appointmentId ? { ...a, duration_minutes: curDuration } : a,
@@ -188,10 +218,10 @@ export function CalendarView({
       document.addEventListener('pointermove', onMove)
       document.addEventListener('pointerup', onUp, { once: true })
     },
-    [appointments],
+    [appointments, snapMinutes],
   )
 
-  // ── Drag top edge — resize start time (shifts start, keeps end fixed) ───────
+  // ── Drag top edge ─────────────────────────────────────────────────────────────
 
   const handleResizeTopStart = useCallback(
     (appointmentId: string, e: React.PointerEvent) => {
@@ -211,9 +241,8 @@ export function CalendarView({
 
       const onMove = (ev: PointerEvent) => {
         const dy = ev.clientY - startY
-        const dMin = Math.round((dy / PIXELS_PER_MINUTE) / SNAP_MINUTES) * SNAP_MINUTES
-        // Clamp: can't move before grid start, can't shrink below 15 min
-        const maxDelta = origDuration - 15
+        const dMin = Math.round((dy / PIXELS_PER_MINUTE) / snapMinutes) * snapMinutes
+        const maxDelta = origDuration - snapMinutes
         const minDelta = START_HOUR * 60 - origStartMins
         const clampedDelta = Math.max(minDelta, Math.min(maxDelta, dMin))
         curNewStart = addMinutes(origStart, clampedDelta)
@@ -249,19 +278,16 @@ export function CalendarView({
       document.addEventListener('pointermove', onMove)
       document.addEventListener('pointerup', onUp, { once: true })
     },
-    [appointments],
+    [appointments, snapMinutes],
   )
 
-  // ── Delete ───────────────────────────────────────────────────────────────────
+  // ── Delete ────────────────────────────────────────────────────────────────────
 
   const handleDelete = useCallback(async (appointmentId: string) => {
     setAppointments((prev) => prev.filter((a) => a.id !== appointmentId))
     const { error } = await deleteCalendarAppointment(appointmentId)
-    if (error) {
-      toast.error('Nie udało się usunąć wizyty')
-    } else {
-      toast.success('Wizyta usunięta')
-    }
+    if (error) toast.error('Nie udało się usunąć wizyty')
+    else toast.success('Wizyta usunięta')
   }, [])
 
   // ── Status change ─────────────────────────────────────────────────────────────
@@ -277,10 +303,54 @@ export function CalendarView({
     [],
   )
 
-  // ── Create ────────────────────────────────────────────────────────────────────
+  // ── Slot click / draw ─────────────────────────────────────────────────────────
 
-  const handleSlotClick = useCallback((date: Date, hour: number, minute: number) => {
-    setCreateSheet({ date, hour, minute })
+  const handleSlotClick = useCallback(
+    async (date: Date, hour: number, minute: number, durationMinutes?: number, isBlock?: boolean) => {
+      if (isBlock && durationMinutes) {
+        const dateStr = date.toISOString().slice(0, 10)
+        const start = new Date(
+          `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+        )
+        const end = addMinutes(start, durationMinutes)
+        const { error } = await createTimeBlock({
+          salonId,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+        })
+        if (error) {
+          toast.error('Nie udało się zarezerwować czasu')
+        } else {
+          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+          const fresh = await getTimeBlocks(salonId, weekStart, weekEnd)
+          setTimeBlocks(fresh)
+          toast.success('Czas zarezerwowany')
+        }
+      } else {
+        setCreateSheet({ date, hour, minute, durationMinutes })
+      }
+    },
+    [salonId, weekStart],
+  )
+
+  const handleDeleteTimeBlock = useCallback(
+    async (id: string) => {
+      setTimeBlocks((prev) => prev.filter((b) => b.id !== id))
+      const { error } = await deleteTimeBlock(id)
+      if (error) {
+        toast.error('Nie udało się usunąć rezerwacji')
+        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+        const fresh = await getTimeBlocks(salonId, weekStart, weekEnd)
+        setTimeBlocks(fresh)
+      } else {
+        toast.success('Rezerwacja usunięta')
+      }
+    },
+    [weekStart, salonId],
+  )
+
+  const handleDrawGuide = useCallback((minutes: number | null) => {
+    setDragGuideMinutes(minutes)
   }, [])
 
   const handleAppointmentCreated = useCallback(async () => {
@@ -295,23 +365,38 @@ export function CalendarView({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <CalendarHeader weekStart={weekStart} isLoading={isLoading} onNavigate={navigateWeek} />
+      <CalendarHeader
+        weekStart={weekStart}
+        isLoading={isLoading}
+        snapMinutes={snapMinutes}
+        isBlockMode={isBlockMode}
+        onNavigate={navigateWeek}
+        onSnapChange={setSnapMinutes}
+        onBlockModeChange={setIsBlockMode}
+      />
 
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
         modifiers={[restrictToWindowEdges]}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
       >
         <CalendarGrid
           weekStart={weekStart}
           appointments={appointments}
+          timeBlocks={timeBlocks}
+          snapMinutes={snapMinutes}
+          isBlockMode={isBlockMode}
+          dragGuideMinutes={dragGuideMinutes}
           onSlotClick={handleSlotClick}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}
           onResizeBottomStart={handleResizeBottomStart}
           onResizeTopStart={handleResizeTopStart}
+          onDeleteTimeBlock={handleDeleteTimeBlock}
+          onDrawGuide={handleDrawGuide}
         />
 
         <DragOverlay dropAnimation={null}>
@@ -331,8 +416,10 @@ export function CalendarView({
           defaultDate={createSheet.date}
           defaultHour={createSheet.hour}
           defaultMinute={createSheet.minute}
+          defaultDurationMinutes={createSheet.durationMinutes}
           treatments={treatments}
           salonId={salonId}
+          timeBlocks={timeBlocks}
           onCreated={handleAppointmentCreated}
         />
       )}

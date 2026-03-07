@@ -113,16 +113,18 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Czas trwania (min)
+                Domyślny czas (min)
               </label>
               <input
                 name="duration"
                 type="number"
                 defaultValue={60}
                 required
-                min={1}
+                min={5}
+                step={5}
                 className="w-full px-3 py-2 rounded-lg border border-border bg-background"
               />
+              <p className="text-xs text-muted-foreground">Można zmienić przy tworzeniu wizyty</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">

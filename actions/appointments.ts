@@ -66,6 +66,7 @@ export async function createCalendarAppointment(input: {
   clientId: string
   treatmentId: string
   startTime: string
+  durationMinutes?: number
   notes?: string
 }): Promise<{ data?: { id: string }; error?: string }> {
   const supabase = await createClient()
@@ -104,6 +105,7 @@ export async function createCalendarAppointment(input: {
       client_id: input.clientId,
       treatment_id: input.treatmentId,
       start_time: input.startTime,
+      duration_minutes: input.durationMinutes ?? null,
       status,
       notes: input.notes ?? null,
     })

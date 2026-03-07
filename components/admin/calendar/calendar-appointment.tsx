@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { format, parseISO, addMinutes } from 'date-fns'
-import { MoreVertical, Trash2, Clock, ExternalLink, CalendarCheck } from 'lucide-react'
+import { MoreHorizontal, Trash2, ExternalLink, CalendarCheck } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,45 +27,53 @@ import {
   ContextMenuLabel,
 } from '@/components/ui/context-menu'
 import { AppointmentPopover } from './appointment-popover'
-import { PIXELS_PER_MINUTE, SNAP_MINUTES } from './constants'
+import { PIXELS_PER_MINUTE } from './constants'
 import type { CalendarAppointment } from '@/actions/appointments'
 
 export const STATUS_CONFIG = {
   scheduled: {
-    bg: 'bg-primary/10',
-    hoverBg: 'hover:bg-primary/15',
-    border: 'border-l-primary',
-    dot: 'bg-primary',
+    bg: 'bg-primary/[0.10]',
+    ring: 'ring-primary/20',
+    topBorder: 'border-t-primary',
+    badgeBg: 'bg-primary',
     text: 'text-primary',
-    subtext: 'text-primary/70',
+    subtext: 'text-primary/65',
+    timeText: 'text-primary/80',
     label: 'Zaplanowana',
+    shortLabel: 'Zap.',
   },
   completed: {
-    bg: 'bg-success/10',
-    hoverBg: 'hover:bg-success/15',
-    border: 'border-l-success',
-    dot: 'bg-success',
-    text: 'text-success',
-    subtext: 'text-success/70',
+    bg: 'bg-emerald-500/[0.09]',
+    ring: 'ring-emerald-500/20',
+    topBorder: 'border-t-emerald-500',
+    badgeBg: 'bg-emerald-500',
+    text: 'text-emerald-700',
+    subtext: 'text-emerald-700/65',
+    timeText: 'text-emerald-700/80',
     label: 'Zakończona',
+    shortLabel: 'Zak.',
   },
   cancelled: {
-    bg: 'bg-muted/40',
-    hoverBg: 'hover:bg-muted/60',
-    border: 'border-l-muted-foreground/30',
-    dot: 'bg-muted-foreground/40',
-    text: 'text-muted-foreground/70',
-    subtext: 'text-muted-foreground/50',
+    bg: 'bg-muted/[0.50]',
+    ring: 'ring-border',
+    topBorder: 'border-t-muted-foreground/40',
+    badgeBg: 'bg-muted-foreground/50',
+    text: 'text-muted-foreground/60',
+    subtext: 'text-muted-foreground/45',
+    timeText: 'text-muted-foreground/50',
     label: 'Anulowana',
+    shortLabel: 'Anu.',
   },
   pending_forms: {
-    bg: 'bg-accent/10',
-    hoverBg: 'hover:bg-accent/15',
-    border: 'border-l-accent',
-    dot: 'bg-accent',
-    text: 'text-accent-foreground',
-    subtext: 'text-accent-foreground/70',
+    bg: 'bg-amber-500/[0.10]',
+    ring: 'ring-amber-500/20',
+    topBorder: 'border-t-amber-500',
+    badgeBg: 'bg-amber-500',
+    text: 'text-amber-700',
+    subtext: 'text-amber-700/65',
+    timeText: 'text-amber-700/80',
     label: 'Oczekuje na ankietę',
+    shortLabel: 'Ank.',
   },
 } as const
 
@@ -105,7 +113,7 @@ export function CalendarAppointmentBlock({
   const startDate = parseISO(appointment.start_time)
   const endDate = addMinutes(startDate, appointment.duration_minutes)
   const heightPx = Math.max(layout.height, 20)
-  const isCompact = heightPx < 44
+  const isCompact = heightPx < 48
   const isTiny = heightPx < 28
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -124,16 +132,55 @@ export function CalendarAppointmentBlock({
     position: 'absolute',
     top: `${layout.top}px`,
     height: `${heightPx}px`,
-    left: `calc(${layout.left * 100}% + 1px)`,
-    width: `calc(${layout.width * 100}% - 2px)`,
-    opacity: isDragging ? 0.2 : 1,
+    left: `calc(${layout.left * 100}% + 2px)`,
+    width: `calc(${layout.width * 100}% - 4px)`,
+    opacity: isDragging ? 0.15 : appointment.status === 'cancelled' ? 0.45 : 1,
     zIndex: isDragging ? 0 : 2,
     touchAction: 'none',
+    transform: transform ? CSS.Translate.toString(transform) : undefined,
   }
 
   const statusMenuItems = (
     ['scheduled', 'pending_forms', 'completed', 'cancelled'] as const
   ).map((s) => ({ status: s, label: STATUS_CONFIG[s].label }))
+
+  const menuContent = (
+    <>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <CalendarCheck className="w-3.5 h-3.5 mr-2 opacity-70" />
+          Zmień status
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          {statusMenuItems.map(({ status, label }) => (
+            <DropdownMenuItem
+              key={status}
+              onClick={() => onStatusChange(appointment.id, status)}
+              className={`gap-2 ${appointment.status === status ? 'font-semibold' : ''}`}
+            >
+              <div className={`w-2 h-2 rounded-full ${STATUS_CONFIG[status].badgeBg}`} />
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild>
+        <a href={`/dashboard/visits/${appointment.id}`}>
+          <ExternalLink className="w-3.5 h-3.5 mr-2 opacity-70" />
+          Szczegóły wizyty
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+        onClick={() => onDelete(appointment.id)}
+      >
+        <Trash2 className="w-3.5 h-3.5 mr-2" />
+        Usuń wizytę
+      </DropdownMenuItem>
+    </>
+  )
 
   return (
     <ContextMenu>
@@ -147,110 +194,82 @@ export function CalendarAppointmentBlock({
             ref={setNodeRef}
             style={blockStyle}
             className={`
-              group rounded-[5px] border-l-[3px] ${cfg.bg} ${cfg.border} ${cfg.hoverBg}
-              transition-colors duration-100 overflow-visible
-              ${appointment.status === 'cancelled' ? 'opacity-50' : ''}
+              group rounded-xl border-t-[3px] ${cfg.bg} ${cfg.topBorder}
+              ring-1 ${cfg.ring}
+              hover:ring-2 hover:shadow-md
+              transition-shadow duration-150 overflow-hidden
             `}
             onPointerDown={handlePointerDown}
             onClick={handleClick}
           >
             {/* TOP resize handle */}
             <div
-              className="absolute top-0 left-0 right-0 h-[5px] cursor-n-resize z-10 group/top"
+              className="absolute top-0 left-0 right-0 h-[6px] cursor-n-resize z-10"
               onPointerDown={(e) => {
                 e.stopPropagation()
                 onResizeTopStart(appointment.id, e)
               }}
               onClick={(e) => e.stopPropagation()}
-            >
-              <div className="absolute top-0.5 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-current opacity-0 group-hover/top:opacity-30 transition-opacity" />
-            </div>
+            />
 
             {/* Main drag area */}
             <div
               {...listeners}
               {...attributes}
-              className="h-full px-1.5 pb-[5px] pt-0.5 cursor-grab active:cursor-grabbing select-none"
+              className="h-full cursor-grab active:cursor-grabbing select-none px-2 pt-1 pb-[6px]"
             >
               {isTiny ? (
-                <p className={`text-[10px] font-semibold truncate leading-tight ${cfg.text}`}>
-                  {appointment.client.name}
+                // Tiny: just time
+                <p className={`text-[9px] tabular-nums font-semibold truncate leading-none ${cfg.timeText}`}>
+                  {format(startDate, 'HH:mm')}
                 </p>
               ) : isCompact ? (
-                <div className="flex items-center gap-1">
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+                // Compact: time + client name inline
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`text-[9px] tabular-nums font-medium shrink-0 ${cfg.timeText}`}>
+                    {format(startDate, 'HH:mm')}
+                  </span>
                   <p className={`text-[11px] font-semibold truncate leading-tight ${cfg.text}`}>
                     {appointment.client.name}
                   </p>
-                  <span className={`ml-auto text-[10px] shrink-0 ${cfg.subtext}`}>
-                    {format(startDate, 'HH:mm')}
-                  </span>
                 </div>
               ) : (
+                // Full: time row, client name, treatment
                 <>
-                  <div className="flex items-start gap-1 mb-0.5">
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[3px] ${cfg.dot}`} />
-                    <p className={`text-[11px] font-bold leading-tight flex-1 truncate ${cfg.text}`}>
-                      {appointment.client.name}
-                    </p>
-                    {/* Three-dots dropdown — visible on hover */}
+                  {/* Time row + three-dots */}
+                  <div className="flex items-center justify-between mb-[2px]">
+                    <span className={`text-[9px] tabular-nums font-medium ${cfg.timeText}`}>
+                      {format(startDate, 'HH:mm')}–{format(endDate, 'HH:mm')}
+                    </span>
                     <div
-                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity -mt-0.5 -mr-0.5"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className={`p-0.5 rounded hover:bg-black/10 transition-colors ${cfg.text}`}
+                            className={`p-0.5 rounded-md hover:bg-black/10 transition-colors ${cfg.text}`}
                             aria-label="Opcje wizyty"
                           >
-                            <MoreVertical className="w-3 h-3" />
+                            <MoreHorizontal className="w-3 h-3" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <Clock className="w-3.5 h-3.5 mr-2" />
-                              Zmień status
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                              {statusMenuItems.map(({ status, label }) => (
-                                <DropdownMenuItem
-                                  key={status}
-                                  onClick={() => onStatusChange(appointment.id, status)}
-                                  className={`gap-2 ${appointment.status === status ? 'font-medium' : ''}`}
-                                >
-                                  <div className={`w-2 h-2 rounded-full ${STATUS_CONFIG[status].dot}`} />
-                                  {label}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <a href={`/dashboard/visits/${appointment.id}`}>
-                              <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                              Szczegóły wizyty
-                            </a>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                            onClick={() => onDelete(appointment.id)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            Usuń wizytę
-                          </DropdownMenuItem>
+                          {menuContent}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
-                  <p className={`text-[10px] leading-tight truncate pl-2.5 ${cfg.subtext}`}>
-                    {appointment.treatment.name}
+
+                  {/* Client name */}
+                  <p className={`text-[12px] font-bold leading-tight truncate ${cfg.text}`}>
+                    {appointment.client.name}
                   </p>
-                  {heightPx >= 56 && (
-                    <p className={`text-[10px] leading-tight pl-2.5 mt-0.5 tabular-nums ${cfg.subtext}`}>
-                      {format(startDate, 'HH:mm')}–{format(endDate, 'HH:mm')}
+
+                  {/* Treatment */}
+                  {heightPx >= 60 && (
+                    <p className={`text-[10px] leading-tight truncate mt-0.5 ${cfg.subtext}`}>
+                      {appointment.treatment.name}
                     </p>
                   )}
                 </>
@@ -259,14 +278,14 @@ export function CalendarAppointmentBlock({
 
             {/* BOTTOM resize handle */}
             <div
-              className="absolute bottom-0 left-0 right-0 h-[5px] cursor-s-resize z-10 group/bottom"
+              className="absolute bottom-0 left-0 right-0 h-[6px] cursor-s-resize z-10 flex items-end justify-center pb-[2px]"
               onPointerDown={(e) => {
                 e.stopPropagation()
                 onResizeBottomStart(appointment.id, e)
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-current opacity-0 group-hover/bottom:opacity-30 transition-opacity" />
+              <div className="w-6 h-[2px] rounded-full bg-current opacity-0 group-hover:opacity-20 transition-opacity" />
             </div>
           </div>
         </AppointmentPopover>
@@ -274,13 +293,13 @@ export function CalendarAppointmentBlock({
 
       {/* Right-click context menu */}
       <ContextMenuContent className="w-56">
-        <ContextMenuLabel className="text-xs text-muted-foreground font-normal">
+        <ContextMenuLabel className="text-xs text-muted-foreground font-normal truncate">
           {appointment.client.name}
         </ContextMenuLabel>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>
-            <CalendarCheck className="w-3.5 h-3.5 mr-2" />
+            <CalendarCheck className="w-3.5 h-3.5 mr-2 opacity-70" />
             Zmień status
           </ContextMenuSubTrigger>
           <ContextMenuSubContent>
@@ -290,7 +309,7 @@ export function CalendarAppointmentBlock({
                 onClick={() => onStatusChange(appointment.id, status)}
                 className={`gap-2 ${appointment.status === status ? 'font-semibold' : ''}`}
               >
-                <div className={`w-2 h-2 rounded-full ${STATUS_CONFIG[status].dot}`} />
+                <div className={`w-2 h-2 rounded-full ${STATUS_CONFIG[status].badgeBg}`} />
                 {label}
               </ContextMenuItem>
             ))}
@@ -299,7 +318,7 @@ export function CalendarAppointmentBlock({
         <ContextMenuSeparator />
         <ContextMenuItem asChild>
           <a href={`/dashboard/visits/${appointment.id}`}>
-            <ExternalLink className="w-3.5 h-3.5 mr-2" />
+            <ExternalLink className="w-3.5 h-3.5 mr-2 opacity-70" />
             Szczegóły wizyty
           </a>
         </ContextMenuItem>
@@ -316,7 +335,7 @@ export function CalendarAppointmentBlock({
   )
 }
 
-// ── Drag overlay (floating clone while dragging) ─────────────────────────────
+// ── Drag overlay ─────────────────────────────────────────────────────────────
 
 interface AppointmentDragOverlayProps {
   appointment: CalendarAppointment
@@ -330,20 +349,17 @@ export function AppointmentDragOverlay({ appointment, height }: AppointmentDragO
 
   return (
     <div
-      style={{ height: `${Math.max(height, 24)}px`, width: '180px' }}
-      className={`rounded-[5px] border-l-[3px] ${cfg.bg} ${cfg.border} shadow-2xl ring-2 ring-primary/20 px-1.5 pt-0.5 pointer-events-none`}
+      style={{ height: `${Math.max(height, 24)}px`, width: '160px' }}
+      className={`rounded-xl border-t-[3px] ${cfg.bg} ${cfg.topBorder} ring-2 ${cfg.ring} shadow-2xl px-2 pt-1 pointer-events-none`}
     >
-      <div className="flex items-center gap-1 mb-0.5">
-        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
-        <p className={`text-[11px] font-bold leading-tight truncate ${cfg.text}`}>
-          {appointment.client.name}
-        </p>
-      </div>
-      <p className={`text-[10px] leading-tight truncate pl-2.5 ${cfg.subtext}`}>
-        {appointment.treatment.name}
+      <span className={`text-[9px] tabular-nums font-medium block ${cfg.timeText}`}>
+        {format(startDate, 'HH:mm')}–{format(endDate, 'HH:mm')}
+      </span>
+      <p className={`text-[12px] font-bold leading-tight truncate ${cfg.text}`}>
+        {appointment.client.name}
       </p>
-      <p className={`text-[10px] pl-2.5 mt-0.5 tabular-nums ${cfg.subtext}`}>
-        {format(startDate, 'HH:mm')} – {format(endDate, 'HH:mm')}
+      <p className={`text-[10px] truncate ${cfg.subtext}`}>
+        {appointment.treatment.name}
       </p>
     </div>
   )
