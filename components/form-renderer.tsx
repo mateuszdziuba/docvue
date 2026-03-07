@@ -18,7 +18,7 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
   const hasCustomSignatureField = fields.some((f: FormField) => f.type === 'signature' || f.type === 'Signature')
 
   const renderField = (field: FormField) => {
-    const commonClasses = "w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+    const commonClasses = "w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
 
     switch (field.type) {
       case 'Input':
@@ -35,7 +35,7 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
             className={commonClasses}
           />
         )
-      
+
       case 'Textarea':
       case 'textarea':
         return (
@@ -64,7 +64,7 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
                 </option>
               ))}
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+            <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-muted-foreground">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -82,9 +82,9 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
                   type="checkbox"
                   value={option.value}
                   disabled={field.disabled}
-                  className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 transition-all"
+                  className="w-5 h-5 rounded border-border text-primary focus:ring-primary/30 transition-all"
                 />
-                <span className="text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+                <span className="text-foreground group-hover:text-primary transition-colors">
                   {option.label}
                 </span>
               </label>
@@ -94,16 +94,16 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
 
       case 'Checkbox':
       case 'checkbox':
-        // Single boolean checkbox (e.g. for constents)
+        // Single boolean checkbox (e.g. for consents)
         return (
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
               {...register(field.name, { required: field.required })}
               type="checkbox"
               disabled={field.disabled}
-              className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 transition-all"
+              className="w-5 h-5 rounded border-border text-primary focus:ring-primary/30 transition-all"
             />
-            <span className="text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+            <span className="text-foreground group-hover:text-primary transition-colors">
               {field.label}
             </span>
           </label>
@@ -120,9 +120,9 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
                   type="radio"
                   value={option.value}
                   disabled={field.disabled}
-                  className="w-5 h-5 border-gray-300 text-purple-600 focus:ring-purple-500 transition-all"
+                  className="w-5 h-5 border-border text-primary focus:ring-primary/30 transition-all"
                 />
-                <span className="text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+                <span className="text-foreground group-hover:text-primary transition-colors">
                   {option.label}
                 </span>
               </label>
@@ -167,8 +167,8 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
 
       case 'separator':
         return (
-          <div className="p-4 rounded-xl border-l-4 border-purple-500 bg-purple-50 dark:bg-purple-900/10 prose dark:prose-invert max-w-none">
-            <p className="text-gray-900 dark:text-purple-100 font-medium whitespace-pre-wrap text-base leading-relaxed m-0">
+          <div className="p-4 rounded-xl border-l-4 border-primary bg-primary/5 prose dark:prose-invert max-w-none">
+            <p className="text-foreground font-medium whitespace-pre-wrap text-base leading-relaxed m-0">
               {field.label}
             </p>
           </div>
@@ -192,19 +192,19 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
       {fields.map((field: FormField) => (
         <div key={field.name}>
           {field.type !== 'checkbox' && field.type !== 'separator' && (
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
+              {field.required && <span className="text-destructive ml-1">*</span>}
             </label>
           )}
           {renderField(field)}
           {field.description && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               {field.description}
             </p>
           )}
           {errors[field.name] && (
-            <p className="mt-1 text-sm text-red-500">
+            <p className="mt-1 text-sm text-destructive">
               To pole jest wymagane
             </p>
           )}
@@ -212,10 +212,10 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
       ))}
 
       {!hasCustomSignatureField && (
-        <div className="mt-8 pt-6 border-t border-border mt-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="mt-8 pt-6 border-t border-border">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Podpis klienta
-            <span className="text-red-500 ml-1">*</span>
+            <span className="text-destructive ml-1">*</span>
           </label>
           <Controller
             name="signature"
@@ -230,7 +230,7 @@ export function FormRenderer({ form, onSubmit, isSubmitting }: FormRendererProps
             )}
           />
           {errors.signature && (
-            <p className="mt-1 text-sm text-red-500">
+            <p className="mt-1 text-sm text-destructive">
               Podpis przed przystąpieniem do zabiegu jest wymagany.
             </p>
           )}

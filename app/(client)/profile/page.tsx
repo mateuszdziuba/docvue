@@ -49,7 +49,7 @@ export default async function ClientProfilePage() {
                     </p>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                    apt.status === 'completed' ? 'bg-[hsl(150,45%,45%)]/10 text-[hsl(150,45%,45%)]' : 
+                    apt.status === 'completed' ? 'bg-success/10 text-success' : 
                     apt.status === 'cancelled' ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground'
                   }`}>
                     {apt.status}

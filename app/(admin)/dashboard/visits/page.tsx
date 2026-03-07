@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
+import { AddAppointmentDialog } from '@/components/admin/add-appointment-dialog'
 
 interface Props {
   searchParams: Promise<{ q?: string }>
@@ -60,6 +61,7 @@ export default async function VisitsPage({ searchParams }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Wszystkie wizyty</h1>
+        <AddAppointmentDialog salonId={salon?.id} />
       </div>
 
       {/* Search & Filter */}

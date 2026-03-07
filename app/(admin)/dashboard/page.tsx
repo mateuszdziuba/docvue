@@ -48,16 +48,10 @@ export default async function DashboardPage() {
     .order('start_time', { ascending: true })
     .limit(3)
 
-  // Sync status
+  // Sync appointment statuses in the background — don't block page render
   if (upcomingAppointments && upcomingAppointments.length > 0) {
     const appointmentIds = upcomingAppointments.map(a => a.id)
-    await syncMultipleAppointmentStatuses(appointmentIds)
-    const { data: refreshed } = await supabase
-      .from('appointments')
-      .select(`*, treatments (name, duration_minutes), clients (name)`)
-      .in('id', appointmentIds)
-      .order('start_time', { ascending: true })
-    if (refreshed) upcomingAppointments.splice(0, upcomingAppointments.length, ...refreshed)
+    syncMultipleAppointmentStatuses(appointmentIds).catch(() => {})
   }
 
   // 7-day chart data

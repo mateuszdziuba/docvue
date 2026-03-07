@@ -42,158 +42,147 @@ export default async function AdminVisitDetailsPage({ params }: Props) {
 
   if (!appointment) notFound()
 
-  // Fetch client submissions to check status
   const { data: clientSubmissions } = await supabase
     .from('submissions')
     .select('*, forms(id, title, schema)')
     .eq('client_id', appointment.client_id)
     .order('created_at', { ascending: false })
 
-  // --- Status Auto-Sync Logic ---
-  // Check if status needs to be updated based on form requirements
+  // Auto-sync status based on form completion
   if (appointment.status !== 'completed' && appointment.status !== 'cancelled') {
-      const treatmentForms = appointment.treatments?.treatment_forms || []
-      const requiredFormIds = treatmentForms.map((tf: any) => tf.forms.id)
-      
-      let shouldBeStatus = 'scheduled'
-      
-      if (requiredFormIds.length > 0) {
-          // Check if all required forms are in submissions
-          const submittedFormIds = clientSubmissions?.map((s: any) => s.form_id) || []
-          const submittedSet = new Set(submittedFormIds)
-          const allMet = requiredFormIds.every((id: string) => submittedSet.has(id))
-          
-          if (!allMet) {
-              shouldBeStatus = 'pending_forms'
-          }
-      }
+    const treatmentForms = appointment.treatments?.treatment_forms || []
+    const requiredFormIds = treatmentForms.map((tf: any) => tf.forms.id)
 
-      // If status mismatch, update it
-      if (appointment.status !== shouldBeStatus) {
-          console.log(`Auto-updating appointment ${id} status from ${appointment.status} to ${shouldBeStatus}`)
-          
-          await supabase
-            .from('appointments')
-            .update({ status: shouldBeStatus })
-            .eq('id', id)
-          
-          // Update local object for display
-          appointment.status = shouldBeStatus
+    let shouldBeStatus = 'scheduled'
+
+    if (requiredFormIds.length > 0) {
+      const submittedFormIds = clientSubmissions?.map((s: any) => s.form_id) || []
+      const submittedSet = new Set(submittedFormIds)
+      const allMet = requiredFormIds.every((id: string) => submittedSet.has(id))
+
+      if (!allMet) {
+        shouldBeStatus = 'pending_forms'
       }
+    }
+
+    if (appointment.status !== shouldBeStatus) {
+      await supabase
+        .from('appointments')
+        .update({ status: shouldBeStatus })
+        .eq('id', id)
+
+      appointment.status = shouldBeStatus
+    }
   }
-  // -----------------------------
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link href={`/dashboard/clients/${appointment.client_id}`} className="hover:text-gray-900">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href={`/dashboard/clients/${appointment.client_id}`} className="hover:text-foreground transition-colors">
           Klient: {appointment.clients.name}
         </Link>
         <span>/</span>
-        <span>Wizyta</span>
+        <span className="text-foreground">Wizyta</span>
       </div>
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
-           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-             {appointment.treatments.name}
-           </h1>
-           <p className="text-gray-500 mt-1">
-             {format(new Date(appointment.start_time), 'EEEE, d MMMM yyyy, HH:mm', { locale: pl })}
-             {' • '}{appointment.treatments.duration_minutes} min
-           </p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {appointment.treatments.name}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {format(new Date(appointment.start_time), 'EEEE, d MMMM yyyy, HH:mm', { locale: pl })}
+            {' • '}{appointment.treatments.duration_minutes} min
+          </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <VisitStatusSelect 
-            id={appointment.id} 
-            currentStatus={appointment.status} 
+          <VisitStatusSelect
+            id={appointment.id}
+            currentStatus={appointment.status}
           />
           <DeleteVisitButton visitId={appointment.id} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column: Details & Notes */}
+        {/* Left Column: Notes & Forms */}
         <div className="md:col-span-2 space-y-6">
-           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-bold mb-4">Notatki z wizyty</h3>
-              <VisitNotes id={appointment.id} initialNotes={appointment.notes} />
-           </div>
+          <div className="bg-card rounded-xl p-6 border border-border/60">
+            <h3 className="text-base font-semibold text-foreground mb-4">Notatki z wizyty</h3>
+            <VisitNotes id={appointment.id} initialNotes={appointment.notes} />
+          </div>
 
-           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-bold mb-4">Wymagane formularze</h3>
-              {appointment.treatments?.treatment_forms && appointment.treatments.treatment_forms.length > 0 ? (
-                <ul className="space-y-3">
-                  {appointment.treatments.treatment_forms
-                    .filter((tf: any) => tf.forms && tf.forms.is_active !== false) // Filter out nulls or inactive
-                    .map((tf: any) => {
-                    const formId = tf.forms.id;
-                    // Find latest submission for this form
-                    const submission = clientSubmissions?.find((s: any) => s.form_id === formId);
-                    
+          <div className="bg-card rounded-xl p-6 border border-border/60">
+            <h3 className="text-base font-semibold text-foreground mb-4">Wymagane formularze</h3>
+            {appointment.treatments?.treatment_forms && appointment.treatments.treatment_forms.length > 0 ? (
+              <ul className="space-y-2">
+                {appointment.treatments.treatment_forms
+                  .filter((tf: any) => tf.forms && tf.forms.is_active !== false)
+                  .map((tf: any) => {
+                    const formId = tf.forms.id
+                    const submission = clientSubmissions?.find((s: any) => s.form_id === formId)
+
                     return (
-                    <li key={formId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                      <div className="flex items-center gap-3 text-sm font-medium">
-                        {submission ? (
-                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        ) : (
-                             <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                        )}
-                        <span className={submission ? 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-600' : 'text-gray-900 dark:text-white'}>
+                      <li key={formId} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg">
+                        <div className="flex items-center gap-3 text-sm font-medium">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${submission ? 'bg-success' : 'bg-accent'}`} />
+                          <span className={submission ? 'text-muted-foreground line-through decoration-muted-foreground/40' : 'text-foreground'}>
                             {tf.forms.title}
-                        </span>
-                      </div>
-                      
-                      {submission ? (
+                          </span>
+                        </div>
+
+                        {submission ? (
                           <div className="flex items-center gap-2">
-                             <span className="text-xs text-green-600 font-medium hidden sm:inline-block">Wypełniono</span>
-                             <SubmissionPreviewDialog 
-                                submission={submission}
-                                trigger={
-                                    <button className="text-xs bg-white border border-gray-200 px-2 py-1 rounded hover:bg-gray-50 text-gray-600">
-                                        Podgląd
-                                    </button>
-                                }
-                             />
+                            <span className="text-xs text-success font-medium hidden sm:inline-block">Wypełniono</span>
+                            <SubmissionPreviewDialog
+                              submission={submission}
+                              trigger={
+                                <button className="text-xs bg-card border border-border text-foreground px-2 py-1 rounded hover:bg-secondary transition-colors">
+                                  Podgląd
+                                </button>
+                              }
+                            />
                           </div>
-                      ) : (
-                        <FillVisitFormButton 
+                        ) : (
+                          <FillVisitFormButton
                             clientId={appointment.client_id}
                             formId={formId}
                             formTitle={tf.forms.title}
-                        />
-                      )}
-                    </li>
-                  )})}
-                </ul>
-              ) : (
-                <p className="text-gray-500 text-sm">Brak wymaganych formularzy.</p>
-              )}
-           </div>
+                          />
+                        )}
+                      </li>
+                    )
+                  })}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">Brak wymaganych formularzy.</p>
+            )}
+          </div>
         </div>
 
         {/* Right Column: Photos */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-             <h3 className="text-lg font-bold mb-4">Zdjęcia</h3>
-             <div className="flex flex-col gap-6">
-               <PhotoUpload 
-                 visitId={appointment.id} 
-                 type="before" 
-                 initialPath={appointment.before_photo_path} 
-               />
-               <div className="w-full h-px bg-gray-100 dark:bg-gray-700" />
-               <PhotoUpload 
-                  visitId={appointment.id} 
-                  type="after" 
-                  initialPath={appointment.after_photo_path} 
-               />
-             </div>
-             <PhotoComparison 
-                beforePath={appointment.before_photo_path} 
-                afterPath={appointment.after_photo_path} 
-             />
+          <div className="bg-card rounded-xl p-6 border border-border/60">
+            <h3 className="text-base font-semibold text-foreground mb-4">Zdjęcia</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <PhotoUpload
+                visitId={appointment.id}
+                type="before"
+                initialPath={appointment.before_photo_path}
+              />
+              <PhotoUpload
+                visitId={appointment.id}
+                type="after"
+                initialPath={appointment.after_photo_path}
+              />
+            </div>
+            <PhotoComparison
+              beforePath={appointment.before_photo_path}
+              afterPath={appointment.after_photo_path}
+            />
           </div>
         </div>
       </div>

@@ -3,29 +3,39 @@ import Link from 'next/link'
 
 export default async function SubmissionsPage() {
   const supabase = await createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   const { data: salon } = await supabase
     .from('salons')
     .select('id')
     .eq('user_id', user?.id)
     .single()
 
-  const { data: submissions } = await supabase
-    .from('submissions')
-    .select(`
-      *,
-      forms (id, title)
-    `)
-    .eq('salon_id', salon?.id)
-    .order('created_at', { ascending: false })
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
-  const { data: forms } = await supabase
-    .from('forms')
-    .select('id, title')
-    .eq('salon_id', salon?.id)
-    .order('title')
+  const [
+    { data: submissions },
+    { count: todayCount },
+    { count: signedCount },
+  ] = await Promise.all([
+    supabase
+      .from('submissions')
+      .select('*, forms (id, title)')
+      .eq('salon_id', salon?.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('salon_id', salon?.id)
+      .gte('created_at', today.toISOString()),
+    supabase
+      .from('submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('salon_id', salon?.id)
+      .not('signature', 'is', null),
+  ])
 
   return (
     <div className="space-y-6">
@@ -45,15 +55,11 @@ export default async function SubmissionsPage() {
         </div>
         <div className="bg-card rounded-xl p-5 border border-border/60">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Dzisiaj</p>
-          <p className="text-3xl font-bold text-foreground mt-1">
-            {submissions?.filter(s => new Date(s.created_at).toDateString() === new Date().toDateString()).length || 0}
-          </p>
+          <p className="text-3xl font-bold text-foreground mt-1">{todayCount || 0}</p>
         </div>
         <div className="bg-card rounded-xl p-5 border border-border/60">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Z podpisami</p>
-          <p className="text-3xl font-bold text-foreground mt-1">
-            {submissions?.filter(s => s.signature).length || 0}
-          </p>
+          <p className="text-3xl font-bold text-foreground mt-1">{signedCount || 0}</p>
         </div>
       </div>
 
