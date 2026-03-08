@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { addDays, isSameDay, format } from 'date-fns'
+import { addDays, isSameDay, isToday, format } from 'date-fns'
 import { CalendarDayColumn } from './calendar-day-column'
 import {
   HOUR_HEIGHT,
@@ -58,58 +58,55 @@ function GridLines() {
     <div className="absolute inset-0 pointer-events-none">
       {hours.map((_, i) => (
         <div key={i}>
+          {/* Hour line — solid */}
           <div
-            className="absolute left-0 right-0 border-t border-border/40"
+            className="absolute left-0 right-0 border-t border-border/50"
             style={{ top: `${i * HOUR_HEIGHT}px` }}
           />
+          {/* 15-min line */}
           <div
-            className="absolute left-0 right-0 border-t border-dashed border-border/15"
+            className="absolute left-0 right-0 border-t border-dashed border-border/25"
             style={{ top: `${i * HOUR_HEIGHT + HOUR_HEIGHT * 0.25}px` }}
           />
+          {/* 30-min line — slightly stronger */}
           <div
-            className="absolute left-0 right-0 border-t border-border/25"
+            className="absolute left-0 right-0 border-t border-border/35"
             style={{ top: `${i * HOUR_HEIGHT + HOUR_HEIGHT * 0.5}px` }}
           />
+          {/* 45-min line */}
           <div
-            className="absolute left-0 right-0 border-t border-dashed border-border/15"
+            className="absolute left-0 right-0 border-t border-dashed border-border/25"
             style={{ top: `${i * HOUR_HEIGHT + HOUR_HEIGHT * 0.75}px` }}
           />
         </div>
       ))}
       <div
-        className="absolute left-0 right-0 border-t border-border/40"
+        className="absolute left-0 right-0 border-t border-border/50"
         style={{ top: `${(END_HOUR - START_HOUR) * HOUR_HEIGHT}px` }}
       />
     </div>
   )
 }
 
-// ── Current time line (days area only) ────────────────────────────────────────
-
-function CurrentTimeLine({ top }: { top: number }) {
-  return (
-    <div
-      className="absolute left-0 right-0 z-20 pointer-events-none"
-      style={{ top: `${top}px` }}
-    >
-      <div className="flex items-center">
-        <div className="w-2 h-2 rounded-full bg-destructive shrink-0" />
-        <div className="flex-1 h-px bg-destructive" />
-      </div>
-    </div>
-  )
-}
-
 // ── Main grid ────────────────────────────────────────────────────────────────
+
+export interface PendingSelection {
+  date: Date
+  hour: number
+  minute: number
+  durationMinutes: number
+}
 
 interface CalendarGridProps {
   weekStart: Date
+  days?: Date[]
   appointments: CalendarAppointment[]
   timeBlocks: TimeBlock[]
   snapMinutes: number
   isBlockMode: boolean
   dragGuideMinutes: number | null
-  onSlotClick: (date: Date, hour: number, minute: number, durationMinutes?: number, isBlock?: boolean) => void
+  pendingSelection?: PendingSelection | null
+  onSlotSelect: (date: Date, hour: number, minute: number, durationMinutes: number | undefined, cursorX: number, cursorY: number) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CalendarAppointment['status']) => void
   onResizeBottomStart: (id: string, e: React.PointerEvent) => void
@@ -120,12 +117,14 @@ interface CalendarGridProps {
 
 export function CalendarGrid({
   weekStart,
+  days,
   appointments,
   timeBlocks,
   snapMinutes,
   isBlockMode,
   dragGuideMinutes,
-  onSlotClick,
+  pendingSelection,
+  onSlotSelect,
   onDelete,
   onStatusChange,
   onResizeBottomStart,
@@ -134,7 +133,7 @@ export function CalendarGrid({
   onDrawGuide,
 }: CalendarGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const weekDays = days ?? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   const [currentTimeTop, setCurrentTimeTop] = useState<number | null>(null)
 
@@ -155,7 +154,7 @@ export function CalendarGrid({
   }, [])
 
   const [hoverStates, setHoverStates] = useState<Array<{ hour: number; minute: number } | null>>(
-    () => Array(7).fill(null),
+    () => Array(weekDays.length).fill(null),
   )
 
   const setHoverSlot = (dayIdx: number, slot: { hour: number; minute: number } | null) => {
@@ -206,6 +205,14 @@ export function CalendarGrid({
         )}
 
         <div className="flex relative" style={{ minWidth: `${weekDays.length * 100}px` }}>
+          {/* Grid lines spanning ALL columns */}
+          <div
+            className="absolute left-0 right-0 pointer-events-none z-0"
+            style={{ top: `${52}px`, height: `${TOTAL_GRID_HEIGHT}px` }}
+          >
+            <GridLines />
+          </div>
+
           {weekDays.map((day, dayIndex) => {
             const dayAppointments = appointments.filter((a) =>
               isSameDay(new Date(a.start_time), day),
@@ -213,7 +220,6 @@ export function CalendarGrid({
             const dayBlocks = timeBlocks.filter((b) => {
               const bStart = new Date(b.start_time)
               const bEnd = new Date(b.end_time)
-              // Show block if it overlaps with this day
               const dayStart = new Date(day)
               dayStart.setHours(0, 0, 0, 0)
               const dayEnd = new Date(day)
@@ -223,15 +229,6 @@ export function CalendarGrid({
 
             return (
               <div key={dayIndex} className="flex-1 relative">
-                {dayIndex === 0 && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div style={{ height: '52px' }} />
-                    <div className="relative" style={{ height: TOTAL_GRID_HEIGHT }}>
-                      <GridLines />
-                    </div>
-                  </div>
-                )}
-
                 <CalendarDayColumn
                   date={day}
                   dayIndex={dayIndex}
@@ -239,7 +236,13 @@ export function CalendarGrid({
                   timeBlocks={dayBlocks}
                   snapMinutes={snapMinutes}
                   isBlockMode={isBlockMode}
-                  onSlotClick={onSlotClick}
+                  currentTimeTop={isToday(day) ? currentTimeTop : null}
+                  pendingSelection={
+                    pendingSelection && isSameDay(day, pendingSelection.date)
+                      ? pendingSelection
+                      : null
+                  }
+                  onSlotSelect={onSlotSelect}
                   onDelete={onDelete}
                   onStatusChange={onStatusChange}
                   onResizeBottomStart={onResizeBottomStart}
@@ -254,15 +257,6 @@ export function CalendarGrid({
           })}
         </div>
 
-        {/* Current time line */}
-        {currentTimeTop !== null && (
-          <div
-            className="absolute pointer-events-none z-20"
-            style={{ top: `${52 + currentTimeTop}px`, left: 0, right: 0 }}
-          >
-            <CurrentTimeLine top={0} />
-          </div>
-        )}
       </div>
     </div>
   )

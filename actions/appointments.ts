@@ -26,7 +26,7 @@ export async function getCalendarAppointments(
   const { data, error } = await supabase
     .from('appointments')
     .select(`
-      id, salon_id, client_id, treatment_id, start_time, status, notes,
+      id, salon_id, client_id, treatment_id, start_time, duration_minutes, status, notes,
       clients (id, name, phone),
       treatments (id, name, duration_minutes, price)
     `)

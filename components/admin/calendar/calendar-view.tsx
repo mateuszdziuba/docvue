@@ -22,13 +22,23 @@ import {
   getHours,
   getMinutes,
   startOfDay,
+  endOfDay,
+  addDays,
   setHours,
   setMinutes,
   addMinutes,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+  format,
 } from 'date-fns'
 import { toast } from 'sonner'
-import { CalendarHeader } from './calendar-header'
-import { CalendarGrid } from './calendar-grid'
+import { CalendarHeader, type ViewType } from './calendar-header'
+import { CalendarGrid, type PendingSelection } from './calendar-grid'
+import { CalendarMonthView } from './calendar-month-view'
+import { SlotContextMenu } from './slot-context-menu'
+import { ReserveTimeSheet } from './reserve-time-sheet'
 import { AppointmentDragOverlay } from './calendar-appointment'
 import { CreateAppointmentSheet } from './create-appointment-sheet'
 import {
@@ -65,16 +75,36 @@ export function CalendarView({
   const [appointments, setAppointments] = useState<CalendarAppointment[]>(initialAppointments)
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>(initialTimeBlocks)
   const [weekStart, setWeekStart] = useState<Date>(() => parseISO(initialWeekStart))
+  const [selectedDay, setSelectedDay] = useState<Date>(new Date())
+  const [monthStart, setMonthStart] = useState<Date>(() => startOfMonth(parseISO(initialWeekStart)))
+  const [view, setView] = useState<ViewType>('week')
   const [isLoading, setIsLoading] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [snapMinutes, setSnapMinutes] = useState(15)
   const [isBlockMode, setIsBlockMode] = useState(false)
   const [dragGuideMinutes, setDragGuideMinutes] = useState<number | null>(null)
+
   const [createSheet, setCreateSheet] = useState<{
     date: Date
     hour: number
     minute: number
     durationMinutes?: number
+  } | null>(null)
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    date: Date
+    hour: number
+    minute: number
+    durationMinutes?: number
+  } | null>(null)
+
+  const [reserveSheet, setReserveSheet] = useState<{
+    date: Date
+    hour: number
+    minute: number
+    durationMinutes: number
   } | null>(null)
 
   const activeAppointment = activeId
@@ -85,30 +115,98 @@ export function CalendarView({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
 
-  // ── Week navigation ─────────────────────────────────────────────────────────
+  // ── Date range helpers ───────────────────────────────────────────────────────
 
-  const navigateWeek = useCallback(
+  const getRangeForView = (v: ViewType, wStart: Date, sDay: Date, mStart: Date): [Date, Date] => {
+    if (v === 'day') return [startOfDay(sDay), endOfDay(sDay)]
+    if (v === 'month') {
+      return [
+        startOfWeek(startOfMonth(mStart), { weekStartsOn: 1 }),
+        endOfWeek(endOfMonth(mStart), { weekStartsOn: 1 }),
+      ]
+    }
+    return [wStart, endOfWeek(wStart, { weekStartsOn: 1 })]
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
+
+  const navigate = useCallback(
     async (direction: 'prev' | 'next' | 'today') => {
-      let next: Date
+      let newWeekStart = weekStart
+      let newSelectedDay = selectedDay
+      let newMonthStart = monthStart
+
       if (direction === 'today') {
-        next = startOfWeek(new Date(), { weekStartsOn: 1 })
-      } else if (direction === 'prev') {
-        next = subWeeks(weekStart, 1)
+        const now = new Date()
+        newWeekStart = startOfWeek(now, { weekStartsOn: 1 })
+        newSelectedDay = now
+        newMonthStart = startOfMonth(now)
+      } else if (view === 'day') {
+        newSelectedDay = addDays(selectedDay, direction === 'prev' ? -1 : 1)
+        newWeekStart = startOfWeek(newSelectedDay, { weekStartsOn: 1 })
+        newMonthStart = startOfMonth(newSelectedDay)
+      } else if (view === 'week') {
+        newWeekStart = direction === 'prev' ? subWeeks(weekStart, 1) : addWeeks(weekStart, 1)
+        newSelectedDay = newWeekStart
+        newMonthStart = startOfMonth(newWeekStart)
       } else {
-        next = addWeeks(weekStart, 1)
+        newMonthStart = direction === 'prev' ? subMonths(monthStart, 1) : addMonths(monthStart, 1)
+        newWeekStart = startOfWeek(newMonthStart, { weekStartsOn: 1 })
+        newSelectedDay = newMonthStart
       }
-      setWeekStart(next)
+
+      setWeekStart(newWeekStart)
+      setSelectedDay(newSelectedDay)
+      setMonthStart(newMonthStart)
       setIsLoading(true)
-      const weekEnd = endOfWeek(next, { weekStartsOn: 1 })
+
+      const [from, to] = getRangeForView(view, newWeekStart, newSelectedDay, newMonthStart)
       const [fresh, freshBlocks] = await Promise.all([
-        getCalendarAppointments(salonId, next, weekEnd),
-        getTimeBlocks(salonId, next, weekEnd),
+        getCalendarAppointments(salonId, from, to),
+        getTimeBlocks(salonId, from, to),
       ])
       setAppointments(fresh)
       setTimeBlocks(freshBlocks)
       setIsLoading(false)
     },
-    [weekStart, salonId],
+    [view, weekStart, selectedDay, monthStart, salonId],
+  )
+
+  const handleViewChange = useCallback(
+    async (newView: ViewType) => {
+      setView(newView)
+      setIsLoading(true)
+      const [from, to] = getRangeForView(newView, weekStart, selectedDay, monthStart)
+      const [fresh, freshBlocks] = await Promise.all([
+        getCalendarAppointments(salonId, from, to),
+        getTimeBlocks(salonId, from, to),
+      ])
+      setAppointments(fresh)
+      setTimeBlocks(freshBlocks)
+      setIsLoading(false)
+    },
+    [weekStart, selectedDay, monthStart, salonId],
+  )
+
+  const handleDayClick = useCallback(
+    async (day: Date) => {
+      const newWeekStart = startOfWeek(day, { weekStartsOn: 1 })
+      setView('day')
+      setSelectedDay(day)
+      setWeekStart(newWeekStart)
+      setMonthStart(startOfMonth(day))
+      setIsLoading(true)
+      const from = startOfDay(day)
+      const to = endOfDay(day)
+      const [fresh, freshBlocks] = await Promise.all([
+        getCalendarAppointments(salonId, from, to),
+        getTimeBlocks(salonId, from, to),
+      ])
+      setAppointments(fresh)
+      setTimeBlocks(freshBlocks)
+      setIsLoading(false)
+    },
+    [salonId],
   )
 
   // ── Drag to move ─────────────────────────────────────────────────────────────
@@ -303,35 +401,29 @@ export function CalendarView({
     [],
   )
 
-  // ── Slot click / draw ─────────────────────────────────────────────────────────
+  // ── Slot select → context menu ────────────────────────────────────────────────
 
-  const handleSlotClick = useCallback(
-    async (date: Date, hour: number, minute: number, durationMinutes?: number, isBlock?: boolean) => {
-      if (isBlock && durationMinutes) {
-        const dateStr = date.toISOString().slice(0, 10)
-        const start = new Date(
-          `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
-        )
-        const end = addMinutes(start, durationMinutes)
-        const { error } = await createTimeBlock({
-          salonId,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-        })
-        if (error) {
-          toast.error('Nie udało się zarezerwować czasu')
-        } else {
-          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-          const fresh = await getTimeBlocks(salonId, weekStart, weekEnd)
-          setTimeBlocks(fresh)
-          toast.success('Czas zarezerwowany')
-        }
-      } else {
-        setCreateSheet({ date, hour, minute, durationMinutes })
-      }
+  const handleSlotSelect = useCallback(
+    (
+      date: Date,
+      hour: number,
+      minute: number,
+      durationMinutes: number | undefined,
+      cursorX: number,
+      cursorY: number,
+    ) => {
+      setContextMenu({ x: cursorX, y: cursorY, date, hour, minute, durationMinutes })
     },
-    [salonId, weekStart],
+    [],
   )
+
+  // ── Time block helpers ────────────────────────────────────────────────────────
+
+  const refreshTimeBlocks = useCallback(async () => {
+    const [from, to] = getRangeForView(view, weekStart, selectedDay, monthStart)
+    const fresh = await getTimeBlocks(salonId, from, to)
+    setTimeBlocks(fresh)
+  }, [view, weekStart, selectedDay, monthStart, salonId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDeleteTimeBlock = useCallback(
     async (id: string) => {
@@ -339,76 +431,162 @@ export function CalendarView({
       const { error } = await deleteTimeBlock(id)
       if (error) {
         toast.error('Nie udało się usunąć rezerwacji')
-        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-        const fresh = await getTimeBlocks(salonId, weekStart, weekEnd)
-        setTimeBlocks(fresh)
+        await refreshTimeBlocks()
       } else {
         toast.success('Rezerwacja usunięta')
       }
     },
-    [weekStart, salonId],
+    [refreshTimeBlocks],
   )
+
+  // ── Context menu actions ──────────────────────────────────────────────────────
+
+  const handleContextCreateAppointment = useCallback(() => {
+    if (!contextMenu) return
+    setCreateSheet({
+      date: contextMenu.date,
+      hour: contextMenu.hour,
+      minute: contextMenu.minute,
+      durationMinutes: contextMenu.durationMinutes,
+    })
+    setContextMenu(null)
+  }, [contextMenu])
+
+  const handleContextReserveTime = useCallback(() => {
+    if (!contextMenu) return
+    setReserveSheet({
+      date: contextMenu.date,
+      hour: contextMenu.hour,
+      minute: contextMenu.minute,
+      durationMinutes: contextMenu.durationMinutes ?? snapMinutes,
+    })
+    setContextMenu(null)
+  }, [contextMenu, snapMinutes])
+
+  const handleContextBlockInstant = useCallback(async () => {
+    if (!contextMenu) return
+    const { date, hour, minute, durationMinutes = snapMinutes } = contextMenu
+    setContextMenu(null)
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const start = new Date(
+      `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+    )
+    const end = addMinutes(start, durationMinutes)
+    const { error } = await createTimeBlock({
+      salonId,
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+    })
+    if (error) {
+      console.error('[time_blocks] createTimeBlock error:', error)
+      toast.error(`Nie udało się zarezerwować czasu: ${error}`)
+    } else {
+      await refreshTimeBlocks()
+      toast.success('Czas zablokowany')
+    }
+  }, [contextMenu, snapMinutes, salonId, refreshTimeBlocks])
 
   const handleDrawGuide = useCallback((minutes: number | null) => {
     setDragGuideMinutes(minutes)
   }, [])
 
+  // ── Appointment created ───────────────────────────────────────────────────────
+
   const handleAppointmentCreated = useCallback(async () => {
-    const fresh = await getCalendarAppointments(
-      salonId,
-      weekStart,
-      endOfWeek(weekStart, { weekStartsOn: 1 }),
-    )
+    const [from, to] = getRangeForView(view, weekStart, selectedDay, monthStart)
+    const fresh = await getCalendarAppointments(salonId, from, to)
     setAppointments(fresh)
     toast.success('Wizyta dodana')
-  }, [weekStart, salonId])
+  }, [view, weekStart, selectedDay, monthStart, salonId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+
+  const daysForGrid = view === 'day' ? [selectedDay] : undefined
+
+  const pendingSelection: PendingSelection | null = contextMenu
+    ? {
+        date: contextMenu.date,
+        hour: contextMenu.hour,
+        minute: contextMenu.minute,
+        durationMinutes: contextMenu.durationMinutes ?? snapMinutes,
+      }
+    : null
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <CalendarHeader
         weekStart={weekStart}
+        selectedDay={selectedDay}
+        monthStart={monthStart}
+        view={view}
         isLoading={isLoading}
         snapMinutes={snapMinutes}
         isBlockMode={isBlockMode}
-        onNavigate={navigateWeek}
+        onNavigate={navigate}
         onSnapChange={setSnapMinutes}
         onBlockModeChange={setIsBlockMode}
+        onViewChange={handleViewChange}
       />
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerWithin}
-        modifiers={[restrictToWindowEdges]}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragEnd={handleDragEnd}
-      >
-        <CalendarGrid
-          weekStart={weekStart}
+      {view === 'month' ? (
+        <CalendarMonthView
+          monthStart={monthStart}
           appointments={appointments}
-          timeBlocks={timeBlocks}
-          snapMinutes={snapMinutes}
-          isBlockMode={isBlockMode}
-          dragGuideMinutes={dragGuideMinutes}
-          onSlotClick={handleSlotClick}
-          onDelete={handleDelete}
-          onStatusChange={handleStatusChange}
-          onResizeBottomStart={handleResizeBottomStart}
-          onResizeTopStart={handleResizeTopStart}
-          onDeleteTimeBlock={handleDeleteTimeBlock}
-          onDrawGuide={handleDrawGuide}
+          onDayClick={handleDayClick}
+          onSlotSelect={handleSlotSelect}
         />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          modifiers={[restrictToWindowEdges]}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
+        >
+          <CalendarGrid
+            weekStart={weekStart}
+            days={daysForGrid}
+            appointments={appointments}
+            timeBlocks={timeBlocks}
+            snapMinutes={snapMinutes}
+            isBlockMode={isBlockMode}
+            dragGuideMinutes={dragGuideMinutes}
+            pendingSelection={pendingSelection}
+            onSlotSelect={handleSlotSelect}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
+            onResizeBottomStart={handleResizeBottomStart}
+            onResizeTopStart={handleResizeTopStart}
+            onDeleteTimeBlock={handleDeleteTimeBlock}
+            onDrawGuide={handleDrawGuide}
+          />
 
-        <DragOverlay dropAnimation={null}>
-          {activeAppointment ? (
-            <AppointmentDragOverlay
-              appointment={activeAppointment}
-              height={activeAppointment.duration_minutes * PIXELS_PER_MINUTE}
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activeAppointment ? (
+              <AppointmentDragOverlay
+                appointment={activeAppointment}
+                height={activeAppointment.duration_minutes * PIXELS_PER_MINUTE}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
+      {/* Floating context menu */}
+      {contextMenu && (
+        <SlotContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isBlockMode={isBlockMode}
+          onCreateAppointment={handleContextCreateAppointment}
+          onReserveTime={handleContextReserveTime}
+          onBlockInstant={handleContextBlockInstant}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Create appointment sheet */}
       {createSheet && (
         <CreateAppointmentSheet
           open
@@ -421,6 +599,22 @@ export function CalendarView({
           salonId={salonId}
           timeBlocks={timeBlocks}
           onCreated={handleAppointmentCreated}
+        />
+      )}
+
+      {/* Reserve time sheet */}
+      {reserveSheet && (
+        <ReserveTimeSheet
+          open
+          onOpenChange={(o) => !o && setReserveSheet(null)}
+          date={reserveSheet.date}
+          hour={reserveSheet.hour}
+          minute={reserveSheet.minute}
+          durationMinutes={reserveSheet.durationMinutes}
+          salonId={salonId}
+          onCreated={async () => {
+            await refreshTimeBlocks()
+          }}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { parseISO, format, isToday } from 'date-fns'
 import { pl } from 'date-fns/locale'
@@ -15,6 +15,7 @@ import { CalendarAppointmentBlock } from './calendar-appointment'
 import { PIXELS_PER_MINUTE, START_HOUR, END_HOUR, TOTAL_GRID_HEIGHT } from './constants'
 import type { CalendarAppointment } from '@/actions/appointments'
 import type { TimeBlock } from '@/actions/time-blocks'
+import type { PendingSelection } from './calendar-grid'
 
 // ── Overlap layout algorithm ─────────────────────────────────────────────────
 
@@ -173,7 +174,9 @@ interface CalendarDayColumnProps {
   timeBlocks: TimeBlock[]
   snapMinutes: number
   isBlockMode: boolean
-  onSlotClick: (date: Date, hour: number, minute: number, durationMinutes?: number, isBlock?: boolean) => void
+  currentTimeTop?: number | null
+  pendingSelection?: PendingSelection | null
+  onSlotSelect: (date: Date, hour: number, minute: number, durationMinutes: number | undefined, cursorX: number, cursorY: number) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: CalendarAppointment['status']) => void
   onResizeBottomStart: (id: string, e: React.PointerEvent) => void
@@ -191,7 +194,9 @@ export function CalendarDayColumn({
   timeBlocks,
   snapMinutes,
   isBlockMode,
-  onSlotClick,
+  currentTimeTop,
+  pendingSelection,
+  onSlotSelect,
   onDelete,
   onStatusChange,
   onResizeBottomStart,
@@ -210,8 +215,14 @@ export function CalendarDayColumn({
   const layouts = computeDayLayout(appointments)
 
   const [drawing, setDrawing] = useState<{ startMin: number; endMin: number } | null>(null)
+  const drawingRef = useRef<{ startMin: number; endMin: number } | null>(null)
   const isDrawingRef = useRef(false)
   const columnRef = useRef<HTMLDivElement | null>(null)
+
+  const updateDrawing = useCallback((d: { startMin: number; endMin: number } | null) => {
+    drawingRef.current = d
+    setDrawing(d)
+  }, [])
 
   const getMinutesFromClientY = (clientY: number): number => {
     if (!columnRef.current) return 0
@@ -239,29 +250,36 @@ export function CalendarDayColumn({
     isDrawingRef.current = true
 
     const startMin = snapToGrid(getMinutesFromClientY(e.clientY), snapMinutes)
-    setDrawing({ startMin, endMin: startMin + snapMinutes })
+    updateDrawing({ startMin, endMin: startMin + snapMinutes })
     onHoverSlotChange(null)
 
     const onMove = (ev: PointerEvent) => {
       if (!isDrawingRef.current) return
       const endMin = snapToGrid(getMinutesFromClientY(ev.clientY), snapMinutes)
       const clamped = Math.max(startMin + snapMinutes, endMin)
-      setDrawing({ startMin, endMin: clamped })
+      updateDrawing({ startMin, endMin: clamped })
       onDrawGuide(clamped)
     }
 
-    const onUp = () => {
+    const onUp = (ev: PointerEvent) => {
       if (!isDrawingRef.current) return
       isDrawingRef.current = false
       onDrawGuide(null)
 
-      setDrawing((prev) => {
-        if (!prev) return null
-        const duration = prev.endMin - prev.startMin
-        const { hour, minute } = minsToTime(prev.startMin)
-        onSlotClick(date, hour, minute, duration > snapMinutes ? duration : undefined, isBlockMode)
-        return null
-      })
+      const current = drawingRef.current
+      if (current) {
+        const duration = current.endMin - current.startMin
+        const { hour, minute } = minsToTime(current.startMin)
+        onSlotSelect(
+          date,
+          hour,
+          minute,
+          duration > snapMinutes ? duration : undefined,
+          ev.clientX,
+          ev.clientY,
+        )
+      }
+      updateDrawing(null)
 
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
@@ -289,7 +307,6 @@ export function CalendarDayColumn({
   const drawHeight = drawing
     ? Math.max(snapMinutes * PIXELS_PER_MINUTE, (drawing.endMin - drawing.startMin) * PIXELS_PER_MINUTE)
     : 0
-  const isBlock = isBlockMode
 
   return (
     <div className="flex flex-col min-w-0 flex-1 border-l border-border/40 first:border-l-0">
@@ -342,6 +359,17 @@ export function CalendarDayColumn({
           />
         ))}
 
+        {/* Current time line — only on today */}
+        {currentTimeTop != null && (
+          <div
+            className="absolute left-0 right-0 z-20 pointer-events-none"
+            style={{ top: `${currentTimeTop}px` }}
+          >
+            <div className="absolute left-0 right-0 h-px bg-destructive top-0" />
+            <div className="absolute w-2 h-2 rounded-full bg-destructive" style={{ left: 0, top: '-3.5px' }} />
+          </div>
+        )}
+
         {/* Hover slot ghost (only when not drawing, not in block mode) */}
         {hoverSlot && !drawing && !isBlockMode && (
           <div
@@ -372,21 +400,32 @@ export function CalendarDayColumn({
           </div>
         )}
 
+        {/* Pending selection ghost — stays visible while context menu is open */}
+        {!drawing && pendingSelection && (
+          <div
+            className="absolute left-0.5 right-0.5 rounded-lg pointer-events-none z-[5] bg-primary/[0.12] border border-primary/40"
+            style={{
+              top: `${(pendingSelection.hour * 60 + pendingSelection.minute - START_HOUR * 60) * PIXELS_PER_MINUTE}px`,
+              height: `${Math.max(pendingSelection.durationMinutes * PIXELS_PER_MINUTE, snapMinutes * PIXELS_PER_MINUTE)}px`,
+            }}
+          />
+        )}
+
         {/* Draw-to-create preview */}
         {drawing && (
           <div
             className={`absolute left-0.5 right-0.5 rounded-lg pointer-events-none z-[5] flex flex-col justify-between px-2 py-1 ${
-              isBlock
+              isBlockMode
                 ? 'bg-destructive/[0.12] border border-destructive/40'
                 : 'bg-primary/[0.12] border border-primary/40'
             }`}
             style={{ top: `${drawTop}px`, height: `${drawHeight}px` }}
           >
-            <span className={`text-[10px] font-semibold tabular-nums ${isBlock ? 'text-destructive' : 'text-primary'}`}>
+            <span className={`text-[10px] font-semibold tabular-nums ${isBlockMode ? 'text-destructive' : 'text-primary'}`}>
               {formatMinutes(drawing.startMin)}
             </span>
             {drawHeight >= 32 && (
-              <span className={`text-[10px] font-medium tabular-nums self-end ${isBlock ? 'text-destructive/70' : 'text-primary/70'}`}>
+              <span className={`text-[10px] font-medium tabular-nums self-end ${isBlockMode ? 'text-destructive/70' : 'text-primary/70'}`}>
                 {formatMinutes(drawing.endMin)}
               </span>
             )}
