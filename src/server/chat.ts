@@ -164,7 +164,7 @@ async function executeTool(
   switch (name) {
     case 'searchTreatments': {
       const query = (args.query as string) || ''
-      const dbQuery = supabase
+      let dbQuery = supabase
         .from('treatments')
         .select(`
           id, name, description, duration_minutes, price, salon_id,
@@ -173,14 +173,14 @@ async function executeTool(
         .order('name')
 
       if (targetSalonId) {
-        dbQuery.eq('salon_id', targetSalonId)
+        dbQuery = dbQuery.eq('salon_id', targetSalonId)
       }
 
       if (query) {
-        dbQuery.ilike('name', `%${query}%`)
+        dbQuery = dbQuery.ilike('name', `%${query}%`)
       }
 
-      const { data } = await dbQuery.limit(20)
+      const { data } = await dbQuery.limit(30)
 
       const treatments = (data || []).map((t: Record<string, unknown>) => {
         const salon = t.salons as { name: string; phone: string | null; address: string | null } | null
@@ -341,15 +341,6 @@ async function executeTool(
         .limit(10)
 
       return { client, history: history || [] }
-    }
-
-    case 'getSalons': {
-      const { data: salons } = await supabase
-        .from('salons')
-        .select('id, name, phone, address')
-        .order('name')
-        .limit(50)
-      return { salons: (salons || []).map((s) => ({ id: s.id, name: s.name, phone: s.phone || '', address: s.address || '' })) }
     }
 
     default:

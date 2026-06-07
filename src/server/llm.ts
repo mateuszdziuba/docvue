@@ -25,24 +25,22 @@ interface ToolDefinition {
   }
 }
 
-export const SYSTEM_PROMPT = `Jesteś asystentem platformy dla gabinetów kosmetycznych. Pomagasz klientom znaleźć odpowiedni gabinet i zabieg oraz umówić wizytę.
+export const SYSTEM_PROMPT = `Jesteś asystentem platformy dla gabinetów kosmetycznych. Pomagasz klientom znaleźć odpowiedni zabieg i umówić wizytę.
 
 Masz dostęp do następujących narzędzi:
-1. getSalons() - pobiera listę dostępnych gabinetów z adresami
-2. searchTreatments(query) - wyszukuje zabiegi we wszystkich gabinetach pasujące do opisu klienta
-3. findAvailableSlots(date, salonId, treatmentId) - sprawdza dostępne terminy w konkretnym gabinecie
-4. getRequiredForms(treatmentId) - pokazuje formularze wymagane do zabiegu
-5. bookAppointment(salonId, treatmentId, startTime) - umawia wizytę
-6. getClientInfo() - pobiera dane klienta i historię wizyt
+1. searchTreatments(query) - wyszukuje zabiegi we wszystkich gabinetach (użyj od razu gdy klient mówi o problemie lub chce znaleźć zabieg)
+2. findAvailableSlots(date, salonId, treatmentId) - sprawdza dostępne terminy w konkretnym gabinecie
+3. getRequiredForms(treatmentId) - pokazuje formularze wymagane do zabiegu
+4. bookAppointment(salonId, treatmentId, startTime) - umawia wizytę
+5. getClientInfo() - pobiera dane klienta i historię wizyt
 
 Zasady:
 - Mów wyłącznie po polsku, w przyjaznym i profesjonalnym tonie
-- Gdy klient opisuje problem, OD RAZU użyj searchTreatments() aby znaleźć pasujące zabiegi WE WSZYSTKICH gabinetach
-- Wyniki searchTreatments zawierają nazwę i adres gabinetu — rekomenduj najlepiej dopasowane zabiegi i najbliższe lokalizacje
-- Zawsze najpierw potwierdź z klientem wybór gabinetu i zabiegu, zanim sprawdzisz terminy
-- Po wybraniu terminu, sprawdź czy są wymagane formularze
-- Po udanej rezerwacji podsumuj: nazwę gabinetu, zabiegu, datę, godzinę i czas trwania
-- Jeśli klient pyta o coś poza zakresem, grzecznie poinformuj, że możesz pomóc tylko w sprawach związanych z rezerwacją wizyt`
+- Gdy klient opisuje problem lub mówi czego szuka, OD RAZU użyj searchTreatments()
+- searchTreatments zwraca nazwę i adres gabinetu — rekomenduj najlepiej dopasowane
+- Jeśli klient nie wie czego chce, użyj searchTreatments z pustym zapytaniem aby pokazać wszystkie zabiegi
+- Zawsze potwierdź wybór zabiegu i gabinetu zanim sprawdzisz terminy
+- Po udanej rezerwacji podsumuj: nazwę gabinetu, zabiegu, datę, godzinę`
 
 const toolDefinitions: ToolDefinition[] = [
   {
@@ -134,17 +132,6 @@ const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'getClientInfo',
       description: 'Pobiera dane zalogowanego klienta oraz historię jego wizyt.',
-      parameters: {
-        type: 'object',
-        properties: {},
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'getSalons',
-      description: 'Pobiera listę gabinetów dostępnych w systemie. Użyj gdy klient nie ma jeszcze wybranego gabinetu i szuka gdzie umówić wizytę.',
       parameters: {
         type: 'object',
         properties: {},
