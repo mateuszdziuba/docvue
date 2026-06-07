@@ -26,9 +26,6 @@ function ClientLayout() {
             <Link to="/client/calendar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Wizyty
             </Link>
-            <Link to="/client/book" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Rezerwacja
-            </Link>
             <Link to="/client/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Czat
             </Link>
@@ -38,6 +35,12 @@ function ClientLayout() {
             <div className="text-sm font-medium text-foreground ml-2">
               {client?.name || user?.email}
             </div>
+            <Link
+              to="/logout"
+              className="text-sm text-destructive/70 hover:text-destructive transition-colors ml-1"
+            >
+              Wyloguj
+            </Link>
           </div>
         </div>
       </nav>

@@ -153,17 +153,34 @@ const toolDefinitions: ToolDefinition[] = [
   },
 ]
 
-export async function callLLM(messages: LLMMessage[]): Promise<{
-  content: string
-  toolCalls?: Array<{
-    id: string
-    function: { name: string; arguments: string }
-  }>
-}> {
-  const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) {
-    throw new Error('GROQ_API_KEY nie jest skonfigurowany. Dodaj go do .env')
+async function callOllama(messages: LLMMessage[]) {
+  const endpoint = (process.env.OLLAMA_ENDPOINT || 'http://localhost:11434').replace(/\/$/, '')
+  const model = process.env.OLLAMA_MODEL || 'qwen2.5:7b'
+
+  const response = await fetch(`${endpoint}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      tools: toolDefinitions,
+      tool_choice: 'auto',
+      temperature: 0.7,
+      max_tokens: 2048,
+    }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Błąd Ollama (${response.status}): ${text}`)
   }
+
+  return response.json()
+}
+
+async function callGroq(messages: LLMMessage[]) {
+  const apiKey = process.env.GROQ_API_KEY
+  const model = process.env.GROQ_MODEL || 'llama-3.1-8b-instant'
 
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
@@ -172,7 +189,7 @@ export async function callLLM(messages: LLMMessage[]): Promise<{
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+      model,
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       tools: toolDefinitions,
       tool_choice: 'auto',
@@ -186,9 +203,30 @@ export async function callLLM(messages: LLMMessage[]): Promise<{
     throw new Error(`Błąd API Groq (${response.status}): ${text}`)
   }
 
-  const data = await response.json()
-  const choice = data.choices?.[0]?.message
+  return response.json()
+}
 
+export async function callLLM(messages: LLMMessage[]): Promise<{
+  content: string
+  toolCalls?: Array<{
+    id: string
+    function: { name: string; arguments: string }
+  }>
+}> {
+  const useOllama = !!process.env.OLLAMA_ENDPOINT || !process.env.GROQ_API_KEY
+
+  let data: { choices?: Array<{ message?: { content?: string; tool_calls?: ToolCall[] } }> }
+
+  if (useOllama) {
+    data = await callOllama(messages)
+  } else {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY nie jest skonfigurowany. Dodaj go do .env lub skonfiguruj Ollama przez OLLAMA_ENDPOINT')
+    }
+    data = await callGroq(messages)
+  }
+
+  const choice = data.choices?.[0]?.message
   if (!choice) {
     return { content: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.' }
   }

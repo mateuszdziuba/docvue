@@ -24,7 +24,6 @@ import { Route as FTokenSuccessRouteImport } from './routes/f.$token_.success'
 import { Route as ClientClientProfileRouteImport } from './routes/_client/client/profile'
 import { Route as ClientClientChatRouteImport } from './routes/_client/client/chat'
 import { Route as ClientClientCalendarRouteImport } from './routes/_client/client/calendar'
-import { Route as ClientClientBookRouteImport } from './routes/_client/client/book'
 import { Route as AuthedDashboardVisitsIndexRouteImport } from './routes/_authed/dashboard/visits/index'
 import { Route as AuthedDashboardTreatmentsIndexRouteImport } from './routes/_authed/dashboard/treatments/index'
 import { Route as AuthedDashboardSubmissionsIndexRouteImport } from './routes/_authed/dashboard/submissions/index'
@@ -110,11 +109,6 @@ const ClientClientChatRoute = ClientClientChatRouteImport.update({
 const ClientClientCalendarRoute = ClientClientCalendarRouteImport.update({
   id: '/client/calendar',
   path: '/client/calendar',
-  getParentRoute: () => ClientRoute,
-} as any)
-const ClientClientBookRoute = ClientClientBookRouteImport.update({
-  id: '/client/book',
-  path: '/client/book',
   getParentRoute: () => ClientRoute,
 } as any)
 const AuthedDashboardVisitsIndexRoute =
@@ -204,7 +198,6 @@ export interface FileRoutesByFullPath {
   '/register-client': typeof RegisterClientRoute
   '/dashboard': typeof AuthedDashboardRouteWithChildren
   '/f/$token': typeof FTokenRoute
-  '/client/book': typeof ClientClientBookRoute
   '/client/calendar': typeof ClientClientCalendarRoute
   '/client/chat': typeof ClientClientChatRoute
   '/client/profile': typeof ClientClientProfileRoute
@@ -232,7 +225,6 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/register-client': typeof RegisterClientRoute
   '/f/$token': typeof FTokenRoute
-  '/client/book': typeof ClientClientBookRoute
   '/client/calendar': typeof ClientClientCalendarRoute
   '/client/chat': typeof ClientClientChatRoute
   '/client/profile': typeof ClientClientProfileRoute
@@ -264,7 +256,6 @@ export interface FileRoutesById {
   '/register-client': typeof RegisterClientRoute
   '/_authed/dashboard': typeof AuthedDashboardRouteWithChildren
   '/f/$token': typeof FTokenRoute
-  '/_client/client/book': typeof ClientClientBookRoute
   '/_client/client/calendar': typeof ClientClientCalendarRoute
   '/_client/client/chat': typeof ClientClientChatRoute
   '/_client/client/profile': typeof ClientClientProfileRoute
@@ -295,7 +286,6 @@ export interface FileRouteTypes {
     | '/register-client'
     | '/dashboard'
     | '/f/$token'
-    | '/client/book'
     | '/client/calendar'
     | '/client/chat'
     | '/client/profile'
@@ -323,7 +313,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/register-client'
     | '/f/$token'
-    | '/client/book'
     | '/client/calendar'
     | '/client/chat'
     | '/client/profile'
@@ -354,7 +343,6 @@ export interface FileRouteTypes {
     | '/register-client'
     | '/_authed/dashboard'
     | '/f/$token'
-    | '/_client/client/book'
     | '/_client/client/calendar'
     | '/_client/client/chat'
     | '/_client/client/profile'
@@ -493,13 +481,6 @@ declare module '@tanstack/react-router' {
       path: '/client/calendar'
       fullPath: '/client/calendar'
       preLoaderRoute: typeof ClientClientCalendarRouteImport
-      parentRoute: typeof ClientRoute
-    }
-    '/_client/client/book': {
-      id: '/_client/client/book'
-      path: '/client/book'
-      fullPath: '/client/book'
-      preLoaderRoute: typeof ClientClientBookRouteImport
       parentRoute: typeof ClientRoute
     }
     '/_authed/dashboard/visits/': {
@@ -647,14 +628,12 @@ const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
 interface ClientRouteChildren {
-  ClientClientBookRoute: typeof ClientClientBookRoute
   ClientClientCalendarRoute: typeof ClientClientCalendarRoute
   ClientClientChatRoute: typeof ClientClientChatRoute
   ClientClientProfileRoute: typeof ClientClientProfileRoute
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
-  ClientClientBookRoute: ClientClientBookRoute,
   ClientClientCalendarRoute: ClientClientCalendarRoute,
   ClientClientChatRoute: ClientClientChatRoute,
   ClientClientProfileRoute: ClientClientProfileRoute,
