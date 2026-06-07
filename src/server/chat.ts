@@ -65,6 +65,37 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
         tool_call_id: undefined,
       })) || []
 
+    // ----- Rule-based intent detection (fallback gdy AI nie woła narzędzi) -----
+    const userMsg = data.message.toLowerCase()
+    const treatmentIntent = /szukam|poleć|pokaż|co (macie|polecasz)|na (twarz|cerę|skórę)|mam (suchą|tłustą|problem|trądzik|zmarszczki)|potrzebuję/.test(userMsg)
+
+    if (treatmentIntent) {
+      const { data: allTx } = await supabase
+        .from('treatments')
+        .select('id, name, description, duration_minutes, price, salon_id, indications')
+        .limit(50)
+
+      // Filter by relevance
+      const searchWords = userMsg.replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 2)
+      let matched = allTx || []
+      if (searchWords.length > 0) {
+        matched = matched.filter((t: any) => {
+          const text = [t.name, t.description, ...(t.indications || [])].join(' ').toLowerCase()
+          return searchWords.some((w: string) => text.includes(w))
+        })
+      }
+
+      if (matched.length > 0) {
+        const ctx = matched.map((t: any) => {
+          return `- ${t.name}: ${t.description || ''} (${t.duration_minutes}min${t.price ? `, ${t.price}zł` : ''})`
+        }).join('\n')
+        messages.unshift({ role: 'system', content: `Znalezione zabiegi pasujące do zapytania:\n${ctx}\n\nPoleć je klientowi.` })
+        toolResults.push({ name: 'searchTreatments', result: { treatments: matched } })
+      }
+    }
+
+    // ----- End of rule-based detection -----
+
     // Main LLM loop
     const MAX_ITERATIONS = 5
     let iterations = 0
