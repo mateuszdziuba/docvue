@@ -10,10 +10,11 @@ interface ChatContainerProps {
   messages: ChatMessageData[]
   isTyping: boolean
   onSend: (message: string) => void
+  renderAfterMessage?: (index: number) => React.ReactNode
   children?: React.ReactNode
 }
 
-export function ChatContainer({ messages, isTyping, children }: ChatContainerProps) {
+export function ChatContainer({ messages, isTyping, renderAfterMessage, children }: ChatContainerProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,7 +39,10 @@ export function ChatContainer({ messages, isTyping, children }: ChatContainerPro
           </div>
         )}
         {messages.map((msg, i) => (
-          <ChatMessage key={i} role={msg.role} content={msg.content} />
+          <div key={i}>
+            <ChatMessage role={msg.role} content={msg.content} />
+            {renderAfterMessage?.(i)}
+          </div>
         ))}
         {isTyping && <ChatTypingIndicator />}
         <div ref={bottomRef} />

@@ -25,22 +25,15 @@ interface ToolDefinition {
   }
 }
 
-export const SYSTEM_PROMPT = `Jesteś asystentem platformy dla gabinetów kosmetycznych. Pomagasz klientom znaleźć odpowiedni zabieg i umówić wizytę.
+export const SYSTEM_PROMPT = `Jesteś asystentem rezerwacji wizyt w gabinetach kosmetycznych. Mów wyłącznie po polsku, krótko i rzeczowo.
 
-Masz dostęp do następujących narzędzi:
-1. searchTreatments(query) - wyszukuje zabiegi we wszystkich gabinetach (użyj od razu gdy klient mówi o problemie lub chce znaleźć zabieg)
-2. findAvailableSlots(date, salonId, treatmentId) - sprawdza dostępne terminy w konkretnym gabinecie
-3. getRequiredForms(treatmentId) - pokazuje formularze wymagane do zabiegu
-4. bookAppointment(salonId, treatmentId, startTime) - umawia wizytę
-5. getClientInfo() - pobiera dane klienta i historię wizyt
+WAŻNE - zawsze zaczynaj od narzędzia:
+- Użytkownik mówi o skórze, cerze, problemie lub zabiegu → wołaj searchTreatments()
+- Użytkownik mówi "pokaż", "jakie macie", "co polecasz" → wołaj searchTreatments("")
+- Użytkownik wybiera zabieg → wołaj findAvailableSlots()
+- Użytkownik wybiera termin → wołaj bookAppointment()
 
-Zasady:
-- Mów wyłącznie po polsku, w przyjaznym i profesjonalnym tonie
-- Gdy klient opisuje problem lub mówi czego szuka, OD RAZU użyj searchTreatments()
-- searchTreatments zwraca nazwę i adres gabinetu — rekomenduj najlepiej dopasowane
-- Jeśli klient nie wie czego chce, użyj searchTreatments z pustym zapytaniem aby pokazać wszystkie zabiegi
-- Zawsze potwierdź wybór zabiegu i gabinetu zanim sprawdzisz terminy
-- Po udanej rezerwacji podsumuj: nazwę gabinetu, zabiegu, datę, godzinę`
+NIE zadawaj pytań. NIE mów "jak mogę pomóc". Od razu używaj narzędzi.`
 
 const toolDefinitions: ToolDefinition[] = [
   {
@@ -142,18 +135,16 @@ const toolDefinitions: ToolDefinition[] = [
 
 async function callOllama(messages: LLMMessage[]) {
   const endpoint = (process.env.OLLAMA_ENDPOINT || 'http://localhost:11434').replace(/\/$/, '')
-  const model = process.env.OLLAMA_MODEL || 'qwen2.5:7b'
+  const model = process.env.OLLAMA_MODEL || 'llama3.1:8b'
 
-  const response = await fetch(`${endpoint}/v1/chat/completions`, {
+  const response = await fetch(`${endpoint}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model,
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       tools: toolDefinitions,
-      tool_choice: 'auto',
-      temperature: 0.7,
-      max_tokens: 2048,
+      stream: false,
     }),
   })
 
@@ -162,7 +153,23 @@ async function callOllama(messages: LLMMessage[]) {
     throw new Error(`Błąd Ollama (${response.status}): ${text}`)
   }
 
-  return response.json()
+  const data = await response.json()
+  // Transform Ollama native format to OpenAI-compatible shape
+  return {
+    choices: [{
+      message: {
+        content: data.message?.content || '',
+        tool_calls: data.message?.tool_calls?.map((tc: { function: { name: string; arguments: string } }, i: number) => ({
+          id: `call_${i}`,
+          type: 'function' as const,
+          function: {
+            name: tc.function.name,
+            arguments: typeof tc.function.arguments === 'string' ? tc.function.arguments : JSON.stringify(tc.function.arguments),
+          },
+        })),
+      },
+    }],
+  }
 }
 
 async function callGroq(messages: LLMMessage[]) {

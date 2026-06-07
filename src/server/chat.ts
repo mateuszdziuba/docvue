@@ -68,6 +68,7 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
     // Main LLM loop
     const MAX_ITERATIONS = 5
     let iterations = 0
+    const toolResults: Array<{ name: string; result: any }> = []
 
     try {
       while (iterations < MAX_ITERATIONS) {
@@ -86,28 +87,32 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
 
           return {
             message: response.content,
-          history: [],
-        }
-      }
-
-      // Process tool calls
-      for (const tc of response.toolCalls) {
-        const { name, arguments: argsStr } = tc.function
-        let args: Record<string, unknown> = {}
-        try {
-          args = JSON.parse(argsStr)
-        } catch {
-          args = {}
+            tools: toolResults,
+          }
         }
 
-        let result: string
+        // Process tool calls
+        for (const tc of response.toolCalls) {
+          const { name, arguments: argsStr } = tc.function
+          let args: Record<string, unknown> = {}
+          try {
+            args = JSON.parse(argsStr)
+          } catch {
+            args = {}
+          }
 
-        try {
-          const toolResult = await executeTool(name, args, { supabase, clientId, salonId })
-          result = JSON.stringify(toolResult)
-        } catch (e) {
-          result = JSON.stringify({ error: (e as Error).message })
-        }
+          let result: string
+
+          try {
+            const toolResult = await executeTool(name, args, { supabase, clientId, salonId })
+            result = JSON.stringify(toolResult)
+            // Track for frontend rendering
+            if (name === 'searchTreatments' || name === 'findAvailableSlots' || name === 'getRequiredForms' || name === 'bookAppointment') {
+              toolResults.push({ name, result: toolResult })
+            }
+          } catch (e) {
+            result = JSON.stringify({ error: (e as Error).message })
+          }
 
         // Add assistant message with tool call
         messages.push({
