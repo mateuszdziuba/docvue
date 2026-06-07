@@ -8,7 +8,7 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 async function callGroq(messages, systemPrompt) {
   const apiKey = process.env.GROQ_API_KEY
-  const model = process.env.GROQ_MODEL || 'mixtral-8x7b-32768'
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
 
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',

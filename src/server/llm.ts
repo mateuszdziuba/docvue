@@ -172,7 +172,7 @@ export async function callLLM(messages: LLMMessage[]): Promise<{
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: process.env.GROQ_MODEL || 'mixtral-8x7b-32768',
+      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       tools: toolDefinitions,
       tool_choice: 'auto',
