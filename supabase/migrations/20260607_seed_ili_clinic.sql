@@ -15,7 +15,7 @@ BEGIN
 
   -- Dodaj zabiegi jeśli jeszcze nie istnieją
   INSERT INTO treatments (id, salon_id, name, description, duration_minutes)
-  SELECT gen_random_uuid(), v_salon_id, n.name, n.desc, n.dur
+  SELECT gen_random_uuid(), v_salon_id, n.name, n.description, n.duration
   FROM (VALUES
     ('Toksyna Botulinowa (Botoks)', 'Redukcja zmarszczek mimicznych. Naturalnie wygładzona skóra bez efektu maski.', 30),
     ('Depilacja Laserowa', 'Trwałe usuwanie owłosienia laserem AlexDual Xlase. Dla każdego typu skóry.', 45),
@@ -31,7 +31,7 @@ BEGIN
     ('Stymulatory Tkankowe', 'Głęboka regeneracja i odmłodzenie. Poprawa owalu twarzy i jędrności.', 45),
     ('Termolifting Xlase', 'Laserowy lifting bez skalpela. Napięcie i odmłodzenie energią cieplną.', 60),
     ('Trychologia', 'Konsultacje i zabiegi skóry głowy. Stymulacja wzrostu włosów, leczenie łysienia.', 60)
-  ) AS n(name, desc, dur)
+  ) AS n(name, description, duration)
   WHERE NOT EXISTS (
     SELECT 1 FROM treatments t WHERE t.salon_id = v_salon_id AND t.name = n.name
   );
