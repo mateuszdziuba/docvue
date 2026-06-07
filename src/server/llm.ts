@@ -213,32 +213,54 @@ export async function callLLM(messages: LLMMessage[]): Promise<{
     function: { name: string; arguments: string }
   }>
 }> {
-  const useOllama = !!process.env.OLLAMA_ENDPOINT || !process.env.GROQ_API_KEY
+  const ollamaEndpoint = (process.env.OLLAMA_ENDPOINT || 'http://localhost:11434').replace(/\/$/, '')
 
-  let data: { choices?: Array<{ message?: { content?: string; tool_calls?: ToolCall[] } }> }
-
-  if (useOllama) {
-    data = await callOllama(messages)
-  } else {
-    if (!process.env.GROQ_API_KEY) {
-      throw new Error('GROQ_API_KEY nie jest skonfigurowany. Dodaj go do .env lub skonfiguruj Ollama przez OLLAMA_ENDPOINT')
+  // Prefer Ollama (lokalny, bez limitów)
+  try {
+    const health = await fetch(`${ollamaEndpoint}/api/tags`, { signal: AbortSignal.timeout(2000) })
+    if (health.ok) {
+      const data = await callOllama(messages)
+      const choice = data.choices?.[0]?.message
+      if (!choice) {
+        return { content: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.' }
+      }
+      return {
+        content: choice.content || '',
+        toolCalls: choice.tool_calls?.map((tc: ToolCall) => ({
+          id: tc.id,
+          function: {
+            name: tc.function.name,
+            arguments: tc.function.arguments,
+          },
+        })),
+      }
     }
-    data = await callGroq(messages)
+  } catch {
+    // Ollama unavailable — fall through to Groq
   }
 
-  const choice = data.choices?.[0]?.message
-  if (!choice) {
-    return { content: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.' }
+  // Fallback: Groq (jeśli skonfigurowany)
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const data = await callGroq(messages)
+      const choice = data.choices?.[0]?.message
+      if (!choice) {
+        return { content: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.' }
+      }
+      return {
+        content: choice.content || '',
+        toolCalls: choice.tool_calls?.map((tc: ToolCall) => ({
+          id: tc.id,
+          function: {
+            name: tc.function.name,
+            arguments: tc.function.arguments,
+          },
+        })),
+      }
+    } catch (e) {
+      throw new Error(`Błąd API Groq: ${(e as Error).message}`)
+    }
   }
 
-  return {
-    content: choice.content || '',
-    toolCalls: choice.tool_calls?.map((tc: ToolCall) => ({
-      id: tc.id,
-      function: {
-        name: tc.function.name,
-        arguments: tc.function.arguments,
-      },
-    })),
-  }
+  throw new Error('Brak skonfigurowanego AI. Uruchom Ollama (lokalnie) lub dodaj GROQ_API_KEY do .env')
 }
