@@ -76,6 +76,7 @@ export interface Treatment {
   description: string | null
   duration_minutes: number
   price: number | null
+  indications: string[] | null
   // required_form_id: string | null -- DEPRECATED
   created_at: string
 }

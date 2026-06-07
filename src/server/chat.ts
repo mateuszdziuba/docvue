@@ -172,7 +172,7 @@ async function executeTool(
       let dbQuery = supabase
         .from('treatments')
         .select(`
-          id, name, description, duration_minutes, price, salon_id,
+          id, name, description, duration_minutes, price, salon_id, indications,
           salons!inner(id, name, phone, address)
         `)
         .order('name')
@@ -181,13 +181,21 @@ async function executeTool(
         dbQuery = dbQuery.eq('salon_id', targetSalonId)
       }
 
+      const { data } = await dbQuery.limit(50)
+
+      // Smart search: match name, description, AND indications array
+      let treatments = (data || [])
       if (query) {
-        dbQuery = dbQuery.ilike('name', `%${query}%`)
+        const q = query.toLowerCase()
+        treatments = treatments.filter((t: Record<string, unknown>) => {
+          const name = (t.name as string || '').toLowerCase()
+          const desc = (t.description as string || '').toLowerCase()
+          const inds = (t.indications as string[] || [])
+          return inds.some((i) => i.toLowerCase().includes(q)) || name.includes(q) || desc.includes(q)
+        })
       }
 
-      const { data } = await dbQuery.limit(30)
-
-      const treatments = (data || []).map((t: Record<string, unknown>) => {
+      const result = treatments.map((t: Record<string, unknown>) => {
         const salon = t.salons as { name: string; phone: string | null; address: string | null } | null
         return {
           id: t.id as string,
@@ -196,13 +204,14 @@ async function executeTool(
           duration_minutes: t.duration_minutes as number,
           price: t.price as number | null,
           salon_id: t.salon_id as string,
+          indications: t.indications as string[] | null,
           salon_name: salon?.name || '',
           salon_address: salon?.address || '',
           salon_phone: salon?.phone || '',
         }
       })
 
-      return { treatments }
+      return { treatments: result }
     }
 
     case 'findAvailableSlots': {
