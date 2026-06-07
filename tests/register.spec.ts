@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 
-test('register page flow', async ({ page }) => {
+test('register page flow', async ({ page }: { page: any }) => {
   // Generate random data for registration
   const randomSuffix = Math.floor(Math.random() * 100000);
   const salonName = `Test Salon ${randomSuffix}`;
@@ -25,4 +25,3 @@ test('register page flow', async ({ page }) => {
   // In that case, it might redirect to /register?error=...
   await expect(page).toHaveURL(/dashboard/);
 });
-

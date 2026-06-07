@@ -11,7 +11,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { createTimeBlock } from '@/actions/time-blocks'
+import { createTimeBlock } from '@/src/server/time-blocks'
 
 const DURATION_PRESETS = [15, 30, 45, 60, 90, 120]
 

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
-import { updateSalonSettings } from '@/actions/settings'
+import { updateSalonSettings } from '@/src/server/settings'
 import type { Salon } from '@/types/database'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 

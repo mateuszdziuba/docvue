@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, getPublicStorageUrl } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import Image from '@/lib/image-compat'
+import { useRouterCompat } from '@/lib/router-compat'
 import Cropper from 'react-easy-crop'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -87,14 +87,14 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
   
   const [preview, setPreview] = useState<string | null>(
     initialPath 
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/visit-photos/${initialPath}`
+      ? getPublicStorageUrl('visit-photos', initialPath)
       : null
   )
   const [currentPath, setCurrentPath] = useState<string | null>(initialPath)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
     setCroppedAreaPixels(croppedAreaPixels)
@@ -163,7 +163,7 @@ export function PhotoUpload({ visitId, type, initialPath, onUploadComplete }: Ph
       setCurrentPath(filePath)
       
       // Update Preview
-      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/visit-photos/${filePath}`
+      const publicUrl = getPublicStorageUrl('visit-photos', filePath)
       setPreview(publicUrl)
       
       toast.success('Zdjęcie zostało dodane')

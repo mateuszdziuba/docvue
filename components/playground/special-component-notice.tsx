@@ -1,4 +1,4 @@
-import { Link } from 'next-view-transitions'
+import { Link } from '@/lib/link-compat'
 
 import { SPECIAL_COMPONENTS } from '@/constants/special-components'
 import { FormFieldType } from '@/types'

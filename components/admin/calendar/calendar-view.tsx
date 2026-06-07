@@ -37,6 +37,7 @@ import { toast } from 'sonner'
 import { CalendarHeader, type ViewType } from './calendar-header'
 import { CalendarGrid, type PendingSelection } from './calendar-grid'
 import { CalendarMonthView } from './calendar-month-view'
+import { CalendarStaffGrid } from './calendar-staff-grid'
 import { SlotContextMenu } from './slot-context-menu'
 import { ReserveTimeSheet } from './reserve-time-sheet'
 import { AppointmentDragOverlay } from './calendar-appointment'
@@ -47,15 +48,15 @@ import {
   updateCalendarAppointmentStatus,
   deleteCalendarAppointment,
   type CalendarAppointment,
-} from '@/actions/appointments'
+} from '@/src/server/appointments'
 import {
   getTimeBlocks,
   createTimeBlock,
   deleteTimeBlock,
   type TimeBlock,
-} from '@/actions/time-blocks'
+} from '@/src/server/time-blocks'
 import { PIXELS_PER_MINUTE, START_HOUR, END_HOUR } from './constants'
-import type { Treatment } from '@/types/database'
+import type { Treatment, StaffMember } from '@/types/database'
 
 interface CalendarViewProps {
   initialAppointments: CalendarAppointment[]
@@ -63,6 +64,7 @@ interface CalendarViewProps {
   treatments: Pick<Treatment, 'id' | 'name' | 'duration_minutes' | 'price'>[]
   salonId: string
   initialWeekStart: string
+  staff: StaffMember[]
 }
 
 export function CalendarView({
@@ -71,6 +73,7 @@ export function CalendarView({
   treatments,
   salonId,
   initialWeekStart,
+  staff,
 }: CalendarViewProps) {
   const [appointments, setAppointments] = useState<CalendarAppointment[]>(initialAppointments)
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>(initialTimeBlocks)
@@ -89,6 +92,7 @@ export function CalendarView({
     hour: number
     minute: number
     durationMinutes?: number
+    staffId?: string | null
   } | null>(null)
 
   const [contextMenu, setContextMenu] = useState<{
@@ -98,6 +102,7 @@ export function CalendarView({
     hour: number
     minute: number
     durationMinutes?: number
+    staffId?: string | null
   } | null>(null)
 
   const [reserveSheet, setReserveSheet] = useState<{
@@ -118,7 +123,7 @@ export function CalendarView({
   // ── Date range helpers ───────────────────────────────────────────────────────
 
   const getRangeForView = (v: ViewType, wStart: Date, sDay: Date, mStart: Date): [Date, Date] => {
-    if (v === 'day') return [startOfDay(sDay), endOfDay(sDay)]
+    if (v === 'day' || v === 'staff') return [startOfDay(sDay), endOfDay(sDay)]
     if (v === 'month') {
       return [
         startOfWeek(startOfMonth(mStart), { weekStartsOn: 1 }),
@@ -141,7 +146,7 @@ export function CalendarView({
         newWeekStart = startOfWeek(now, { weekStartsOn: 1 })
         newSelectedDay = now
         newMonthStart = startOfMonth(now)
-      } else if (view === 'day') {
+      } else if (view === 'day' || view === 'staff') {
         newSelectedDay = addDays(selectedDay, direction === 'prev' ? -1 : 1)
         newWeekStart = startOfWeek(newSelectedDay, { weekStartsOn: 1 })
         newMonthStart = startOfMonth(newSelectedDay)
@@ -411,8 +416,9 @@ export function CalendarView({
       durationMinutes: number | undefined,
       cursorX: number,
       cursorY: number,
+      staffId?: string | null,
     ) => {
-      setContextMenu({ x: cursorX, y: cursorY, date, hour, minute, durationMinutes })
+      setContextMenu({ x: cursorX, y: cursorY, date, hour, minute, durationMinutes, staffId })
     },
     [],
   )
@@ -448,6 +454,7 @@ export function CalendarView({
       hour: contextMenu.hour,
       minute: contextMenu.minute,
       durationMinutes: contextMenu.durationMinutes,
+      staffId: contextMenu.staffId,
     })
     setContextMenu(null)
   }, [contextMenu])
@@ -503,14 +510,26 @@ export function CalendarView({
 
   const daysForGrid = view === 'day' ? [selectedDay] : undefined
 
-  const pendingSelection: PendingSelection | null = contextMenu
-    ? {
-        date: contextMenu.date,
-        hour: contextMenu.hour,
-        minute: contextMenu.minute,
-        durationMinutes: contextMenu.durationMinutes ?? snapMinutes,
-      }
-    : null
+  const pendingSelection: PendingSelection | null =
+    contextMenu && view !== 'staff'
+      ? {
+          date: contextMenu.date,
+          hour: contextMenu.hour,
+          minute: contextMenu.minute,
+          durationMinutes: contextMenu.durationMinutes ?? snapMinutes,
+        }
+      : null
+
+  const staffPendingSelection =
+    contextMenu && view === 'staff'
+      ? {
+          date: contextMenu.date,
+          hour: contextMenu.hour,
+          minute: contextMenu.minute,
+          durationMinutes: contextMenu.durationMinutes ?? snapMinutes,
+          staffId: contextMenu.staffId ?? null,
+        }
+      : null
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -522,6 +541,7 @@ export function CalendarView({
         isLoading={isLoading}
         snapMinutes={snapMinutes}
         isBlockMode={isBlockMode}
+        staffCount={staff.length}
         onNavigate={navigate}
         onSnapChange={setSnapMinutes}
         onBlockModeChange={setIsBlockMode}
@@ -534,6 +554,24 @@ export function CalendarView({
           appointments={appointments}
           onDayClick={handleDayClick}
           onSlotSelect={handleSlotSelect}
+        />
+      ) : view === 'staff' ? (
+        <CalendarStaffGrid
+          selectedDay={selectedDay}
+          staff={staff}
+          appointments={appointments}
+          timeBlocks={timeBlocks}
+          snapMinutes={snapMinutes}
+          isBlockMode={isBlockMode}
+          dragGuideMinutes={dragGuideMinutes}
+          pendingSelection={staffPendingSelection}
+          onSlotSelect={handleSlotSelect}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+          onResizeBottomStart={handleResizeBottomStart}
+          onResizeTopStart={handleResizeTopStart}
+          onDeleteTimeBlock={handleDeleteTimeBlock}
+          onDrawGuide={handleDrawGuide}
         />
       ) : (
         <DndContext
@@ -595,7 +633,9 @@ export function CalendarView({
           defaultHour={createSheet.hour}
           defaultMinute={createSheet.minute}
           defaultDurationMinutes={createSheet.durationMinutes}
+          defaultStaffId={createSheet.staffId}
           treatments={treatments}
+          staffMembers={staff}
           salonId={salonId}
           timeBlocks={timeBlocks}
           onCreated={handleAppointmentCreated}

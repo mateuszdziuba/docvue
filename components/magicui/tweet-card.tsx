@@ -146,7 +146,7 @@ export const TweetHeader = ({ tweet }: { tweet: EnrichedTweet }) => (
 
 export const TweetBody = ({ tweet }: { tweet: EnrichedTweet }) => (
   <div className="break-words leading-normal tracking-tighter">
-    {tweet.entities.map((entity, idx) => {
+    {tweet.entities.map((entity: any, idx: number) => {
       switch (entity.type) {
         case 'url':
         case 'symbol':
@@ -194,7 +194,7 @@ export const TweetMedia = ({ tweet }: { tweet: EnrichedTweet }) => (
     {tweet.photos && (
       <div className="relative flex transform-gpu snap-x snap-mandatory gap-4 overflow-x-auto">
         <div className="shrink-0 snap-center sm:w-2" />
-        {tweet.photos.map((photo) => (
+        {tweet.photos.map((photo: any) => (
           <img
             key={photo.url}
             src={photo.url}
@@ -208,10 +208,10 @@ export const TweetMedia = ({ tweet }: { tweet: EnrichedTweet }) => (
     )}
     {!tweet.video &&
       !tweet.photos &&
-      // @ts-expect-error - Twitter API response includes optional card data with binding values that aren't fully typed
+      // @ts-ignore - Twitter API response includes optional card data with binding values that aren't fully typed
       tweet?.card?.binding_values?.thumbnail_image_large?.image_value.url && (
         <img
-          // @ts-expect-error - Twitter API response includes optional card data with binding values that aren't fully typed
+          // @ts-ignore - Twitter API response includes optional card data with binding values that aren't fully typed
           src={tweet.card.binding_values.thumbnail_image_large.image_value.url}
           alt={tweet.text || 'Tweet card thumbnail'}
           className="h-64 rounded-xl border object-cover shadow-sm"

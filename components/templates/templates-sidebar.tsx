@@ -1,7 +1,6 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { Link } from 'next-view-transitions'
+import { Link, usePathname } from '@/lib/link-compat'
 
 import {
   Sidebar,

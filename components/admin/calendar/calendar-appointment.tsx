@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/context-menu'
 import { AppointmentPopover } from './appointment-popover'
 import { PIXELS_PER_MINUTE } from './constants'
-import type { CalendarAppointment } from '@/actions/appointments'
+import type { CalendarAppointment } from '@/src/server/appointments'
 
 export const STATUS_CONFIG = {
   scheduled: {

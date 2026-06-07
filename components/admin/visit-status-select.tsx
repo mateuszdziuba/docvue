@@ -2,11 +2,11 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 
 export function VisitStatusSelect({ id, currentStatus }: { id: string, currentStatus: string }) {
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value

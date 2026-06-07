@@ -1,10 +1,11 @@
-'use client'
+// Note: LockProvider and useLock are in components/providers/lock-provider.tsx
+// This file only exports the LockScreen UI component
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
+import { useNavigate } from '@tanstack/react-router'
+import { getSupabaseBrowserClient } from '@/src/utils/supabase-browser'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
-import { logout } from '@/actions/auth'
 
 interface LockScreenProps {
   onUnlock: () => void
@@ -12,12 +13,13 @@ interface LockScreenProps {
 
 export function LockScreen({ onUnlock }: LockScreenProps) {
   const [pin, setPin] = useState('')
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [salonPin, setSalonPin] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchSalonPin = async () => {
-      const supabase = createClient()
+      const supabase = getSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data } = await supabase
@@ -25,10 +27,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
           .select('pin_code')
           .eq('user_id', user.id)
           .single()
-
-        if (data) {
-          setSalonPin(data.pin_code)
-        }
+        if (data) setSalonPin(data.pin_code)
       }
     }
     fetchSalonPin()
@@ -36,7 +35,6 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
 
   const handleUnlockWithPin = (pinValue: string) => {
     setLoading(true)
-
     setTimeout(() => {
       if (salonPin && pinValue === salonPin) {
         toast.success('Odblokowano')
@@ -61,9 +59,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
           </svg>
         </div>
 
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          Dashboard Zablokowany
-        </h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Dashboard Zablokowany</h2>
         <p className="text-muted-foreground mb-8">
           Wprowadź kod PIN salonu, aby powrócić do panelu zarządzania.
         </p>
@@ -104,17 +100,13 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border">
-          <p className="text-sm text-muted-foreground mb-3">
-            Nie pamiętasz kodu PIN?
-          </p>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors"
-            >
-              Wyloguj się
-            </button>
-          </form>
+          <p className="text-sm text-muted-foreground mb-3">Nie pamiętasz kodu PIN?</p>
+          <button
+            onClick={() => navigate({ to: '/logout' })}
+            className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors"
+          >
+            Wyloguj się
+          </button>
         </div>
       </div>
     </div>

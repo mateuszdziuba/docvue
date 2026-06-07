@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/actions/tanstack-compat'
 import { createClient } from '@/lib/supabase/server'
 import { syncClientAppointmentsStatus } from '@/actions/appointments-sync'
 

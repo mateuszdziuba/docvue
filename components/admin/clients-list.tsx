@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/lib/link-compat'
 import { AddClientForm } from './add-client-form'
-import { deleteClient } from '@/actions/clients'
+import { deleteClient } from '@/src/server/clients'
+import { useRouterCompat } from '@/lib/router-compat'
 import type { Client } from '@/types/database'
 
 import { SearchInput } from '@/components/ui/search-input'
@@ -12,12 +13,14 @@ interface ClientsListProps {
   clients: Client[]
   query?: string
   defaultOpenAdd?: boolean
+  isOwner?: boolean
 }
 
-export function ClientsList({ clients, query, defaultOpenAdd = false }: ClientsListProps) {
+export function ClientsList({ clients, query, defaultOpenAdd = false, isOwner = false }: ClientsListProps) {
   const [showAddForm, setShowAddForm] = useState(defaultOpenAdd)
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouterCompat()
 
   const handleDeleteClick = (e: React.MouseEvent, clientId: string) => {
     e.preventDefault()
@@ -31,6 +34,7 @@ export function ClientsList({ clients, query, defaultOpenAdd = false }: ClientsL
     try {
       await deleteClient(clientToDelete)
       setClientToDelete(null)
+      router.refresh()
     } catch (error) {
       console.error('Error deleting client:', error)
       alert('Wystąpił błąd podczas usuwania klienta')
@@ -50,11 +54,11 @@ export function ClientsList({ clients, query, defaultOpenAdd = false }: ClientsL
                 Dodaj nowego klienta
               </h3>
               <AddClientForm
-                onSuccess={() => setShowAddForm(false)}
+                onSuccess={() => { router.refresh(); setShowAddForm(false) }}
                 onCancel={() => setShowAddForm(false)}
               />
             </div>
-          ) : (
+          ) : isOwner ? (
             <button
               onClick={() => setShowAddForm(true)}
               className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
@@ -64,7 +68,7 @@ export function ClientsList({ clients, query, defaultOpenAdd = false }: ClientsL
               </svg>
               Dodaj klienta
             </button>
-          )}
+          ) : null}
         </div>
 
         {/* Search - Moved here as requested */}
@@ -126,15 +130,17 @@ export function ClientsList({ clients, query, defaultOpenAdd = false }: ClientsL
                           >
                             Zarządzaj
                           </Link>
-                          <button
-                            onClick={(e) => handleDeleteClick(e, client.id)}
-                            className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                            title="Usuń"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {isOwner && (
+                            <button
+                              onClick={(e) => handleDeleteClick(e, client.id)}
+                              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                              title="Usuń"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

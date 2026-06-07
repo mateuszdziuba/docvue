@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { Form, Treatment } from '@/types/database'
 import { Pencil } from 'lucide-react'
 
@@ -24,7 +24,7 @@ export function EditTreatmentDialog({ treatment, forms }: EditTreatmentDialogPro
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const defaultFormIds = treatment.treatment_forms
     .map(tf => tf.forms?.id)

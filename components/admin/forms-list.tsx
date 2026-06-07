@@ -1,21 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { toggleFormActive, deleteForm } from '@/actions/forms'
+import { Link } from '@/lib/link-compat'
+import { toggleFormActive, deleteForm } from '@/src/server/forms'
+import { useRouterCompat } from '@/lib/router-compat'
 import type { Form } from '@/types/database'
 
 interface FormsListProps {
   forms: Form[]
   query?: string
+  isOwner?: boolean
 }
 
-export function FormsList({ forms, query }: FormsListProps) {
+export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
   const [formToDelete, setFormToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouterCompat()
 
   const handleToggleActive = async (form: Form) => {
     await toggleFormActive(form.id, !form.is_active)
+    router.refresh()
   }
 
   const handleDeleteClick = (formId: string) => {
@@ -28,6 +32,7 @@ export function FormsList({ forms, query }: FormsListProps) {
     try {
       await deleteForm(formToDelete)
       setFormToDelete(null)
+      router.refresh()
     } catch (error) {
       console.error('Error deleting form:', error)
       alert('Wystąpił błąd podczas usuwania formularza')
@@ -68,21 +73,37 @@ export function FormsList({ forms, query }: FormsListProps) {
         <p className="text-muted-foreground mb-6">
           Utwórz swój pierwszy formularz, aby rozpocząć zbieranie danych od klientów.
         </p>
-        <Link
-          href="/dashboard/forms/new"
-          className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Utwórz formularz
-        </Link>
+        {isOwner && (
+          <Link
+            href="/dashboard/forms/new"
+            className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Utwórz formularz
+          </Link>
+        )}
       </div>
     )
   }
 
   return (
     <>
+      <div className="flex items-center justify-between">
+        {isOwner && (
+          <Link
+            href="/dashboard/forms/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nowy formularz
+          </Link>
+        )}
+      </div>
+
       <div className="grid gap-4">
         {forms.map((form) => (
           <div
@@ -113,27 +134,31 @@ export function FormsList({ forms, query }: FormsListProps) {
 
               {/* Actions */}
               <div className="flex items-center gap-2">
-                {/* Edit */}
-                <Link
-                  href={`/dashboard/forms/${form.id}/edit`}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors"
-                  title="Edytuj"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </Link>
+                {isOwner && (
+                  <>
+                    {/* Edit */}
+                    <Link
+                      href={`/dashboard/forms/${form.id}/edit`}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors"
+                      title="Edytuj"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </Link>
 
-                {/* Delete */}
-                <button
-                  onClick={() => handleDeleteClick(form.id)}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
-                  title="Usuń"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                    {/* Delete */}
+                    <button
+                      onClick={() => handleDeleteClick(form.id)}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
+                      title="Usuń"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

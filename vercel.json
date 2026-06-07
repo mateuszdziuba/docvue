@@ -1,0 +1,31 @@
+{
+  "rewrites": [
+    {
+      "source": "/_serverFn/(.*)",
+      "destination": "/_serverFn/$1"
+    },
+    {
+      "source": "/((?!_serverFn).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}

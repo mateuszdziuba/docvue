@@ -32,12 +32,10 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('dashboard_locked')
   }
 
-  if (!mounted) return null
-
   return (
     <LockContext.Provider value={{ isLocked, lock, unlock }}>
-      {isLocked && <LockScreen onUnlock={unlock} />}
-      <div className={isLocked ? 'hidden' : ''}>
+      {mounted && isLocked && <LockScreen onUnlock={unlock} />}
+      <div aria-hidden={mounted && isLocked ? true : undefined} style={mounted && isLocked ? { position: 'fixed', inset: 0, overflow: 'hidden' } : undefined}>
         {children}
       </div>
     </LockContext.Provider>

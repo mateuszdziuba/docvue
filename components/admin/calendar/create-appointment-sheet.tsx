@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { ClientCombobox } from '@/components/admin/client-combobox'
-import { createCalendarAppointment } from '@/actions/appointments'
+import { createCalendarAppointment } from '@/src/server/appointments'
 import { START_HOUR, END_HOUR } from './constants'
-import type { Treatment } from '@/types/database'
-import type { TimeBlock } from '@/actions/time-blocks'
+import type { Treatment, StaffMember } from '@/types/database'
+import type { TimeBlock } from '@/src/server/time-blocks'
 
 const DURATION_PRESETS = [15, 30, 45, 60, 90, 120]
 
@@ -27,7 +27,9 @@ interface CreateAppointmentSheetProps {
   defaultHour: number
   defaultMinute: number
   defaultDurationMinutes?: number
+  defaultStaffId?: string | null
   treatments: Pick<Treatment, 'id' | 'name' | 'duration_minutes' | 'price'>[]
+  staffMembers?: Pick<StaffMember, 'id' | 'name'>[]
   salonId: string
   timeBlocks?: TimeBlock[]
   onCreated: () => void
@@ -58,13 +60,16 @@ export function CreateAppointmentSheet({
   defaultHour,
   defaultMinute,
   defaultDurationMinutes,
+  defaultStaffId,
   treatments,
+  staffMembers = [],
   salonId,
   timeBlocks = [],
   onCreated,
 }: CreateAppointmentSheetProps) {
   const [selectedClientId, setSelectedClientId] = useState<string | undefined>()
   const [treatmentId, setTreatmentId] = useState('')
+  const [staffId, setStaffId] = useState<string>(defaultStaffId ?? '')
   const [hour, setHour] = useState(defaultHour)
   const [minute, setMinute] = useState(defaultMinute)
   const [duration, setDuration] = useState(defaultDurationMinutes ?? 60)
@@ -80,6 +85,7 @@ export function CreateAppointmentSheet({
       setDurationManuallySet(!!defaultDurationMinutes)
       setSelectedClientId(undefined)
       setTreatmentId('')
+      setStaffId(defaultStaffId ?? '')
       setNotes('')
     }
     onOpenChange(o)
@@ -115,6 +121,7 @@ export function CreateAppointmentSheet({
       startTime,
       durationMinutes: duration,
       notes: notes || undefined,
+      staffId: staffId || undefined,
     })
 
     setIsLoading(false)
@@ -173,6 +180,25 @@ export function CreateAppointmentSheet({
               ))}
             </select>
           </div>
+
+          {/* Staff (only if salon has staff members) */}
+          {staffMembers.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Pracownik</label>
+              <select
+                value={staffId}
+                onChange={(e) => setStaffId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">-- Nieprzypisany --</option>
+                {staffMembers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Time */}
           <div className="space-y-1.5">

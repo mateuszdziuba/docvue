@@ -3,7 +3,7 @@ import React from 'react'
 import { fieldTypes } from '@/constants'
 import { Button } from '@/components/ui/button'
 import If from '@/components/ui/if'
-import Link from 'next/link'
+import Link from '@/lib/link-compat'
 import { Badge } from '@/components/ui/badge'
 
 type FieldSelectorProps = {

@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card'
 import LocationSelector from '@/components/ui/location-input'
 import Code from '@/components/code'
 import { LocationForm } from '@/components/components/location-form'
-import { Link } from 'next-view-transitions'
+import { Link } from '@/lib/link-compat'
 
 import installationManual from '@/components/ui/location-input?raw'
 import formCode from '@/components/components/location-form?raw'

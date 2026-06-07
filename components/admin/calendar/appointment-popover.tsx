@@ -8,8 +8,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import Link from 'next/link'
-import type { CalendarAppointment } from '@/actions/appointments'
+import { Link } from '@/lib/link-compat'
+import type { CalendarAppointment } from '@/src/server/appointments'
 
 const statusLabels: Record<CalendarAppointment['status'], string> = {
   scheduled: 'Zaplanowana',

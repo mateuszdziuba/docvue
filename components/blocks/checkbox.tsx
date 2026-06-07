@@ -32,7 +32,7 @@ export const Checkbox = createReactBlockSpec(
     content: 'inline',
   },
   {
-    render: (props) => {
+    render: (props: any) => {
       return (
         <div className="flex items-center space-x-2">
           <CheckboxPrimitive.Root

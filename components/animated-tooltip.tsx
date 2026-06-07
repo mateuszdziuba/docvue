@@ -1,5 +1,5 @@
 'use client'
-import Image from 'next/image'
+import Image from '@/lib/image-compat'
 import React, { useState } from 'react'
 import {
   motion,

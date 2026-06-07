@@ -2,7 +2,7 @@
 import Logo from '@/assets/logo.svg'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+import { Link } from '@/lib/link-compat'
 import { getSponsorsByTier, pastSponsors, type Sponsor, getSponsorUrl } from '@/data/sponsors'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {

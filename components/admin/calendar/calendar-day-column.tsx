@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/context-menu'
 import { CalendarAppointmentBlock } from './calendar-appointment'
 import { PIXELS_PER_MINUTE, START_HOUR, END_HOUR, TOTAL_GRID_HEIGHT } from './constants'
-import type { CalendarAppointment } from '@/actions/appointments'
-import type { TimeBlock } from '@/actions/time-blocks'
+import type { CalendarAppointment } from '@/src/server/appointments'
+import type { TimeBlock } from '@/src/server/time-blocks'
 import type { PendingSelection } from './calendar-grid'
 
 // ── Overlap layout algorithm ─────────────────────────────────────────────────
@@ -170,6 +170,7 @@ function TimeBlockOverlay({ block, date, onDelete }: TimeBlockOverlayProps) {
 interface CalendarDayColumnProps {
   date: Date
   dayIndex: number
+  headerLabel?: string
   appointments: CalendarAppointment[]
   timeBlocks: TimeBlock[]
   snapMinutes: number
@@ -190,6 +191,7 @@ interface CalendarDayColumnProps {
 export function CalendarDayColumn({
   date,
   dayIndex,
+  headerLabel,
   appointments,
   timeBlocks,
   snapMinutes,
@@ -315,24 +317,32 @@ export function CalendarDayColumn({
         className={`
           h-[52px] flex flex-col items-center justify-center shrink-0
           border-b border-border/40
-          ${today ? 'bg-primary/[0.04]' : ''}
+          ${today && !headerLabel ? 'bg-primary/[0.04]' : ''}
         `}
       >
-        <span
-          className={`text-[10px] font-semibold uppercase tracking-widest leading-none ${
-            today ? 'text-primary' : 'text-muted-foreground'
-          }`}
-        >
-          {format(date, 'EEE', { locale: pl })}
-        </span>
-        <span
-          className={`
-            mt-1 text-sm font-bold leading-none flex items-center justify-center
-            ${today ? 'w-7 h-7 rounded-full bg-primary text-primary-foreground' : 'text-foreground'}
-          `}
-        >
-          {format(date, 'd')}
-        </span>
+        {headerLabel ? (
+          <span className="text-xs font-semibold text-foreground px-2 text-center truncate w-full">
+            {headerLabel}
+          </span>
+        ) : (
+          <>
+            <span
+              className={`text-[10px] font-semibold uppercase tracking-widest leading-none ${
+                today ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              {format(date, 'EEE', { locale: pl })}
+            </span>
+            <span
+              className={`
+                mt-1 text-sm font-bold leading-none flex items-center justify-center
+                ${today ? 'w-7 h-7 rounded-full bg-primary text-primary-foreground' : 'text-foreground'}
+              `}
+            >
+              {format(date, 'd')}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Column body */}

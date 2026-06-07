@@ -1,5 +1,6 @@
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider'
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { getPublicStorageUrl } from '@/lib/supabase/client'
 
 interface PhotoComparisonProps {
   beforePath: string | null
@@ -23,8 +24,8 @@ export function PhotoComparison({ beforePath, afterPath }: PhotoComparisonProps)
     )
   }
 
-  const beforeUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/visit-photos/${beforePath}`
-  const afterUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/visit-photos/${afterPath}`
+  const beforeUrl = getPublicStorageUrl('visit-photos', beforePath)
+  const afterUrl = getPublicStorageUrl('visit-photos', afterPath)
 
   return (
     <Dialog>

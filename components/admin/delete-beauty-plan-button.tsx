@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 
 interface DeleteBeautyPlanButtonProps {
   planId: string
@@ -24,7 +24,7 @@ export function DeleteBeautyPlanButton({ planId }: DeleteBeautyPlanButtonProps) 
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const handleDelete = async () => {
     setIsLoading(true)

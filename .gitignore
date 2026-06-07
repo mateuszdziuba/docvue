@@ -15,6 +15,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -36,10 +37,13 @@ yarn-error.log*
 next-env.d.ts
 
 # env variables
-
 .env
 .env.production
 .env.development
 
 # Ignore for WebStorm configuration
 .idea
+
+# Capacitor generated files (optional - uncomment to track)
+/android
+/ios

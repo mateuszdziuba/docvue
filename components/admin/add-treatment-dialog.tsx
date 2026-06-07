@@ -11,14 +11,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { Form } from '@/types/database'
 
 export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'>[] }) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

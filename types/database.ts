@@ -59,6 +59,16 @@ export interface Submission {
   created_at: string
 }
 
+export interface ChatMessage {
+  id: string
+  salon_id: string
+  client_id: string
+  role: 'user' | 'assistant' | 'tool' | 'system'
+  content: string
+  tool_calls: Record<string, unknown> | null
+  created_at: string
+}
+
 export interface Treatment {
   id: string
   salon_id: string
@@ -108,6 +118,19 @@ export interface FormField {
   min?: number
   max?: number
   step?: number
+}
+
+export interface StaffMember {
+  id: string
+  salon_id: string
+  user_id: string | null
+  name: string
+  email: string
+  role: 'staff' | 'manager'
+  avatar_path: string | null
+  is_active: boolean
+  invited_at: string
+  created_at: string
 }
 
 // Supabase Database type definition

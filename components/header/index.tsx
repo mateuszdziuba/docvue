@@ -1,6 +1,6 @@
 'use client'
 
-import { Link } from 'next-view-transitions'
+import { Link, usePathname } from '@/lib/link-compat'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +18,6 @@ import { FaXTwitter } from 'react-icons/fa6'
 import { SiBuymeacoffee } from 'react-icons/si'
 
 import Logo from '@/assets/logo.svg'
-import { usePathname } from 'next/navigation'
 import { ThemeSwitch } from '../ui/theme-switch'
 import { Play } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'

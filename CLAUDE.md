@@ -10,10 +10,12 @@ docvue is a Polish SaaS for beauty salon form management. Salon owners create co
 
 | Layer | Tech |
 |---|---|
-| Framework | Next.js 16.1.1 (App Router, Server Components) |
+| Framework | TanStack Start 1.x (file-based routing, SSR via Vite) |
+| Build Tool | Vite 8 (replaced Next.js) |
 | Language | TypeScript 5.7 |
 | Database / Auth | Supabase (PostgreSQL + Auth) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
+| Design System | DESIGN.md — Noto Serif + Manrope, blush/sage/cream palette |
 | Charts | Recharts |
 | Animations | Framer Motion (landing page only) |
 | Forms | React Hook Form + Zod |
@@ -22,55 +24,66 @@ docvue is a Polish SaaS for beauty salon form management. Salon owners create co
 | Analytics | Umami + PostHog + Google Analytics |
 | Deployment | Vercel |
 
+> **Migration note**: The app was migrated from Next.js App Router to TanStack Start. Server Actions → `createServerFn`. `next/navigation` → `@tanstack/react-router`. `app/` routes → `src/routes/`. Remaining `'use client'` directives in components are harmless legacy artifacts — they have no effect in TanStack Start.
+
 ---
 
 ## Commands
 
 ```bash
-pnpm dev          # dev server (webpack mode)
-pnpm build        # production build
+pnpm dev          # Vite dev server
+pnpm build        # Production build (Vite)
 pnpm lint         # ESLint
 pnpm test         # Vitest
 ```
 
 ---
 
-## Route Architecture
+## Route Architecture (TanStack File-based Routing)
 
 ```
-app/
-├── page.tsx                          # Landing page (marketing)
-├── layout.tsx                        # Root layout (Geist font, Toaster, providers)
-├── globals.css                       # Design tokens + Tailwind config
+src/routes/
+├── __root.tsx                        # Root layout (Toaster, font links, meta)
+├── index.tsx                         # Landing page (marketing)
+├── login.tsx                         # Login page
+├── register.tsx                      # Registration
+├── logout.tsx                        # Logout handler
+├── f.$token.tsx                      # Public form fill (no auth, token-based)
+├── f.$token_.success.tsx             # Form fill success screen
 │
-├── (auth)/                           # Unauthenticated routes
-│   ├── login/page.tsx
-│   └── register/page.tsx
+├── _authed.tsx                       # Auth guard (redirects to /login if no user)
 │
-├── (admin)/                          # Protected admin dashboard
-│   ├── layout.tsx                    # Auth gate + LockProvider + Sidebar
-│   └── dashboard/
-│       ├── page.tsx                  # Overview: stats, chart, upcoming visits
-│       ├── clients/                  # Client CRUD
-│       ├── forms/                    # Form builder + list
-│       │   └── new/page.tsx          # Form builder (9 field types)
-│       ├── visits/                   # Appointment scheduling
-│       │   └── [id]/                 # Visit detail + photos + form assignment
-│       ├── submissions/              # Form responses
-│       │   └── [id]/                 # Submission detail
-│       └── treatments/               # Beauty service definitions
-│
-├── (client)/                         # Client portal (requires client account)
-│   ├── layout.tsx
-│   ├── calendar/page.tsx             # Upcoming appointments
-│   └── profile/page.tsx             # Profile + history
-│
-└── f/[token]/                        # Public form submission (no auth)
-    ├── page.tsx                      # Form renderer
-    └── success/page.tsx              # Confirmation screen
+└── _authed/
+    ├── dashboard.tsx                 # Dashboard layout (Sidebar + LockProvider)
+    └── dashboard/
+        ├── index.tsx                 # Overview: stats, chart, upcoming visits
+        ├── clients/
+        │   ├── index.tsx             # Client list
+        │   └── $clientId.tsx         # Client detail
+        ├── forms/
+        │   ├── index.tsx             # Form list
+        │   ├── new.tsx               # Form builder (create)
+        │   └── $formId/edit.tsx      # Form editor
+        ├── visits/
+        │   ├── index.tsx             # Visit list
+        │   └── $visitId.tsx          # Visit detail + photos
+        ├── submissions/
+        │   ├── index.tsx             # Submission list
+        │   └── $submissionId.tsx     # Submission detail
+        ├── treatments/index.tsx      # Treatment list
+        ├── calendar/index.tsx        # Calendar view
+        └── staff/index.tsx           # Staff management (owner only)
 
-api/
-└── upload/route.ts                   # Image upload endpoint
+src/server/                           # Server functions (createServerFn — replaces Next.js Server Actions)
+├── auth.ts                           # fetchUserFn, loginFn, signupFn, logoutFn
+├── clients.ts                        # CRUD for salon clients
+├── forms.ts                          # CRUD for form templates
+├── form-usage.ts                     # checkFormUsageFn
+├── settings.ts                       # getSalonFn, updateSalonSettingsFn
+├── staff.ts                          # Staff management: getStaffFn, inviteStaffFn, etc.
+├── submissions.ts                    # Form submissions
+├── appointments.ts                   # Appointment CRUD
+└── treatments.ts                     # Treatment CRUD
 ```
 
 ---
@@ -153,29 +166,34 @@ Supports 9 field types: `text`, `textarea`, `select`, `radio`, `checkbox_group`,
 
 ---
 
-## Server Actions (`actions/`)
+## Server Functions (`src/server/`)
+
+All server-side logic uses TanStack Start's `createServerFn`. These replaced Next.js Server Actions.
 
 | File | Key Functions |
 |---|---|
-| `auth.ts` | `login()`, `signup()`, `logout()` |
-| `client-forms.ts` | `assignFormToClient()`, `getClientFormByToken()`, `submitClientForm()`, `deleteClientForm()` |
-| `submissions.ts` | `submitForm()`, `getPublicForm()`, `deleteSubmission()` |
+| `auth.ts` | `fetchUserFn`, `loginFn`, `signupFn`, `logoutFn` |
+| `client-forms.ts` | `assignFormToClientFn`, `getClientFormByTokenFn`, `submitClientFormFn`, `deleteClientFormFn` |
+| `submissions.ts` | `submitFormFn`, `getPublicFormFn`, `deleteSubmissionFn` |
 | `forms.ts` | CRUD for form templates |
 | `clients.ts` | CRUD for salon clients |
-| `appointments-sync.ts` | Syncs appointment status based on required form completion |
-| `settings.ts` | Update salon profile + PIN |
+| `appointments.ts` | Appointment scheduling + sync |
+| `settings.ts` | `getSalonFn`, `updateSalonSettingsFn` |
+| `staff.ts` | `getStaffFn`, `inviteStaffFn`, `updateStaffFn`, `deleteStaffFn` |
 
 ---
 
 ## Key Patterns
 
-- **Server Components by default** — data fetching in layout/page, not in client components
-- **Parallel Supabase queries** — use `Promise.all()` for independent queries
-- **URL-based state** — search, filters via `searchParams`
-- **Server Actions + `revalidatePath`** — mutation pattern throughout
+- **TanStack loaders** — data fetching in `loader` on each route, passed via `Route.useLoaderData()`
+- **Parallel Supabase queries** — use `Promise.all()` for independent queries in loaders
+- **URL-based state** — search, filters via `useSearch()` from TanStack Router
+- **Server Functions** — `createServerFn()` for mutations (replaces Next.js Server Actions)
 - **Optimistic UI** — client state updated before server confirms where appropriate
 - **Token-based public access** — no session needed for `/f/[token]`
-- **Form locking** — forms with submissions cannot have fields added/removed
+- **Form locking** — forms with submissions cannot have fields added/removed; title/description remain editable
+- **LockProvider** — wraps dashboard; triggered before form fill in kiosk mode. PIN stored in `salons.pin_code`
+- **Staff accounts** — owner can invite staff via email. Staff access is limited (no settings, no staff management)
 
 ---
 

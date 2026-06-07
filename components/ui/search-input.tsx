@@ -1,28 +1,21 @@
 'use client'
 
-import { useSearchParams, usePathname, useRouter } from 'next/navigation'
+import { useNavigate, useLocation, useSearch } from '@tanstack/react-router'
 import { useTransition } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
 export function SearchInput({ placeholder }: { placeholder: string }) {
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
-  const { replace } = useRouter()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const search = useSearch({ strict: false }) as Record<string, string>
   const [isPending, startTransition] = useTransition()
   const handleSearch = useDebouncedCallback((term: string) => {
-    const params = new URLSearchParams(searchParams)
-    
-    // Don't update if value hasn't changed (prevents loops)
-    if (term === searchParams.get('query')) return
-    
-    if (term) {
-      params.set('query', term)
-    } else {
-      params.delete('query')
-    }
-    
+    if (term === search.query) return
     startTransition(() => {
-      replace(`${pathname}?${params.toString()}`)
+      navigate({
+        to: location.pathname,
+        search: (prev: Record<string, string>) => ({ ...prev, query: term || undefined }),
+      })
     })
   }, 300)
 
@@ -43,7 +36,7 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
       </div>
       <input
         type="text"
-        defaultValue={searchParams.get('query')?.toString()}
+        defaultValue={search.query}
         onChange={(e) => handleSearch(e.target.value)}
         className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent sm:text-sm transition-all"
         placeholder={placeholder}

@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Image from 'next/image'
-import { Link } from 'next-view-transitions'
+import Image from '@/lib/image-compat'
+import { Link } from '@/lib/link-compat'
 
 import { FormFieldType } from '@/types'
 import { defaultFieldConfig, FORM_LIBRARIES, FormLibrary } from '@/constants'

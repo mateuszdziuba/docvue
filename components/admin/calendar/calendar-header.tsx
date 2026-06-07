@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 
 const SNAP_OPTIONS = [5, 10, 15, 30, 60] as const
 
-export type ViewType = 'day' | 'week' | 'month'
+export type ViewType = 'day' | 'week' | 'month' | 'staff'
 
 interface CalendarHeaderProps {
   weekStart: Date
@@ -16,6 +16,7 @@ interface CalendarHeaderProps {
   isLoading: boolean
   snapMinutes: number
   isBlockMode: boolean
+  staffCount?: number
   onNavigate: (direction: 'prev' | 'next' | 'today') => void
   onSnapChange: (minutes: number) => void
   onBlockModeChange: (active: boolean) => void
@@ -30,6 +31,7 @@ export function CalendarHeader({
   isLoading,
   snapMinutes,
   isBlockMode,
+  staffCount = 0,
   onNavigate,
   onSnapChange,
   onBlockModeChange,
@@ -39,6 +41,9 @@ export function CalendarHeader({
 
   const formatLabel = () => {
     if (view === 'day') {
+      return format(selectedDay, 'EEEE, d MMMM yyyy', { locale: pl })
+    }
+    if (view === 'staff') {
       return format(selectedDay, 'EEEE, d MMMM yyyy', { locale: pl })
     }
     if (view === 'month') {
@@ -54,9 +59,9 @@ export function CalendarHeader({
   }
 
   const prevLabel =
-    view === 'day' ? 'Poprzedni dzień' : view === 'month' ? 'Poprzedni miesiąc' : 'Poprzedni tydzień'
+    view === 'day' || view === 'staff' ? 'Poprzedni dzień' : view === 'month' ? 'Poprzedni miesiąc' : 'Poprzedni tydzień'
   const nextLabel =
-    view === 'day' ? 'Następny dzień' : view === 'month' ? 'Następny miesiąc' : 'Następny tydzień'
+    view === 'day' || view === 'staff' ? 'Następny dzień' : view === 'month' ? 'Następny miesiąc' : 'Następny tydzień'
 
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/50 bg-card shrink-0 flex-wrap">
@@ -103,6 +108,18 @@ export function CalendarHeader({
               {v === 'day' ? 'Dzień' : v === 'week' ? 'Tydzień' : 'Miesiąc'}
             </button>
           ))}
+          {staffCount > 0 && (
+            <button
+              onClick={() => onViewChange('staff')}
+              className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-border ${
+                view === 'staff'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              Pracownicy
+            </button>
+          )}
         </div>
       </div>
 
@@ -116,8 +133,8 @@ export function CalendarHeader({
         </span>
       </div>
 
-      {/* Right: snap picker + block mode (hidden in month view) */}
-      {view !== 'month' && (
+      {/* Right: snap picker + block mode (hidden in month/staff view) */}
+      {view !== 'month' && view !== 'staff' && (
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium text-muted-foreground">Siatka</span>

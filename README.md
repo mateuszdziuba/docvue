@@ -44,8 +44,8 @@ Nowoczesna platforma do zarządzania dokumentacją dla gabinetów kosmetycznych 
    
    Wypełnij `.env.local`:
    ```
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
 4. **Uruchom serwer deweloperski**

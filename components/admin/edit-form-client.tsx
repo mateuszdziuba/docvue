@@ -1,23 +1,122 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect } from 'react'
+import { useRouterCompat } from '@/lib/router-compat'
 import { Reorder } from 'framer-motion'
 import { toast } from 'sonner'
-import { updateForm, deleteForm } from '@/actions/forms'
-import { checkFormUsage } from '@/actions/form-usage'
+import { updateForm, deleteForm } from '@/src/server/forms'
+import { checkFormUsage } from '@/src/server/form-usage'
 import type { FormField } from '@/types/database'
 
+// Icon wrapper with a tinted background pill — used in the field type buttons
+function FieldIcon({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg ${color}`}>
+      {children}
+    </span>
+  )
+}
+
 const fieldTypes = [
-  { type: 'text', label: 'Krótka odpowiedź', icon: '📝' },
-  { type: 'textarea', label: 'Długa odpowiedź', icon: '📄' },
-  { type: 'select', label: 'Lista rozwijana', icon: '▼' },
-  { type: 'radio', label: 'Jednokrotny wybór', icon: '◉' },
-  { type: 'checkbox_group', label: 'Wielokrotny wybór', icon: '☑️' },
-  { type: 'date', label: 'Data', icon: '📅' },
-  { type: 'email', label: 'Email', icon: '✉️' },
-  { type: 'tel', label: 'Telefon', icon: '📱' },
-  { type: 'separator', label: 'Opis / Rozdzielacz', icon: '📝' },
+  {
+    type: 'text',
+    label: 'Krótka odpowiedź',
+    icon: (
+      <FieldIcon color="bg-primary-container text-primary dark:bg-primary/20 dark:text-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'textarea',
+    label: 'Długa odpowiedź',
+    icon: (
+      <FieldIcon color="bg-secondary text-secondary-foreground dark:bg-secondary/30 dark:text-secondary-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="11" x2="21" y2="11"/><line x1="3" y1="16" x2="14" y2="16"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'select',
+    label: 'Lista rozwijana',
+    icon: (
+      <FieldIcon color="bg-accent text-accent-foreground dark:bg-accent/30 dark:text-accent-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6h16"/><path d="M4 12h10"/><path d="M14 17l3 3 3-3"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'radio',
+    label: 'Jednokrotny wybór',
+    icon: (
+      <FieldIcon color="bg-primary-container text-primary dark:bg-primary/20 dark:text-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'checkbox_group',
+    label: 'Wielokrotny wybór',
+    icon: (
+      <FieldIcon color="bg-secondary text-secondary-foreground dark:bg-secondary/30 dark:text-secondary-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/><polyline points="8 12 11 15 16 9"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'date',
+    label: 'Data',
+    icon: (
+      <FieldIcon color="bg-accent text-accent-foreground dark:bg-accent/30 dark:text-accent-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'email',
+    label: 'Email',
+    icon: (
+      <FieldIcon color="bg-primary-container text-primary dark:bg-primary/20 dark:text-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'tel',
+    label: 'Telefon',
+    icon: (
+      <FieldIcon color="bg-secondary text-secondary-foreground dark:bg-secondary/30 dark:text-secondary-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.96-.96a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
+  {
+    type: 'separator',
+    label: 'Opis / Rozdzielacz',
+    icon: (
+      <FieldIcon color="bg-muted text-muted-foreground dark:bg-muted/50 dark:text-muted-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12h14"/><path d="M5 7h4"/><path d="M15 7h4"/>
+        </svg>
+      </FieldIcon>
+    ),
+  },
 ]
 
 interface EditFormClientProps {
@@ -32,7 +131,7 @@ interface EditFormClientProps {
 }
 
 export default function EditFormClient({ form }: EditFormClientProps) {
-  const router = useRouter()
+  const router = useRouterCompat()
   const [title, setTitle] = useState(form.title)
   const [description, setDescription] = useState(form.description || '')
   const [fields, setFields] = useState<FormField[]>(form.schema?.fields || [])
@@ -116,11 +215,13 @@ export default function EditFormClient({ form }: EditFormClientProps) {
 
     setIsSaving(true)
 
-    const cleanedFields = fields.map(f => ({
-      ...f,
-      label: f.label.trim(),
-      options: f.options?.filter(o => o.label.trim()).map(o => ({ ...o, label: o.label.trim() }))
-    }))
+    const cleanedFields = isLocked
+      ? form.schema?.fields || []  // keep original fields if locked
+      : fields.map(f => ({
+          ...f,
+          label: f.label.trim(),
+          options: f.options?.filter(o => o.label.trim()).map(o => ({ ...o, label: o.label.trim() }))
+        }))
 
     const result = await updateForm(form.id, {
       title: title.trim(),
@@ -165,22 +266,21 @@ export default function EditFormClient({ form }: EditFormClientProps) {
 
         {/* Lock Warning */}
         {isLocked && (
-          <div className="p-4 bg-accent/10 border border-accent/20 rounded-xl flex items-start gap-3">
-            <svg className="w-5 h-5 text-accent-foreground mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-3">
+            <svg className="w-5 h-5 text-warning mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
             <div>
-              <h3 className="font-semibold text-accent-foreground">Edycja zablokowana</h3>
-              <p className="text-sm text-accent-foreground/80 mt-1">
-                Ten formularz został już wypełniony przez klientów. Aby zachować spójność danych, nie można zmieniać jego struktury.
-                Możesz go tylko usunąć (co usunie również wszystkie odpowiedzi).
+              <h3 className="font-medium text-warning/90 text-sm">Struktura zablokowana</h3>
+              <p className="text-sm text-warning/80 mt-0.5">
+                Pola formularza są zablokowane po pierwszym wypełnieniu, ale możesz edytować tytuł i opis.
               </p>
             </div>
           </div>
         )}
 
-        {/* Form Details */}
-        <div className={`bg-card rounded-xl p-6 border border-border/60 ${isLocked ? 'opacity-60 pointer-events-none' : ''}`}>
+        {/* Form Details — always editable */}
+        <div className="bg-card rounded-xl p-6 border border-border/60">
           <h2 className="text-lg font-semibold text-foreground mb-4">Szczegóły formularza</h2>
           <div className="space-y-4">
             <div>
@@ -403,10 +503,10 @@ export default function EditFormClient({ form }: EditFormClientProps) {
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving || isLocked}
+            disabled={isSaving}
             className="px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLocked ? 'Edycja zablokowana' : (isSaving ? 'Zapisywanie...' : 'Zapisz zmiany')}
+            {isSaving ? 'Zapisywanie...' : 'Zapisz zmiany'}
           </button>
         </div>
       </div>

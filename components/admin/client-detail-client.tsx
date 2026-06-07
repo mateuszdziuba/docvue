@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/lib/link-compat'
 import { toast } from 'sonner'
-import { assignFormToClient, deleteClientForm } from '@/actions/client-forms'
+import { assignFormToClient, deleteClientForm } from '@/src/server/client-forms'
 import type { Client, ClientForm, Submission } from '@/types/database'
 import { useLock } from '@/components/providers/lock-provider'
 
@@ -11,10 +11,11 @@ interface Props {
   client: Client
   clientForms: (ClientForm & { forms: { id: string; title: string; description: string | null } })[]
   availableForms: { id: string; title: string }[]
-  submissions: (Submission & { forms: { title: string } })[]
+  submissions?: (Submission & { forms: { title: string } })[]
+  appointments?: unknown[]
 }
 
-export function ClientDetailClient({ client, clientForms, availableForms, submissions }: Props) {
+export function ClientDetailClient({ client, clientForms, availableForms, submissions = [] }: Props) {
   const { lock } = useLock()
   const [isAssigning, setIsAssigning] = useState(false)
   const [selectedFormId, setSelectedFormId] = useState('')

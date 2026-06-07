@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { assignFormToClient } from '@/actions/client-forms'
+import { useRouterCompat } from '@/lib/router-compat'
+import { assignFormToClient } from '@/src/server/client-forms'
 import { toast } from 'sonner'
 import { Button } from "@/components/ui/button"
 
@@ -14,7 +14,7 @@ interface FillVisitFormButtonProps {
 
 export function FillVisitFormButton({ clientId, formId, formTitle }: FillVisitFormButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const handleFill = async () => {
     try {

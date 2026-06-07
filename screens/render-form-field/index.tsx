@@ -281,7 +281,7 @@ export const renderFormField = (field: FormFieldType, form: any) => {
             {...field}
             value={datetime}
             // onChange={setDatetime}
-            onChange={(newDate) => {
+            onChange={(newDate: Date | undefined) => {
               setDatetime(newDate)
               form.setValue(field.name, newDate, {
                 shouldValidate: true,

@@ -1,0 +1,298 @@
+/* Google Fonts — must precede all other rules */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+@import 'tailwindcss';
+
+/* ==========================================================================
+   docvue — Atmospheric Luxury Design System
+   Palette: Blush · Sage · Cream · Charcoal
+   Fonts: Noto Serif (display) · Manrope (body)
+   ========================================================================== */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* ── Fonts ── */
+  --font-sans: 'Manrope', system-ui, sans-serif;
+  --font-serif: 'Noto Serif', Georgia, serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  /* ── Border radius ── */
+  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 2rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-card:
+    0 1px 3px 0 rgb(111 89 87 / 0.06), 0 1px 2px -1px rgb(111 89 87 / 0.06);
+  --shadow-modal:
+    0 20px 48px -8px rgb(111 89 87 / 0.18), 0 8px 16px -4px rgb(111 89 87 / 0.1);
+  --shadow-float: 0 4px 12px rgb(111 89 87 / 0.12);
+}
+
+/* ── Tailwind v4: map semantic CSS vars to color utilities ── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-secondary-container: var(--secondary-container);
+
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-panel-surface: var(--panel-surface);
+  --color-panel-on-surface: var(--panel-on-surface);
+  --color-panel-on-surface-secondary: var(--panel-on-surface-secondary);
+  --color-panel-on-surface-tertiary: var(--panel-on-surface-tertiary);
+  --color-panel-emphasis: var(--panel-emphasis);
+}
+
+/* ── Light mode tokens ── */
+:root {
+  --background: hsl(20 33% 98%); /* #fcf9f8 cream */
+  --foreground: hsl(0 1% 11%); /* #1b1c1c charcoal */
+
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 1% 11%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 1% 11%);
+
+  --primary: hsl(5 12% 39%); /* #6f5957 blush brown */
+  --primary-foreground: hsl(20 33% 98%);
+
+  --secondary: hsl(115 6% 90%); /* sage tint for bg */
+  --secondary-foreground: hsl(115 6% 25%); /* #576156 sage green */
+
+  --muted: hsl(20 15% 95%);
+  --muted-foreground: hsl(20 8% 38%);
+
+  --accent: hsl(10 18% 94%); /* #f4d7d4 blush container */
+  --accent-foreground: hsl(5 12% 30%);
+
+  --destructive: hsl(0 65% 40%); /* #ba1a1a error */
+  --destructive-foreground: hsl(0 0% 98%);
+
+  --border: hsl(10 17% 82%); /* #d2c3c1 outline-variant */
+  --input: hsl(10 17% 82%);
+  --ring: hsl(5 12% 39%);
+
+  /* docvue semantic tokens */
+  --color-primary: hsl(5 12% 39%); /* blush */
+  --color-secondary: hsl(115 6% 36%); /* sage */
+  --color-success: hsl(115 6% 36%);
+  --color-error: hsl(0 65% 40%);
+
+  /* primary-container (light blush for chip backgrounds etc) */
+  --primary-container: hsl(10 18% 94%); /* #f4d7d4 */
+  --on-primary-container: hsl(5 12% 30%); /* deep blush for text on container */
+  /* secondary-container (pale sage) */
+  --secondary-container: hsl(115 18% 88%); /* #d9e3d4 */
+
+  /* on-surface tokens */
+  --on-surface: hsl(0 1% 11%); /* same as --foreground */
+  --on-surface-variant: hsl(0 8% 30%); /* #4f4443 */
+
+  /* surface container scale (Material Design tokens) */
+  --surface-container-lowest: hsl(0 0% 100%);
+  --surface-container-low: hsl(10 8% 96%); /* #f6f3f2 */
+  --surface-container: hsl(0 3% 94%); /* #f0eded */
+  --surface-container-high: hsl(0 3% 91%); /* #eae7e7 */
+  --surface-container-highest: hsl(0 3% 89%); /* #e4e2e1 */
+
+  /* Warning / caution */
+  --warning: hsl(36 80% 48%);
+  --warning-foreground: hsl(0 0% 100%);
+
+  /* Panel surface (login/register left brand panel) */
+  --panel-surface: hsl(5 12% 20%);
+  --panel-on-surface: hsl(10 18% 94%);
+  --panel-on-surface-secondary: hsl(10 18% 70%);
+  --panel-on-surface-tertiary: hsl(10 18% 50%);
+  --panel-emphasis: hsl(10 18% 88%);
+}
+
+/* ── Dark mode tokens ── */
+.dark {
+  --background: hsl(20 5% 8%);
+  --foreground: hsl(20 8% 92%);
+
+  --card: hsl(20 5% 11%);
+  --card-foreground: hsl(20 8% 92%);
+
+  --popover: hsl(20 5% 11%);
+  --popover-foreground: hsl(20 8% 92%);
+
+  --primary: hsl(5 25% 68%); /* lighter blush */
+  --primary-foreground: hsl(20 5% 8%);
+
+  --secondary: hsl(115 8% 20%);
+  --secondary-foreground: hsl(115 12% 80%);
+
+  --muted: hsl(20 5% 16%);
+  --muted-foreground: hsl(20 5% 56%);
+
+  --accent: hsl(5 15% 20%);
+  --accent-foreground: hsl(5 25% 82%);
+
+  --destructive: hsl(0 55% 55%);
+  --destructive-foreground: hsl(0 0% 98%);
+
+  --border: hsl(20 5% 20%);
+  --input: hsl(20 5% 20%);
+  --ring: hsl(5 25% 68%);
+
+  --color-primary: hsl(5 25% 68%);
+  --color-secondary: hsl(115 12% 60%);
+  --color-success: hsl(115 12% 60%);
+  --color-error: hsl(0 55% 65%);
+
+  --primary-container: hsl(5 15% 22%);
+  --on-primary-container: hsl(5 25% 82%);
+  --secondary-container: hsl(115 8% 22%);
+
+  --on-surface: hsl(20 8% 92%);
+  --on-surface-variant: hsl(20 5% 65%);
+
+  --surface-container-lowest: hsl(20 5% 6%);
+  --surface-container-low: hsl(20 5% 10%);
+  --surface-container: hsl(20 5% 13%);
+  --surface-container-high: hsl(20 5% 16%);
+  --surface-container-highest: hsl(20 5% 19%);
+
+  --warning: hsl(36 80% 60%);
+  --warning-foreground: hsl(0 0% 100%);
+
+  --panel-surface: hsl(10 18% 94%);
+  --panel-on-surface: hsl(5 12% 20%);
+  --panel-on-surface-secondary: hsl(5 12% 30%);
+  --panel-on-surface-tertiary: hsl(5 12% 45%);
+  --panel-emphasis: hsl(5 12% 20%);
+}
+
+/* ── Base reset ── */
+* {
+  border-color: var(--border);
+  outline-color: var(--ring);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography utilities ── */
+.font-serif {
+  font-family: var(--font-serif);
+}
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+/* Label caps — used in admin section headers, form labels, status badges */
+.label-caps {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Selection ── */
+::selection {
+  background: hsl(10 18% 88%);
+  color: hsl(5 12% 25%);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+/* ── Focus ring ── */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ── Capacitor / iOS safe area utilities ── */
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-area-pl {
+  padding-left: env(safe-area-inset-left);
+}
+.safe-area-pr {
+  padding-right: env(safe-area-inset-right);
+}
+/* Header that grows to accommodate notch */
+.h-header {
+  height: calc(3.5rem + env(safe-area-inset-top));
+}
+/* Bottom nav that grows to accommodate home indicator */
+.h-bottom-nav {
+  height: calc(3.5rem + env(safe-area-inset-bottom));
+}

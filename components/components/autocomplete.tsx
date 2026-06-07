@@ -1,4 +1,4 @@
-import { Link } from 'next-view-transitions'
+import { Link } from '@/lib/link-compat'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'

@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { FormRenderer } from '@/components/form-renderer'
-import { submitClientForm } from '@/actions/client-forms'
+import { useRouterCompat } from '@/lib/router-compat'
+import { submitClientForm } from '@/src/server/client-forms'
 import type { Form } from '@/types/database'
 
 interface TokenFormClientProps {
   token: string
   form: Form
   clientName?: string
-  filledBy: 'client' | 'staff'
+  filledBy?: 'client' | 'staff'
+  client?: unknown
+  clientForm?: unknown
 }
 
-export function TokenFormClient({ token, form, clientName, filledBy }: TokenFormClientProps) {
-  const router = useRouter()
+export function TokenFormClient({ token, form, filledBy = 'client' }: TokenFormClientProps) {
+  const router = useRouterCompat()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,11 +27,12 @@ export function TokenFormClient({ token, form, clientName, filledBy }: TokenForm
     // Find signature field logic
     const fields = (form.schema as any)?.fields || []
     const signatureField = fields.find((f: any) => f.type === 'signature' || f.type === 'Signature')
-    
+
     // Extract signature from either the custom field or the global fallback field
-    const signatureValue = signatureField && formData[signatureField.name] 
-      ? formData[signatureField.name] 
-      : formData.signature
+    const signatureValue =
+      signatureField && formData[signatureField.name]
+        ? formData[signatureField.name]
+        : formData.signature
 
     // Remove the global signature from formData JSON if it exists there
     const cleanFormData = { ...formData }
@@ -41,7 +44,7 @@ export function TokenFormClient({ token, form, clientName, filledBy }: TokenForm
       token,
       formData: cleanFormData,
       filledBy,
-      signature: signatureValue as string || undefined,
+      signature: (signatureValue as string) || undefined,
     })
 
     if (result.error) {
@@ -60,11 +63,7 @@ export function TokenFormClient({ token, form, clientName, filledBy }: TokenForm
           {error}
         </div>
       )}
-      <FormRenderer
-        form={form}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-      />
+      <FormRenderer form={form} onSubmit={handleSubmit} isSubmitting={isSubmitting} />
     </>
   )
 }

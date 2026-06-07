@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { redirect } from '@/actions/tanstack-compat'
 
 export async function createFormAssignment(formId: string) {
   const supabase = await createClient()

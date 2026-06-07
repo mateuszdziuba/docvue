@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'next-view-transitions'
+import { Link } from '@/lib/link-compat'
 
 import { LuGithub, LuMail } from 'react-icons/lu'
 import { FaXTwitter } from 'react-icons/fa6'

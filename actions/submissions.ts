@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/actions/tanstack-compat'
 
 export async function submitForm(data: {
   formId: string

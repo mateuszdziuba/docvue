@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { Treatment } from '@/types/database'
 import { format, addMinutes } from 'date-fns'
 
@@ -20,7 +20,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 
 interface AddAppointmentDialogProps {
   clientId?: string
-  salonId: string
+  salonId?: string
   trigger?: React.ReactNode
 }
 
@@ -30,27 +30,48 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
   const [treatments, setTreatments] = useState<Treatment[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string | undefined>(clientId)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [resolvedSalonId, setResolvedSalonId] = useState<string | undefined>(salonId)
   
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   useEffect(() => {
     setSelectedClientId(clientId)
   }, [clientId, open])
 
   useEffect(() => {
+    setResolvedSalonId(salonId)
+  }, [salonId])
+
+  useEffect(() => {
     if (open) {
       const fetchTreatments = async () => {
+        let activeSalonId = resolvedSalonId
+        if (!activeSalonId) {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: salon } = await supabase
+              .from('salons')
+              .select('id')
+              .eq('user_id', user.id)
+              .single()
+            activeSalonId = salon?.id
+            setResolvedSalonId(activeSalonId)
+          }
+        }
+
+        if (!activeSalonId) return
+
         const { data } = await supabase
           .from('treatments')
           .select('*')
-          .eq('salon_id', salonId)
+          .eq('salon_id', activeSalonId)
           .order('name')
         if (data) setTreatments(data)
       }
       fetchTreatments()
     }
-  }, [open, salonId, supabase])
+  }, [open, resolvedSalonId, supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -70,6 +91,12 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
 
     if (!treatmentId || !selectedDate || !hour || !minute) {
       toast.error('Wypełnij wszystkie wymagane pola')
+      setIsLoading(false)
+      return
+    }
+
+    if (!resolvedSalonId) {
+      toast.error('Nie znaleziono salonu')
       setIsLoading(false)
       return
     }
@@ -109,7 +136,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
       }
 
       const { error } = await supabase.from('appointments').insert({
-        salon_id: salonId,
+        salon_id: resolvedSalonId,
         client_id: selectedClientId,
         treatment_id: treatmentId,
         start_time: startTime.toISOString(),
@@ -152,7 +179,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
               <div className="space-y-2">
                   <label className="text-sm font-medium">Klient</label>
                   <ClientCombobox 
-                    salonId={salonId} 
+                    salonId={resolvedSalonId ?? ''} 
                     onSelect={setSelectedClientId} 
                   />
                   {!selectedClientId && <p className="text-xs text-amber-600">Proszę wybrać klienta z listy</p>}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/lib/link-compat'
 import { motion } from 'framer-motion'
 
 import { cn } from '@/lib/utils'

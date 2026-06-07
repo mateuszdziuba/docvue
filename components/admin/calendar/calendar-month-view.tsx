@@ -13,7 +13,7 @@ import {
   parseISO,
 } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import type { CalendarAppointment } from '@/actions/appointments'
+import type { CalendarAppointment } from '@/src/server/appointments'
 import { AppointmentPopover } from './appointment-popover'
 
 const STATUS_CHIP: Record<CalendarAppointment['status'], string> = {

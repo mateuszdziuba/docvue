@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { toast } from 'sonner'
-import { deleteSubmission } from '@/actions/submissions'
+import { deleteSubmission } from '@/src/server/submissions'
 
 interface DeleteSubmissionButtonProps {
   submissionId: string
@@ -12,7 +12,7 @@ interface DeleteSubmissionButtonProps {
 export function DeleteSubmissionButton({ submissionId }: DeleteSubmissionButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const handleDelete = async () => {
     setIsDeleting(true)

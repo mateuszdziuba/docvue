@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { toast } from 'sonner'
-import { updateClient } from '@/actions/clients'
+import { updateClient } from '@/src/server/clients'
 import type { Client } from '@/types/database'
 import * as Dialog from '@radix-ui/react-dialog'
 import { DatePicker } from "@/components/ui/date-picker"
@@ -14,7 +14,7 @@ interface EditClientDialogProps {
 }
 
 export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
-  const router = useRouter()
+  const router = useRouterCompat()
   const [open, setOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState({

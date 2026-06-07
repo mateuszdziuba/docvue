@@ -1,248 +1,229 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
-import { logout } from '@/actions/auth'
-import { SettingsDialog } from '@/components/admin/settings-dialog'
 import { DocvueLogo } from '@/components/ui/docvue-logo'
+import { useLock } from '@/components/providers/lock-provider'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import type { Salon } from '@/types/database'
 
+// ── Icons ────────────────────────────────────────────────────────────────────
+
+const IconDashboard = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+)
+const IconClients = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="7" r="4" /><path d="M3 21v-2a6 6 0 0 1 6-6h2" />
+    <circle cx="19" cy="11" r="3" /><path d="M17 21v-1a4 4 0 0 1 4-4" />
+  </svg>
+)
+const IconCalendar = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+)
+const IconVisits = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12h6M9 16h4" />
+  </svg>
+)
+const IconForms = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="13" y2="17" />
+  </svg>
+)
+const IconSubmissions = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="4" rx="1" /><path d="m9 12 2 2 4-4" />
+  </svg>
+)
+const IconTreatments = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3l18 18M3 21l7-7" /><path d="m17.5 6.5-1 1" /><path d="M21 3l-5.5 5.5-3 3-1.5 4 4-1.5 3-3L21 3z" />
+  </svg>
+)
+const IconStaff = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+  </svg>
+)
+const IconSettings = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+)
+const IconLock = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+)
+const IconLogout = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+)
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+)
+
+// ── Nav items ─────────────────────────────────────────────────────────────────
+
 const navigation = [
-  {
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    )
-  },
-  {
-    label: 'Klienci',
-    href: '/dashboard/clients',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    )
-  },
-  {
-    label: 'Kalendarz',
-    href: '/dashboard/calendar',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11h6M9 15h4" />
-      </svg>
-    )
-  },
-  {
-    label: 'Wizyty',
-    href: '/dashboard/visits',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    )
-  },
-  {
-    label: 'Zabiegi',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-      </svg>
-    ),
-    href: '/dashboard/treatments',
-  },
-  {
-    label: 'Formularze',
-    href: '/dashboard/forms',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    )
-  },
-  {
-    label: 'Odpowiedzi',
-    href: '/dashboard/submissions',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-      </svg>
-    )
-  },
+  { label: 'Przegląd',    href: '/dashboard',             icon: <IconDashboard />,   exact: true },
+  { label: 'Klienci',     href: '/dashboard/clients',     icon: <IconClients /> },
+  { label: 'Kalendarz',   href: '/dashboard/calendar',    icon: <IconCalendar /> },
+  { label: 'Wizyty',      href: '/dashboard/visits',      icon: <IconVisits /> },
+  { label: 'Formularze',  href: '/dashboard/forms',       icon: <IconForms /> },
+  { label: 'Odpowiedzi',  href: '/dashboard/submissions', icon: <IconSubmissions /> },
+  { label: 'Zabiegi',     href: '/dashboard/treatments',  icon: <IconTreatments /> },
 ]
 
-// Desktop Sidebar
-export function Sidebar({ salon }: { salon: Salon | null }) {
-  const pathname = usePathname()
+const ownerNav = [
+  { label: 'Pracownicy',  href: '/dashboard/staff',    icon: <IconStaff /> },
+  { label: 'Ustawienia', href: '/dashboard/settings', icon: <IconSettings /> },
+]
+
+function NavLink({ item, onClick }: { item: { label: string; href: string; icon: React.ReactNode; exact?: boolean }; onClick?: () => void }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const isActive = item.exact
+    ? pathname === item.href
+    : pathname === item.href || pathname.startsWith(item.href + '/')
 
   return (
-    <div className="hidden md:flex flex-col h-full bg-card border-r border-border w-60">
-      {/* Logo */}
-      <div className="flex items-center px-5 py-5 border-b border-border">
-        <DocvueLogo className="text-xl" />
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive = item.href === '/dashboard'
-            ? pathname === '/dashboard'
-            : pathname === item.href || pathname.startsWith(item.href + '/')
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'bg-primary/8 text-primary font-medium border-l-2 border-primary ml-0 pl-[10px]'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* User Menu */}
-      <div className="p-3 border-t border-border">
-        <UserMenu salon={salon} />
-      </div>
-    </div>
+    <Link
+      to={item.href}
+      onClick={onClick}
+      className={[
+        'flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13.5px] leading-none transition-colors',
+        isActive
+          ? 'bg-primary-container text-on-primary-container font-medium'
+          : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface',
+      ].join(' ')}
+    >
+      <span className={isActive ? 'text-primary' : 'opacity-70'}>{item.icon}</span>
+      {item.label}
+    </Link>
   )
 }
 
-// Mobile Top Header
-export function MobileHeader({ salon }: { salon: Salon | null }) {
-  const [menuOpen, setMenuOpen] = useState(false)
+// ── Desktop Sidebar ───────────────────────────────────────────────────────────
+
+export function Sidebar({ salon, isOwner = true }: { salon: Salon | null; isOwner?: boolean }) {
+  const { lock } = useLock()
+
+  return (
+    <aside className="hidden md:flex flex-col h-full w-60 shrink-0 bg-surface-container-low border-r border-border">
+      {/* Brand */}
+      <div className="flex items-center h-14 px-5 border-b border-border shrink-0">
+        <DocvueLogo className="text-[1.1rem]" />
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 flex flex-col gap-[2px] px-2 py-3 overflow-y-auto">
+        {navigation.map((item) => <NavLink key={item.href} item={item} />)}
+
+        {isOwner && (
+          <>
+            <div className="my-2 mx-1 border-t border-border" />
+            {ownerNav.map((item) => <NavLink key={item.href} item={item} />)}
+          </>
+        )}
+      </nav>
+
+      {/* Bottom */}
+      <div className="shrink-0 px-2 py-3 border-t border-border space-y-[2px]">
+        {salon && (
+          <div className="px-3 py-2 mb-1">
+            <p className="font-serif text-[13px] text-on-surface truncate leading-tight">{salon.name}</p>
+            <p className="label-caps text-on-surface-variant/50 mt-0.5 text-[10px]">panel zarządzania</p>
+          </div>
+        )}
+
+        <button
+          onClick={lock}
+          className="flex items-center gap-2.5 w-full px-3 py-[7px] rounded-md text-[13.5px] text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+        >
+          <span className="opacity-70"><IconLock /></span>
+          Tryb kiosku
+        </button>
+
+        <Link
+          to="/logout"
+          className="flex items-center gap-2.5 w-full px-3 py-[7px] rounded-md text-[13.5px] text-destructive/70 hover:bg-destructive/8 hover:text-destructive transition-colors"
+        >
+          <IconLogout />
+          Wyloguj się
+        </Link>
+      </div>
+    </aside>
+  )
+}
+
+// ── Mobile Header ─────────────────────────────────────────────────────────────
+
+export function MobileHeader({ salon: _salon, isOwner = true }: { salon: Salon | null; isOwner?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const { lock } = useLock()
+  const close = () => setOpen(false)
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border md:hidden safe-area-pt">
+      <header className="fixed top-0 inset-x-0 z-40 bg-surface-container-low border-b border-border md:hidden safe-area-pt">
         <div className="flex items-center justify-between h-14 px-4">
-          <DocvueLogo className="text-xl" />
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-secondary"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </button>
+          <DocvueLogo className="text-[1.1rem]" />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <button
+                className="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors"
+                aria-label="Otwórz menu"
+              >
+                <IconMenu />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-60 p-0 pt-14 bg-surface-container-low" aria-label="Menu nawigacji">
+              <nav className="flex-1 flex flex-col gap-[2px] px-2 py-3 overflow-y-auto">
+                {navigation.map((item) => <NavLink key={item.href} item={item} onClick={close} />)}
+                {isOwner && (
+                  <>
+                    <div className="my-2 mx-1 border-t border-border" />
+                    {ownerNav.map((item) => <NavLink key={item.href} item={item} onClick={close} />)}
+                  </>
+                )}
+              </nav>
+
+              <div className="px-2 py-3 border-t border-border space-y-[2px]">
+                <button
+                  onClick={() => { lock(); close() }}
+                  className="flex items-center gap-2.5 w-full px-3 py-[7px] rounded-md text-[13.5px] text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                >
+                  <span className="opacity-70"><IconLock /></span>
+                  Tryb kiosku
+                </button>
+
+                <Link
+                  to="/logout"
+                  className="flex items-center gap-2.5 w-full px-3 py-[7px] rounded-md text-[13.5px] text-destructive/70 hover:bg-destructive/8 hover:text-destructive transition-colors"
+                  onClick={close}
+                >
+                  <IconLogout />
+                  Wyloguj się
+                </Link>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
-
-      {/* Mobile Menu Overlay */}
-      {menuOpen && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMenuOpen(false)} />
-          <div className="fixed top-14 right-0 w-60 bg-card border-l border-border z-50 md:hidden animate-in slide-in-from-right duration-200 h-[calc(100%-3.5rem)]">
-            <nav className="p-3 space-y-0.5">
-              {navigation.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  {item.icon}
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border">
-              {salon && (
-                <SettingsDialog
-                  salon={salon}
-                  trigger={
-                    <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-muted-foreground hover:bg-secondary rounded-lg">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Ustawienia
-                    </button>
-                  }
-                />
-              )}
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-destructive hover:bg-destructive/8 rounded-lg mt-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Wyloguj się
-                </button>
-              </form>
-            </div>
-          </div>
-        </>
-      )}
     </>
-  )
-}
-
-function UserMenu({ salon }: { salon: Salon | null }) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors text-sm"
-      >
-        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-medium">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </div>
-        <span className="flex-1 text-left truncate">{salon?.name || 'Moje konto'}</span>
-        <svg className={`w-4 h-4 text-muted-foreground/60 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute bottom-full left-0 mb-2 w-full bg-card rounded-lg border border-border overflow-hidden z-20 animate-in slide-in-from-bottom-2 duration-200">
-            {salon && (
-              <SettingsDialog
-                salon={salon}
-                trigger={
-                  <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-left">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Ustawienia salonu
-                  </button>
-                }
-              />
-            )}
-
-            <form action={logout}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-destructive hover:bg-destructive/8 transition-colors text-left border-t border-border"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Wyloguj się
-              </button>
-            </form>
-          </div>
-        </>
-      )}
-    </div>
   )
 }

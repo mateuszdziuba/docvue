@@ -11,8 +11,8 @@ import {
   TIME_LABEL_WIDTH,
   PIXELS_PER_MINUTE,
 } from './constants'
-import type { CalendarAppointment } from '@/actions/appointments'
-import type { TimeBlock } from '@/actions/time-blocks'
+import type { CalendarAppointment } from '@/src/server/appointments'
+import type { TimeBlock } from '@/src/server/time-blocks'
 
 // ── Time gutter ──────────────────────────────────────────────────────────────
 

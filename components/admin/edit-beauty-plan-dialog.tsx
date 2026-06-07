@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { Loader2, Plus, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ClientCombobox } from '@/components/admin/client-combobox'
@@ -58,7 +58,7 @@ export function EditBeautyPlanDialog({
   const [scrapingIndex, setScrapingIndex] = useState<{ time: 'morning' | 'evening', index: number } | null>(null)
 
   const supabase = createClient()
-  const router = useRouter()
+  const router = useRouterCompat()
 
   const handleAddProduct = (time: 'morning' | 'evening') => {
     const newProduct = { name: '', url: '', price: null, usage_description: '' }

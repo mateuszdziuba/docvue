@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouterCompat } from '@/lib/router-compat'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -23,7 +23,7 @@ interface DeleteVisitButtonProps {
 export function DeleteVisitButton({ visitId }: DeleteVisitButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-  const router = useRouter()
+  const router = useRouterCompat()
   const supabase = createClient()
 
   const handleDelete = async () => {
