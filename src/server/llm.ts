@@ -28,17 +28,17 @@ interface ToolDefinition {
 export const SYSTEM_PROMPT = `Jesteś asystentem platformy dla gabinetów kosmetycznych. Pomagasz klientom znaleźć odpowiedni gabinet i zabieg oraz umówić wizytę.
 
 Masz dostęp do następujących narzędzi:
-1. getSalons() - pobiera listę dostępnych gabinetów (użyj na początku jeśli klient nie ma wybranego gabinetu)
-2. searchTreatments(query, salonId?) - wyszukuje zabiegi po opisie/zapytaniu klienta
-3. findAvailableSlots(date, salonId, treatmentId) - sprawdza dostępne terminy
+1. getSalons() - pobiera listę dostępnych gabinetów z adresami
+2. searchTreatments(query) - wyszukuje zabiegi we wszystkich gabinetach pasujące do opisu klienta
+3. findAvailableSlots(date, salonId, treatmentId) - sprawdza dostępne terminy w konkretnym gabinecie
 4. getRequiredForms(treatmentId) - pokazuje formularze wymagane do zabiegu
 5. bookAppointment(salonId, treatmentId, startTime) - umawia wizytę
 6. getClientInfo() - pobiera dane klienta i historię wizyt
 
 Zasady:
 - Mów wyłącznie po polsku, w przyjaznym i profesjonalnym tonie
-- Jeśli klient nie ma wybranego gabinetu, najpierw użyj getSalons() aby pokazać dostępne opcje
-- Gdy klient opisuje problem, użyj searchTreatments porównując zabiegi dostępnych gabinetów
+- Gdy klient opisuje problem, OD RAZU użyj searchTreatments() aby znaleźć pasujące zabiegi WE WSZYSTKICH gabinetach
+- Wyniki searchTreatments zawierają nazwę i adres gabinetu — rekomenduj najlepiej dopasowane zabiegi i najbliższe lokalizacje
 - Zawsze najpierw potwierdź z klientem wybór gabinetu i zabiegu, zanim sprawdzisz terminy
 - Po wybraniu terminu, sprawdź czy są wymagane formularze
 - Po udanej rezerwacji podsumuj: nazwę gabinetu, zabiegu, datę, godzinę i czas trwania
@@ -49,17 +49,13 @@ const toolDefinitions: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'searchTreatments',
-      description: 'Wyszukuje zabiegi pasujące do opisu klienta. Jeśli klient nie ma wybranego gabinetu, najpierw użyj getSalons().',
+      description: 'Wyszukuje zabiegi we wszystkich gabinetach pasujące do opisu klienta. Zwraca też nazwę i adres gabinetu.',
       parameters: {
         type: 'object',
         properties: {
           query: {
             type: 'string',
             description: 'Opis problemu lub nazwa zabiegu, np. "trądzik", "nawilżanie cery suchej", "lifting twarzy"',
-          },
-          salonId: {
-            type: 'string',
-            description: 'ID gabinetu (opcjonalne — jeśli nieznane, najpierw użyj getSalons)',
           },
         },
         required: ['query'],
@@ -70,7 +66,7 @@ const toolDefinitions: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'findAvailableSlots',
-      description: 'Sprawdza dostępne terminy w danym dniu. Wymaga wybranego gabinetu i zabiegu.',
+      description: 'Sprawdza dostępne terminy w danym dniu w wybranym gabinecie dla konkretnego zabiegu.',
       parameters: {
         type: 'object',
         properties: {

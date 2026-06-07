@@ -69,22 +69,23 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
     const MAX_ITERATIONS = 5
     let iterations = 0
 
-    while (iterations < MAX_ITERATIONS) {
-      iterations++
+    try {
+      while (iterations < MAX_ITERATIONS) {
+        iterations++
 
-      const response = await callLLM(messages)
+        const response = await callLLM(messages)
 
-      if (!response.toolCalls || response.toolCalls.length === 0) {
-        // LLM finished - return final response
-        await supabase.from('chat_messages').insert({
-          salon_id: salonId,
-          client_id: clientId,
-          role: 'assistant',
-          content: response.content,
-        })
+        if (!response.toolCalls || response.toolCalls.length === 0) {
+          // LLM finished - return final response
+          await supabase.from('chat_messages').insert({
+            salon_id: salonId,
+            client_id: clientId,
+            role: 'assistant',
+            content: response.content,
+          })
 
-        return {
-          message: response.content,
+          return {
+            message: response.content,
           history: [],
         }
       }
@@ -131,7 +132,15 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
     }
 
     return { message: 'Przepraszam, wystąpił błąd. Spróbuj ponownie.' }
-  })
+  } catch (e) {
+    const errorMessage = (e as Error).message
+    console.error('Chat LLM error:', errorMessage)
+    if (errorMessage.includes('GROQ_API_KEY')) {
+      return { error: 'Klucz API AI nie jest skonfigurowany. Dodaj GROQ_API_KEY do .env.' }
+    }
+    return { error: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.' }
+  }
+})
 
 async function executeTool(
   name: string,
@@ -149,15 +158,40 @@ async function executeTool(
   switch (name) {
     case 'searchTreatments': {
       const query = (args.query as string) || ''
-      if (!targetSalonId) return { error: 'Nie określono gabinetu. Użyj najpierw getSalons().' }
-      const { data } = await supabase
+      const dbQuery = supabase
         .from('treatments')
-        .select('id, name, description, duration_minutes, price, salon_id')
-        .eq('salon_id', targetSalonId)
-        .ilike('name', `%${query}%`)
+        .select(`
+          id, name, description, duration_minutes, price, salon_id,
+          salons!inner(id, name, phone, address)
+        `)
         .order('name')
-        .limit(10)
-      return { treatments: data || [] }
+
+      if (targetSalonId) {
+        dbQuery.eq('salon_id', targetSalonId)
+      }
+
+      if (query) {
+        dbQuery.ilike('name', `%${query}%`)
+      }
+
+      const { data } = await dbQuery.limit(20)
+
+      const treatments = (data || []).map((t: Record<string, unknown>) => {
+        const salon = t.salons as { name: string; phone: string | null; address: string | null } | null
+        return {
+          id: t.id as string,
+          name: t.name as string,
+          description: t.description as string | null,
+          duration_minutes: t.duration_minutes as number,
+          price: t.price as number | null,
+          salon_id: t.salon_id as string,
+          salon_name: salon?.name || '',
+          salon_address: salon?.address || '',
+          salon_phone: salon?.phone || '',
+        }
+      })
+
+      return { treatments }
     }
 
     case 'findAvailableSlots': {
@@ -309,7 +343,7 @@ async function executeTool(
         .select('id, name, phone, address')
         .order('name')
         .limit(50)
-      return { salons: salons || [] }
+      return { salons: (salons || []).map((s) => ({ id: s.id, name: s.name, phone: s.phone || '', address: s.address || '' })) }
     }
 
     default:

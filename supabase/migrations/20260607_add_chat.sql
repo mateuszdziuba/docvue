@@ -1,7 +1,7 @@
 -- Chat messaging table for AI assistant + WhatsApp integration
 CREATE TABLE IF NOT EXISTS chat_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  salon_id UUID NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+  salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'tool', 'system')),
   content TEXT NOT NULL DEFAULT '',
