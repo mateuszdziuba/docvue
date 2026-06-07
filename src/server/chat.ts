@@ -139,18 +139,21 @@ async function executeTool(
   context: {
     supabase: ReturnType<typeof getSupabaseServerClient>
     clientId: string
-    salonId: string
+    salonId: string | null
   },
 ): Promise<unknown> {
   const { supabase, clientId, salonId } = context
 
+  const targetSalonId = (args.salonId as string | undefined) || salonId
+
   switch (name) {
     case 'searchTreatments': {
       const query = (args.query as string) || ''
+      if (!targetSalonId) return { error: 'Nie określono gabinetu. Użyj najpierw getSalons().' }
       const { data } = await supabase
         .from('treatments')
-        .select('id, name, description, duration_minutes, price')
-        .eq('salon_id', salonId)
+        .select('id, name, description, duration_minutes, price, salon_id')
+        .eq('salon_id', targetSalonId)
         .ilike('name', `%${query}%`)
         .order('name')
         .limit(10)
@@ -160,6 +163,7 @@ async function executeTool(
     case 'findAvailableSlots': {
       const date = (args.date as string) || new Date().toISOString().split('T')[0]
       const treatmentId = args.treatmentId as string | undefined
+      if (!targetSalonId) return { error: 'Nie określono gabinetu.' }
 
       let durationMinutes = 60
       if (treatmentId) {
@@ -178,14 +182,14 @@ async function executeTool(
         supabase
           .from('appointments')
           .select('start_time, duration_minutes')
-          .eq('salon_id', salonId)
+          .eq('salon_id', targetSalonId)
           .gte('start_time', dayStart)
           .lt('start_time', dayEnd)
           .neq('status', 'cancelled'),
         supabase
           .from('time_blocks')
           .select('start_time, end_time')
-          .eq('salon_id', salonId)
+          .eq('salon_id', targetSalonId)
           .lt('start_time', dayEnd)
           .gt('end_time', dayStart),
       ])
@@ -213,7 +217,6 @@ async function executeTool(
         .select('form_id, forms (id, title, description)')
         .eq('treatment_id', treatmentId)
 
-      // Check which forms are already filled
       const formIds = treatmentForms?.map((tf) => tf.form_id) || []
       let submittedFormIds: string[] = []
 
@@ -239,8 +242,8 @@ async function executeTool(
     case 'bookAppointment': {
       const treatmentId = args.treatmentId as string
       const startTime = args.startTime as string
+      if (!targetSalonId) return { error: 'Nie określono gabinetu.' }
 
-      // Check for required forms
       const { data: requiredForms } = await supabase
         .from('treatment_forms')
         .select('form_id')
@@ -264,7 +267,7 @@ async function executeTool(
       const { data: appointment, error } = await supabase
         .from('appointments')
         .insert({
-          salon_id: salonId,
+          salon_id: targetSalonId,
           client_id: clientId,
           treatment_id: treatmentId,
           start_time: startTime,
@@ -275,24 +278,38 @@ async function executeTool(
 
       if (error) return { error: error.message }
 
+      // Auto-assign client to salon after first booking
+      if (!salonId && targetSalonId) {
+        await supabase.from('clients').update({ salon_id: targetSalonId }).eq('id', clientId)
+      }
+
       return { appointment, status }
     }
 
     case 'getClientInfo': {
       const { data: client } = await supabase
         .from('clients')
-        .select('id, name, email, phone')
+        .select('id, name, email, phone, salon_id')
         .eq('id', clientId)
         .single()
 
       const { data: history } = await supabase
         .from('appointments')
-        .select('*, treatments (name)')
+        .select('*, treatments (id, name)')
         .eq('client_id', clientId)
         .order('start_time', { ascending: false })
         .limit(10)
 
       return { client, history: history || [] }
+    }
+
+    case 'getSalons': {
+      const { data: salons } = await supabase
+        .from('salons')
+        .select('id, name, phone, address')
+        .order('name')
+        .limit(50)
+      return { salons: salons || [] }
     }
 
     default:

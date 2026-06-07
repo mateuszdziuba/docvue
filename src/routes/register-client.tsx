@@ -20,10 +20,14 @@ function RegisterClientPage() {
   const [success, setSuccess] = useState(false)
 
   const form = useForm({
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
     onSubmit: async ({ value }) => {
       setServerError(null)
 
+      if (!value.name.trim()) {
+        setServerError('Imię i nazwisko jest wymagane')
+        return
+      }
       if (value.password !== value.confirmPassword) {
         setServerError('Hasła nie są zgodne')
         return
@@ -34,7 +38,7 @@ function RegisterClientPage() {
       }
 
       const result = await registerClientUserFn({
-        data: { email: value.email, password: value.password },
+        data: { email: value.email, password: value.password, name: value.name },
       })
 
       if (result?.error) {
@@ -105,6 +109,26 @@ function RegisterClientPage() {
             }}
             className="space-y-6"
           >
+            <form.Field
+              name="name"
+              validators={{
+                onBlur: ({ value }) =>
+                  !value ? 'Imię i nazwisko jest wymagane' : undefined,
+              }}
+            >
+              {(field) => (
+                <FloatingLabelInput
+                  id="name"
+                  label="Imię i nazwisko"
+                  type="text"
+                  autoComplete="name"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
+
             <form.Field
               name="email"
               validators={{

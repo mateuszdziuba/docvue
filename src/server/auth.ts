@@ -105,22 +105,19 @@ export const getClientUserFn = createServerFn({ method: 'GET' }).handler(async (
 })
 
 export const registerClientUserFn = createServerFn({ method: 'POST' })
-  .inputValidator((d: { email: string; password: string }) => d)
+  .inputValidator(
+    (d: { email: string; password: string; name: string }) => d,
+  )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
 
-    // Check if client exists in system
-    const { data: existingClient, error: clientError } = await supabase
+    // Check if email already taken
+    const { data: existingClient } = await supabase
       .from('clients')
-      .select('id, user_id')
+      .select('id')
       .eq('email', data.email)
       .maybeSingle()
-
-    if (clientError) return { error: 'Wystąpił błąd. Spróbuj ponownie.' }
-    if (!existingClient) {
-      return { error: 'Nie znaleziono profilu klienta z tym adresem email. Skontaktuj się z gabinetem.' }
-    }
-    if (existingClient.user_id) {
+    if (existingClient) {
       return { error: 'Konto z tym adresem email już istnieje. Zaloguj się.' }
     }
 
@@ -132,13 +129,15 @@ export const registerClientUserFn = createServerFn({ method: 'POST' })
     if (signUpError) return { error: signUpError.message }
     if (!authData.user) return { error: 'Nie udało się utworzyć konta.' }
 
-    // Link client record to auth user
-    const { error: linkError } = await supabase
-      .from('clients')
-      .update({ user_id: authData.user.id })
-      .eq('id', existingClient.id)
-
-    if (linkError) return { error: linkError.message }
+    // Create client record (without salon assignment)
+    const { error: insertError } = await supabase.from('clients').insert({
+      salon_id: null,
+      name: data.name,
+      email: data.email,
+      phone: '',
+      user_id: authData.user.id,
+    })
+    if (insertError) return { error: insertError.message }
 
     return { success: true }
   })

@@ -280,7 +280,7 @@ export const createCalendarAppointment = (data: {
 
 // Client-facing booking — uses auth context to find client
 export const bookAsClientFn = createServerFn({ method: 'POST' })
-  .inputValidator((d: { treatmentId: string; startTime: string }) => d)
+  .inputValidator((d: { treatmentId: string; startTime: string; salonId?: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -293,6 +293,9 @@ export const bookAsClientFn = createServerFn({ method: 'POST' })
       .single()
 
     if (!client) return { error: 'Nie znaleziono profilu klienta' }
+
+    const targetSalonId = data.salonId || client.salon_id
+    if (!targetSalonId) return { error: 'Nie określono gabinetu. Wybierz gabinet przed rezerwacją.' }
 
     // Reuse the same creation logic
     const treatment = await supabase
@@ -315,7 +318,7 @@ export const bookAsClientFn = createServerFn({ method: 'POST' })
     const { data: existing } = await supabase
       .from('appointments')
       .select('start_time, duration_minutes')
-      .eq('salon_id', client.salon_id)
+      .eq('salon_id', targetSalonId)
       .gte('start_time', dayStart.toISOString())
       .lt('start_time', dayEnd.toISOString())
       .neq('status', 'cancelled')
@@ -350,7 +353,7 @@ export const bookAsClientFn = createServerFn({ method: 'POST' })
     const { data: appointment, error } = await supabase
       .from('appointments')
       .insert({
-        salon_id: client.salon_id,
+        salon_id: targetSalonId,
         client_id: client.id,
         treatment_id: data.treatmentId,
         start_time: data.startTime,
@@ -361,5 +364,11 @@ export const bookAsClientFn = createServerFn({ method: 'POST' })
       .single()
 
     if (error) return { error: error.message }
+
+    // Auto-assign client to salon after first booking (if not already assigned)
+    if (!client.salon_id && targetSalonId) {
+      await supabase.from('clients').update({ salon_id: targetSalonId }).eq('id', client.id)
+    }
+
     return { appointment, status }
   })

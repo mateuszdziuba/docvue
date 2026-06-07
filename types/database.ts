@@ -13,7 +13,7 @@ export interface Salon {
 
 export interface Client {
   id: string
-  salon_id: string
+  salon_id: string | null
   name: string
   email: string | null
   phone: string

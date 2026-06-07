@@ -25,36 +25,41 @@ interface ToolDefinition {
   }
 }
 
-export const SYSTEM_PROMPT = `Jesteś asystentem w nowoczesnym gabinecie kosmetycznym. Twoim zadaniem jest pomaganie klientom w naturalnej rozmowie.
+export const SYSTEM_PROMPT = `Jesteś asystentem platformy dla gabinetów kosmetycznych. Pomagasz klientom znaleźć odpowiedni gabinet i zabieg oraz umówić wizytę.
 
 Masz dostęp do następujących narzędzi:
-1. searchTreatments(query) - wyszukuje zabiegi po opisie/zapytaniu klienta (np. "trądzik", "nawilżanie", "zmarszczki")
-2. findAvailableSlots(date) - sprawdza dostępne terminy w danym dniu
-3. getRequiredForms(treatmentId) - pokazuje formularze wymagane do zabiegu
-4. bookAppointment(treatmentId, startTime) - umawia wizytę
-5. getClientInfo() - pobiera dane klienta i historię wizyt
+1. getSalons() - pobiera listę dostępnych gabinetów (użyj na początku jeśli klient nie ma wybranego gabinetu)
+2. searchTreatments(query, salonId?) - wyszukuje zabiegi po opisie/zapytaniu klienta
+3. findAvailableSlots(date, salonId, treatmentId) - sprawdza dostępne terminy
+4. getRequiredForms(treatmentId) - pokazuje formularze wymagane do zabiegu
+5. bookAppointment(salonId, treatmentId, startTime) - umawia wizytę
+6. getClientInfo() - pobiera dane klienta i historię wizyt
 
 Zasady:
 - Mów wyłącznie po polsku, w przyjaznym i profesjonalnym tonie
-- Gdy klient opisuje problem, od razu użyj searchTreatments aby znaleźć odpowiednie zabiegi
-- Zawsze najpierw potwierdź z klientem wybór zabiegu, zanim sprawdzisz terminy
+- Jeśli klient nie ma wybranego gabinetu, najpierw użyj getSalons() aby pokazać dostępne opcje
+- Gdy klient opisuje problem, użyj searchTreatments porównując zabiegi dostępnych gabinetów
+- Zawsze najpierw potwierdź z klientem wybór gabinetu i zabiegu, zanim sprawdzisz terminy
 - Po wybraniu terminu, sprawdź czy są wymagane formularze
-- Jeśli są formularze, poinformuj klienta, że będzie musiał je wypełnić
-- Po udanej rezerwacji podsumuj: nazwę zabiegu, datę, godzinę i czas trwania
-- Jeśli klient pyta o coś poza zakresem, grzecznie poinformuj, że możesz pomóc tylko w sprawach związanych z gabinetem`
+- Po udanej rezerwacji podsumuj: nazwę gabinetu, zabiegu, datę, godzinę i czas trwania
+- Jeśli klient pyta o coś poza zakresem, grzecznie poinformuj, że możesz pomóc tylko w sprawach związanych z rezerwacją wizyt`
 
 const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
       name: 'searchTreatments',
-      description: 'Wyszukuje zabiegi pasujące do opisu klienta. Użyj gdy klient opisuje problem skórny, potrzebę lub pyta o konkretny zabieg.',
+      description: 'Wyszukuje zabiegi pasujące do opisu klienta. Jeśli klient nie ma wybranego gabinetu, najpierw użyj getSalons().',
       parameters: {
         type: 'object',
         properties: {
           query: {
             type: 'string',
             description: 'Opis problemu lub nazwa zabiegu, np. "trądzik", "nawilżanie cery suchej", "lifting twarzy"',
+          },
+          salonId: {
+            type: 'string',
+            description: 'ID gabinetu (opcjonalne — jeśli nieznane, najpierw użyj getSalons)',
           },
         },
         required: ['query'],
@@ -65,20 +70,24 @@ const toolDefinitions: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'findAvailableSlots',
-      description: 'Sprawdza dostępne terminy w danym dniu lub dniach. Użyj gdy klient chce umówić wizytę.',
+      description: 'Sprawdza dostępne terminy w danym dniu. Wymaga wybranego gabinetu i zabiegu.',
       parameters: {
         type: 'object',
         properties: {
           date: {
             type: 'string',
-            description: 'Data w formacie YYYY-MM-DD. Jeśli nieokreślona, użyj bieżącej daty.',
+            description: 'Data w formacie YYYY-MM-DD',
+          },
+          salonId: {
+            type: 'string',
+            description: 'ID gabinetu',
           },
           treatmentId: {
             type: 'string',
-            description: 'ID wybranego zabiegu (opcjonalnie, aby dopasować długość slotu)',
+            description: 'ID wybranego zabiegu',
           },
         },
-        required: ['date'],
+        required: ['date', 'salonId', 'treatmentId'],
       },
     },
   },
@@ -103,10 +112,14 @@ const toolDefinitions: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'bookAppointment',
-      description: 'Umawia wizytę na konkretny termin. Sprawdza też czy są wymagane formularze i czy klient je wypełnił.',
+      description: 'Umawia wizytę w wybranym gabinecie na konkretny termin.',
       parameters: {
         type: 'object',
         properties: {
+          salonId: {
+            type: 'string',
+            description: 'ID gabinetu',
+          },
           treatmentId: {
             type: 'string',
             description: 'ID zabiegu',
@@ -116,7 +129,7 @@ const toolDefinitions: ToolDefinition[] = [
             description: 'Data i godzina w formacie ISO 8601, np. "2025-06-10T09:00:00"',
           },
         },
-        required: ['treatmentId', 'startTime'],
+        required: ['salonId', 'treatmentId', 'startTime'],
       },
     },
   },
@@ -125,6 +138,17 @@ const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'getClientInfo',
       description: 'Pobiera dane zalogowanego klienta oraz historię jego wizyt.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getSalons',
+      description: 'Pobiera listę gabinetów dostępnych w systemie. Użyj gdy klient nie ma jeszcze wybranego gabinetu i szuka gdzie umówić wizytę.',
       parameters: {
         type: 'object',
         properties: {},
