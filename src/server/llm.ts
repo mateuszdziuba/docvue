@@ -94,32 +94,34 @@ async function callGemini(messages: LLMMessage[]): Promise<{
 
   const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: messages
-      .filter((m) => m.role !== 'system')
-      .map((m, idx, arr) => {
-        if (m.role === 'tool') {
-          // Find matching function name from previous assistant message
-          let fnName = m.tool_call_id || 'unknown'
-          for (let i = idx - 1; i >= 0; i--) {
-            if (arr[i].tool_calls?.[0]?.function.name === fnName || arr[i].tool_calls?.[0]?.id === fnName) {
-              fnName = arr[i].tool_calls[0].function.name
-              break
-            }
-          }
-          let responseData: Record<string, unknown> = {}
-          try { responseData = JSON.parse(m.content || '{}') } catch { responseData = { error: m.content } }
-          return {
-            role: 'function',
-            parts: [{
-              functionResponse: {
-                name: fnName,
-                response: responseData,
-              },
-            }],
+  }
+
+  const contents = messages
+    .filter((m) => m.role !== 'system')
+    .map((m, idx, arr) => {
+      if (m.role === 'tool') {
+        // Find matching function name from previous assistant message
+        let fnName = m.tool_call_id || 'unknown'
+        for (let i = idx - 1; i >= 0; i--) {
+          if (arr[i].tool_calls?.[0]?.function.name === fnName || arr[i].tool_calls?.[0]?.id === fnName) {
+            fnName = arr[i].tool_calls[0].function.name
+            break
           }
         }
-        const role = m.role === 'assistant' ? 'model' : 'user'
-        const parts: Record<string, unknown>[] = [{ text: m.content || '' }]
+        let responseData: Record<string, unknown> = {}
+        try { responseData = JSON.parse(m.content || '{}') } catch { responseData = { error: m.content } }
+        return {
+          role: 'function',
+          parts: [{
+            functionResponse: {
+              name: fnName,
+              response: responseData,
+            },
+          }],
+        }
+      }
+      const role = m.role === 'assistant' ? 'model' : 'user'
+      const parts: Record<string, unknown>[] = [{ text: m.content || '' }]
         if (m.tool_calls) {
           parts.push({
             functionCall: {
@@ -129,14 +131,21 @@ async function callGemini(messages: LLMMessage[]): Promise<{
           })
         }
         return { role, parts }
-      }),
-    tools: [{
-      functionDeclarations: toolDefinitions.map((t) => ({
-        name: t.function.name,
-        description: t.function.description,
-        parameters: t.function.parameters,
-      })),
-    }],
+      })
+
+  // Gemini wymaga co najmniej jednego wpisu w contents
+  if (contents.length === 0) {
+    contents.push({ role: 'user', parts: [{ text: 'Witaj' }] })
+  }
+  body.contents = contents
+
+  body.tools = [{
+    functionDeclarations: toolDefinitions.map((t) => ({
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+    })),
+  }]
   }
 
   const response = await fetch(
