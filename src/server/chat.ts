@@ -138,6 +138,12 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
     if (errorMessage.includes('GROQ_API_KEY')) {
       return { error: 'Klucz API AI nie jest skonfigurowany. Dodaj GROQ_API_KEY do .env.' }
     }
+    if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
+      return { error: 'Zbyt wiele zapytań. Odczekaj chwilę i spróbuj ponownie.' }
+    }
+    if (errorMessage.includes('tool_use_failed')) {
+      return { error: 'Model AI ma problem z przetworzeniem żądania. Spróbuj sformułować inaczej.' }
+    }
     return { error: 'Przepraszam, wystąpił błąd. Spróbuj ponownie za chwilę.' }
   }
 })
