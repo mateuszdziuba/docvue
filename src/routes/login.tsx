@@ -6,15 +6,19 @@ import {
 } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { loginFn } from '../server/auth'
+import { loginFn, getClientUserFn } from '../server/auth'
 import { DocvueLogo } from '@/components/ui/docvue-logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: ({ context }) => {
-    if (context.user) throw redirect({ to: '/dashboard' })
+  beforeLoad: async ({ context }) => {
+    if (!context.user) return
+    // Redirect clients to their portal
+    const { client } = await getClientUserFn()
+    if (client) throw redirect({ to: '/client/calendar' })
+    throw redirect({ to: '/dashboard' })
   },
   component: LoginPage,
 })
@@ -32,7 +36,9 @@ function LoginPage() {
         setServerError(result.error)
       } else {
         await router.invalidate()
-        router.navigate({ to: '/dashboard' })
+        // Navigate to client portal if user is a client
+        const { client } = await getClientUserFn()
+        router.navigate({ to: client ? '/client/calendar' : '/dashboard' })
       }
     },
   })

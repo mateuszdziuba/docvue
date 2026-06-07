@@ -3,7 +3,7 @@ import {
   Link,
   useRouter,
 } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { registerClientUserFn } from '../server/auth'
 import { DocvueLogo } from '@/components/ui/docvue-logo'
@@ -18,6 +18,16 @@ function RegisterClientPage() {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => {
+        router.invalidate()
+        router.navigate({ to: '/client/chat' })
+      }, 1500)
+      return () => clearTimeout(t)
+    }
+  }, [success, router])
 
   const form = useForm({
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
@@ -58,13 +68,9 @@ function RegisterClientPage() {
             Konto utworzone
           </h1>
           <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-            Sprawdź swoją skrzynkę email, aby potwierdzić rejestrację. Po potwierdzeniu będziesz mógł się zalogować.
+            Zaraz zostaniesz przekierowany do panelu klienta...
           </p>
-          <Link to="/login">
-            <Button className="w-full" size="lg">
-              Przejdź do logowania
-            </Button>
-          </Link>
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
       </div>
     )
