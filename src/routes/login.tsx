@@ -31,8 +31,9 @@ function LoginPage() {
         setServerError(result.error)
       } else {
         const isClient = 'isClient' in result && result.isClient
-        router.navigate({ to: isClient ? '/client/calendar' : '/dashboard' })
+        // Najpierw odśwież kontekst sesji, potem nawiguj — bez podwójnego ładowania.
         await router.invalidate()
+        router.navigate({ to: isClient ? '/client/calendar' : '/dashboard' })
       }
     },
   })
