@@ -51,3 +51,6 @@ klienci.csv
 # Capacitor generated files (optional - uncomment to track)
 /android
 /ios
+# Nitro build output
+.output
+.vercel

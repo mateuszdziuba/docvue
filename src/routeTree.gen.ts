@@ -9,66 +9,49 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UpdatePasswordRouteImport } from './routes/update-password'
-import { Route as RegisterClientRouteImport } from './routes/register-client'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as LogoutRouteImport } from './routes/logout'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
-import { Route as ClientRouteImport } from './routes/_client'
-import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as FTokenRouteImport } from './routes/f.$token'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as ClientRouteImport } from './routes/_client'
+import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RegisterClientRouteImport } from './routes/register-client'
+import { Route as UpdatePasswordRouteImport } from './routes/update-password'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as FTokenRouteImport } from './routes/f.$token'
 import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
-import { Route as ShareBeautyPlanPlanIdRouteImport } from './routes/share.beauty-plan.$planId'
-import { Route as FTokenSuccessRouteImport } from './routes/f.$token_.success'
-import { Route as ClientClientProfileRouteImport } from './routes/_client/client/profile'
-import { Route as ClientClientChatRouteImport } from './routes/_client/client/chat'
 import { Route as ClientClientCalendarRouteImport } from './routes/_client/client/calendar'
-import { Route as AuthedDashboardVisitsIndexRouteImport } from './routes/_authed/dashboard/visits/index'
-import { Route as AuthedDashboardTreatmentsIndexRouteImport } from './routes/_authed/dashboard/treatments/index'
-import { Route as AuthedDashboardSubmissionsIndexRouteImport } from './routes/_authed/dashboard/submissions/index'
-import { Route as AuthedDashboardStaffIndexRouteImport } from './routes/_authed/dashboard/staff/index'
-import { Route as AuthedDashboardSettingsIndexRouteImport } from './routes/_authed/dashboard/settings/index'
-import { Route as AuthedDashboardFormsIndexRouteImport } from './routes/_authed/dashboard/forms/index'
-import { Route as AuthedDashboardClientsIndexRouteImport } from './routes/_authed/dashboard/clients/index'
+import { Route as ClientClientChatRouteImport } from './routes/_client/client/chat'
+import { Route as ClientClientProfileRouteImport } from './routes/_client/client/profile'
+import { Route as FTokenSuccessRouteImport } from './routes/f.$token_.success'
+import { Route as ShareBeautyPlanPlanIdRouteImport } from './routes/share.beauty-plan.$planId'
 import { Route as AuthedDashboardCalendarIndexRouteImport } from './routes/_authed/dashboard/calendar/index'
-import { Route as AuthedDashboardVisitsVisitIdRouteImport } from './routes/_authed/dashboard/visits/$visitId'
-import { Route as AuthedDashboardSubmissionsSubmissionIdRouteImport } from './routes/_authed/dashboard/submissions/$submissionId'
-import { Route as AuthedDashboardFormsNewRouteImport } from './routes/_authed/dashboard/forms/new'
+import { Route as AuthedDashboardClientsIndexRouteImport } from './routes/_authed/dashboard/clients/index'
 import { Route as AuthedDashboardClientsClientIdRouteImport } from './routes/_authed/dashboard/clients/$clientId'
+import { Route as AuthedDashboardFormsIndexRouteImport } from './routes/_authed/dashboard/forms/index'
+import { Route as AuthedDashboardFormsNewRouteImport } from './routes/_authed/dashboard/forms/new'
+import { Route as AuthedDashboardSettingsIndexRouteImport } from './routes/_authed/dashboard/settings/index'
+import { Route as AuthedDashboardStaffIndexRouteImport } from './routes/_authed/dashboard/staff/index'
+import { Route as AuthedDashboardSubmissionsIndexRouteImport } from './routes/_authed/dashboard/submissions/index'
+import { Route as AuthedDashboardSubmissionsSubmissionIdRouteImport } from './routes/_authed/dashboard/submissions/$submissionId'
+import { Route as AuthedDashboardTreatmentsIndexRouteImport } from './routes/_authed/dashboard/treatments/index'
+import { Route as AuthedDashboardVisitsIndexRouteImport } from './routes/_authed/dashboard/visits/index'
+import { Route as AuthedDashboardVisitsVisitIdRouteImport } from './routes/_authed/dashboard/visits/$visitId'
 import { Route as AuthedDashboardFormsFormIdEditRouteImport } from './routes/_authed/dashboard/forms/$formId/edit'
 
-const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
-  id: '/update-password',
-  path: '/update-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterClientRoute = RegisterClientRouteImport.update({
-  id: '/register-client',
-  path: '/register-client',
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LogoutRoute = LogoutRouteImport.update({
-  id: '/logout',
-  path: '/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
+const ClientRoute = ClientRouteImport.update({
+  id: '/_client',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
@@ -76,22 +59,34 @@ const AcceptInviteRoute = AcceptInviteRouteImport.update({
   path: '/accept-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientRoute = ClientRouteImport.update({
-  id: '/_client',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedRoute = AuthedRouteImport.update({
-  id: '/_authed',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FTokenRoute = FTokenRouteImport.update({
-  id: '/f/$token',
-  path: '/f/$token',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterClientRoute = RegisterClientRouteImport.update({
+  id: '/register-client',
+  path: '/register-client',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
+  id: '/update-password',
+  path: '/update-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
@@ -99,24 +94,19 @@ const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthedRoute,
 } as any)
+const FTokenRoute = FTokenRouteImport.update({
+  id: '/f/$token',
+  path: '/f/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedDashboardRoute,
 } as any)
-const ShareBeautyPlanPlanIdRoute = ShareBeautyPlanPlanIdRouteImport.update({
-  id: '/share/beauty-plan/$planId',
-  path: '/share/beauty-plan/$planId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FTokenSuccessRoute = FTokenSuccessRouteImport.update({
-  id: '/f/$token_/success',
-  path: '/f/$token/success',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientClientProfileRoute = ClientClientProfileRouteImport.update({
-  id: '/client/profile',
-  path: '/client/profile',
+const ClientClientCalendarRoute = ClientClientCalendarRouteImport.update({
+  id: '/client/calendar',
+  path: '/client/calendar',
   getParentRoute: () => ClientRoute,
 } as any)
 const ClientClientChatRoute = ClientClientChatRouteImport.update({
@@ -124,45 +114,25 @@ const ClientClientChatRoute = ClientClientChatRouteImport.update({
   path: '/client/chat',
   getParentRoute: () => ClientRoute,
 } as any)
-const ClientClientCalendarRoute = ClientClientCalendarRouteImport.update({
-  id: '/client/calendar',
-  path: '/client/calendar',
+const ClientClientProfileRoute = ClientClientProfileRouteImport.update({
+  id: '/client/profile',
+  path: '/client/profile',
   getParentRoute: () => ClientRoute,
 } as any)
-const AuthedDashboardVisitsIndexRoute =
-  AuthedDashboardVisitsIndexRouteImport.update({
-    id: '/visits/',
-    path: '/visits/',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
-const AuthedDashboardTreatmentsIndexRoute =
-  AuthedDashboardTreatmentsIndexRouteImport.update({
-    id: '/treatments/',
-    path: '/treatments/',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
-const AuthedDashboardSubmissionsIndexRoute =
-  AuthedDashboardSubmissionsIndexRouteImport.update({
-    id: '/submissions/',
-    path: '/submissions/',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
-const AuthedDashboardStaffIndexRoute =
-  AuthedDashboardStaffIndexRouteImport.update({
-    id: '/staff/',
-    path: '/staff/',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
-const AuthedDashboardSettingsIndexRoute =
-  AuthedDashboardSettingsIndexRouteImport.update({
-    id: '/settings/',
-    path: '/settings/',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
-const AuthedDashboardFormsIndexRoute =
-  AuthedDashboardFormsIndexRouteImport.update({
-    id: '/forms/',
-    path: '/forms/',
+const FTokenSuccessRoute = FTokenSuccessRouteImport.update({
+  id: '/f/$token_/success',
+  path: '/f/$token/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareBeautyPlanPlanIdRoute = ShareBeautyPlanPlanIdRouteImport.update({
+  id: '/share/beauty-plan/$planId',
+  path: '/share/beauty-plan/$planId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedDashboardCalendarIndexRoute =
+  AuthedDashboardCalendarIndexRouteImport.update({
+    id: '/calendar/',
+    path: '/calendar/',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
 const AuthedDashboardClientsIndexRoute =
@@ -171,16 +141,39 @@ const AuthedDashboardClientsIndexRoute =
     path: '/clients/',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
-const AuthedDashboardCalendarIndexRoute =
-  AuthedDashboardCalendarIndexRouteImport.update({
-    id: '/calendar/',
-    path: '/calendar/',
+const AuthedDashboardClientsClientIdRoute =
+  AuthedDashboardClientsClientIdRouteImport.update({
+    id: '/clients/$clientId',
+    path: '/clients/$clientId',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
-const AuthedDashboardVisitsVisitIdRoute =
-  AuthedDashboardVisitsVisitIdRouteImport.update({
-    id: '/visits/$visitId',
-    path: '/visits/$visitId',
+const AuthedDashboardFormsIndexRoute =
+  AuthedDashboardFormsIndexRouteImport.update({
+    id: '/forms/',
+    path: '/forms/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
+const AuthedDashboardFormsNewRoute = AuthedDashboardFormsNewRouteImport.update({
+  id: '/forms/new',
+  path: '/forms/new',
+  getParentRoute: () => AuthedDashboardRoute,
+} as any)
+const AuthedDashboardSettingsIndexRoute =
+  AuthedDashboardSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
+const AuthedDashboardStaffIndexRoute =
+  AuthedDashboardStaffIndexRouteImport.update({
+    id: '/staff/',
+    path: '/staff/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
+const AuthedDashboardSubmissionsIndexRoute =
+  AuthedDashboardSubmissionsIndexRouteImport.update({
+    id: '/submissions/',
+    path: '/submissions/',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
 const AuthedDashboardSubmissionsSubmissionIdRoute =
@@ -189,15 +182,22 @@ const AuthedDashboardSubmissionsSubmissionIdRoute =
     path: '/submissions/$submissionId',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
-const AuthedDashboardFormsNewRoute = AuthedDashboardFormsNewRouteImport.update({
-  id: '/forms/new',
-  path: '/forms/new',
-  getParentRoute: () => AuthedDashboardRoute,
-} as any)
-const AuthedDashboardClientsClientIdRoute =
-  AuthedDashboardClientsClientIdRouteImport.update({
-    id: '/clients/$clientId',
-    path: '/clients/$clientId',
+const AuthedDashboardTreatmentsIndexRoute =
+  AuthedDashboardTreatmentsIndexRouteImport.update({
+    id: '/treatments/',
+    path: '/treatments/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
+const AuthedDashboardVisitsIndexRoute =
+  AuthedDashboardVisitsIndexRouteImport.update({
+    id: '/visits/',
+    path: '/visits/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
+const AuthedDashboardVisitsVisitIdRoute =
+  AuthedDashboardVisitsVisitIdRouteImport.update({
+    id: '/visits/$visitId',
+    path: '/visits/$visitId',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
 const AuthedDashboardFormsFormIdEditRoute =
@@ -417,60 +417,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/update-password': {
-      id: '/update-password'
-      path: '/update-password'
-      fullPath: '/update-password'
-      preLoaderRoute: typeof UpdatePasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register-client': {
-      id: '/register-client'
-      path: '/register-client'
-      fullPath: '/register-client'
-      preLoaderRoute: typeof RegisterClientRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logout': {
-      id: '/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof LogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accept-invite': {
-      id: '/accept-invite'
-      path: '/accept-invite'
-      fullPath: '/accept-invite'
-      preLoaderRoute: typeof AcceptInviteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_client': {
-      id: '/_client'
-      path: ''
+    '/': {
+      id: '/'
+      path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof ClientRouteImport
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -480,18 +431,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_client': {
+      id: '/_client'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof ClientRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/f/$token': {
-      id: '/f/$token'
-      path: '/f/$token'
-      fullPath: '/f/$token'
-      preLoaderRoute: typeof FTokenRouteImport
+    '/accept-invite': {
+      id: '/accept-invite'
+      path: '/accept-invite'
+      fullPath: '/accept-invite'
+      preLoaderRoute: typeof AcceptInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register-client': {
+      id: '/register-client'
+      path: '/register-client'
+      fullPath: '/register-client'
+      preLoaderRoute: typeof RegisterClientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/update-password': {
+      id: '/update-password'
+      path: '/update-password'
+      fullPath: '/update-password'
+      preLoaderRoute: typeof UpdatePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/dashboard': {
@@ -501,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/f/$token': {
+      id: '/f/$token'
+      path: '/f/$token'
+      fullPath: '/f/$token'
+      preLoaderRoute: typeof FTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/dashboard/': {
       id: '/_authed/dashboard/'
       path: '/'
@@ -508,25 +508,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardIndexRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
-    '/share/beauty-plan/$planId': {
-      id: '/share/beauty-plan/$planId'
-      path: '/share/beauty-plan/$planId'
-      fullPath: '/share/beauty-plan/$planId'
-      preLoaderRoute: typeof ShareBeautyPlanPlanIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/f/$token_/success': {
-      id: '/f/$token_/success'
-      path: '/f/$token/success'
-      fullPath: '/f/$token/success'
-      preLoaderRoute: typeof FTokenSuccessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_client/client/profile': {
-      id: '/_client/client/profile'
-      path: '/client/profile'
-      fullPath: '/client/profile'
-      preLoaderRoute: typeof ClientClientProfileRouteImport
+    '/_client/client/calendar': {
+      id: '/_client/client/calendar'
+      path: '/client/calendar'
+      fullPath: '/client/calendar'
+      preLoaderRoute: typeof ClientClientCalendarRouteImport
       parentRoute: typeof ClientRoute
     }
     '/_client/client/chat': {
@@ -536,53 +522,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientClientChatRouteImport
       parentRoute: typeof ClientRoute
     }
-    '/_client/client/calendar': {
-      id: '/_client/client/calendar'
-      path: '/client/calendar'
-      fullPath: '/client/calendar'
-      preLoaderRoute: typeof ClientClientCalendarRouteImport
+    '/_client/client/profile': {
+      id: '/_client/client/profile'
+      path: '/client/profile'
+      fullPath: '/client/profile'
+      preLoaderRoute: typeof ClientClientProfileRouteImport
       parentRoute: typeof ClientRoute
     }
-    '/_authed/dashboard/visits/': {
-      id: '/_authed/dashboard/visits/'
-      path: '/visits'
-      fullPath: '/dashboard/visits/'
-      preLoaderRoute: typeof AuthedDashboardVisitsIndexRouteImport
-      parentRoute: typeof AuthedDashboardRoute
+    '/f/$token_/success': {
+      id: '/f/$token_/success'
+      path: '/f/$token/success'
+      fullPath: '/f/$token/success'
+      preLoaderRoute: typeof FTokenSuccessRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authed/dashboard/treatments/': {
-      id: '/_authed/dashboard/treatments/'
-      path: '/treatments'
-      fullPath: '/dashboard/treatments/'
-      preLoaderRoute: typeof AuthedDashboardTreatmentsIndexRouteImport
-      parentRoute: typeof AuthedDashboardRoute
+    '/share/beauty-plan/$planId': {
+      id: '/share/beauty-plan/$planId'
+      path: '/share/beauty-plan/$planId'
+      fullPath: '/share/beauty-plan/$planId'
+      preLoaderRoute: typeof ShareBeautyPlanPlanIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authed/dashboard/submissions/': {
-      id: '/_authed/dashboard/submissions/'
-      path: '/submissions'
-      fullPath: '/dashboard/submissions/'
-      preLoaderRoute: typeof AuthedDashboardSubmissionsIndexRouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
-    '/_authed/dashboard/staff/': {
-      id: '/_authed/dashboard/staff/'
-      path: '/staff'
-      fullPath: '/dashboard/staff/'
-      preLoaderRoute: typeof AuthedDashboardStaffIndexRouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
-    '/_authed/dashboard/settings/': {
-      id: '/_authed/dashboard/settings/'
-      path: '/settings'
-      fullPath: '/dashboard/settings/'
-      preLoaderRoute: typeof AuthedDashboardSettingsIndexRouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
-    '/_authed/dashboard/forms/': {
-      id: '/_authed/dashboard/forms/'
-      path: '/forms'
-      fullPath: '/dashboard/forms/'
-      preLoaderRoute: typeof AuthedDashboardFormsIndexRouteImport
+    '/_authed/dashboard/calendar/': {
+      id: '/_authed/dashboard/calendar/'
+      path: '/calendar'
+      fullPath: '/dashboard/calendar/'
+      preLoaderRoute: typeof AuthedDashboardCalendarIndexRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
     '/_authed/dashboard/clients/': {
@@ -592,25 +557,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardClientsIndexRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
-    '/_authed/dashboard/calendar/': {
-      id: '/_authed/dashboard/calendar/'
-      path: '/calendar'
-      fullPath: '/dashboard/calendar/'
-      preLoaderRoute: typeof AuthedDashboardCalendarIndexRouteImport
+    '/_authed/dashboard/clients/$clientId': {
+      id: '/_authed/dashboard/clients/$clientId'
+      path: '/clients/$clientId'
+      fullPath: '/dashboard/clients/$clientId'
+      preLoaderRoute: typeof AuthedDashboardClientsClientIdRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
-    '/_authed/dashboard/visits/$visitId': {
-      id: '/_authed/dashboard/visits/$visitId'
-      path: '/visits/$visitId'
-      fullPath: '/dashboard/visits/$visitId'
-      preLoaderRoute: typeof AuthedDashboardVisitsVisitIdRouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
-    '/_authed/dashboard/submissions/$submissionId': {
-      id: '/_authed/dashboard/submissions/$submissionId'
-      path: '/submissions/$submissionId'
-      fullPath: '/dashboard/submissions/$submissionId'
-      preLoaderRoute: typeof AuthedDashboardSubmissionsSubmissionIdRouteImport
+    '/_authed/dashboard/forms/': {
+      id: '/_authed/dashboard/forms/'
+      path: '/forms'
+      fullPath: '/dashboard/forms/'
+      preLoaderRoute: typeof AuthedDashboardFormsIndexRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
     '/_authed/dashboard/forms/new': {
@@ -620,11 +578,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardFormsNewRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
-    '/_authed/dashboard/clients/$clientId': {
-      id: '/_authed/dashboard/clients/$clientId'
-      path: '/clients/$clientId'
-      fullPath: '/dashboard/clients/$clientId'
-      preLoaderRoute: typeof AuthedDashboardClientsClientIdRouteImport
+    '/_authed/dashboard/settings/': {
+      id: '/_authed/dashboard/settings/'
+      path: '/settings'
+      fullPath: '/dashboard/settings/'
+      preLoaderRoute: typeof AuthedDashboardSettingsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/staff/': {
+      id: '/_authed/dashboard/staff/'
+      path: '/staff'
+      fullPath: '/dashboard/staff/'
+      preLoaderRoute: typeof AuthedDashboardStaffIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/submissions/': {
+      id: '/_authed/dashboard/submissions/'
+      path: '/submissions'
+      fullPath: '/dashboard/submissions/'
+      preLoaderRoute: typeof AuthedDashboardSubmissionsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/submissions/$submissionId': {
+      id: '/_authed/dashboard/submissions/$submissionId'
+      path: '/submissions/$submissionId'
+      fullPath: '/dashboard/submissions/$submissionId'
+      preLoaderRoute: typeof AuthedDashboardSubmissionsSubmissionIdRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/treatments/': {
+      id: '/_authed/dashboard/treatments/'
+      path: '/treatments'
+      fullPath: '/dashboard/treatments/'
+      preLoaderRoute: typeof AuthedDashboardTreatmentsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/visits/': {
+      id: '/_authed/dashboard/visits/'
+      path: '/visits'
+      fullPath: '/dashboard/visits/'
+      preLoaderRoute: typeof AuthedDashboardVisitsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
+    '/_authed/dashboard/visits/$visitId': {
+      id: '/_authed/dashboard/visits/$visitId'
+      path: '/visits/$visitId'
+      fullPath: '/dashboard/visits/$visitId'
+      preLoaderRoute: typeof AuthedDashboardVisitsVisitIdRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
     '/_authed/dashboard/forms/$formId/edit': {

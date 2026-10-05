@@ -1,14 +1,5 @@
 {
-  "rewrites": [
-    {
-      "source": "/_serverFn/(.*)",
-      "destination": "/_serverFn/$1"
-    },
-    {
-      "source": "/((?!_serverFn).*)",
-      "destination": "/index.html"
-    }
-  ],
+  "framework": "tanstack-start",
   "headers": [
     {
       "source": "/sw.js",
