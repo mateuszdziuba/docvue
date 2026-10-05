@@ -8,32 +8,50 @@ import { fetchUserFn } from '../server/auth'
 import appCss from '../styles/app.css?url'
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1, viewport-fit=cover',
-      },
-      { title: 'docvue – formularze dla salonów beauty' },
-      {
-        name: 'description',
-        content:
-          'Twórz formularze zgody i ankiety dla swojego salonu kosmetycznego. Klienci wypełniają online, Ty zarządzasz z dashboardu.',
-      },
-      { name: 'apple-mobile-web-app-capable', content: 'yes' },
-      { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
-      { name: 'apple-mobile-web-app-title', content: 'docvue' },
-    ],
-    links: [
-      { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
-      { rel: 'icon', href: '/icons/icon-32.png', type: 'image/png', sizes: '32x32' },
-      { rel: 'icon', href: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
-      { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png', sizes: '180x180' },
-      { rel: 'manifest', href: '/manifest.webmanifest' },
-    ],
-  }),
+  head: () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    let supabaseOrigin: string | null = null
+    try {
+      supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : null
+    } catch {
+      supabaseOrigin = null
+    }
+
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1, viewport-fit=cover',
+        },
+        { title: 'docvue – formularze dla salonów beauty' },
+        {
+          name: 'description',
+          content:
+            'Twórz formularze zgody i ankiety dla swojego salonu kosmetycznego. Klienci wypełniają online, Ty zarządzasz z dashboardu.',
+        },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+        { name: 'apple-mobile-web-app-title', content: 'docvue' },
+      ],
+      links: [
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+        ...(supabaseOrigin
+          ? [
+              { rel: 'preconnect', href: supabaseOrigin, crossOrigin: 'anonymous' as const },
+              { rel: 'dns-prefetch', href: supabaseOrigin },
+            ]
+          : []),
+        { rel: 'stylesheet', href: appCss },
+        { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+        { rel: 'icon', href: '/icons/icon-32.png', type: 'image/png', sizes: '32x32' },
+        { rel: 'icon', href: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
+        { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png', sizes: '180x180' },
+        { rel: 'manifest', href: '/manifest.webmanifest' },
+      ],
+    }
+  },
   beforeLoad: async () => {
     try {
       const user = await fetchUserFn()
