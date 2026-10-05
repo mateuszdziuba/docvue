@@ -18,46 +18,94 @@ function AcceptInvitePage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('loading')
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
+    let active = true
 
-    // Supabase browser client automatically exchanges the hash tokens on load.
-    // We listen for the SIGNED_IN event that fires after the invite token is verified.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-          const displayName = session.user.user_metadata?.name as string | undefined
-          if (displayName) setName(displayName)
-          setStep('set-password')
+    const applySession = (
+      session: { user: { email?: string; user_metadata?: Record<string, unknown> } } | null,
+    ) => {
+      if (!active || !session) return false
+      const displayName = session.user.user_metadata?.name as string | undefined
+      if (displayName) setName(displayName)
+      if (session.user.email) setEmail(session.user.email)
+      setStep('set-password')
+      return true
+    }
+
+    // @supabase/ssr forces PKCE, but admin-generated recovery/invite links
+    // (and the default e-mail templates) return implicit-flow tokens in the
+    // URL hash. Handle both explicitly instead of relying on detection.
+    const acceptSessionFromUrl = async () => {
+      const url = new URL(window.location.href)
+      const code = url.searchParams.get('code')
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!error && applySession(data.session)) {
+          url.searchParams.delete('code')
+          window.history.replaceState(null, '', url.pathname + url.search)
+          return true
         }
+      }
+
+      const hash = window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : ''
+      const params = new URLSearchParams(hash)
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      if (accessToken && refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        if (!error && applySession(data.session)) {
+          window.history.replaceState(null, '', url.pathname + url.search)
+          return true
+        }
+      }
+
+      const { data } = await supabase.auth.getSession()
+      return applySession(data.session)
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        applySession(session)
       },
     )
 
-    // Also check if session already exists (hash already exchanged)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const displayName = session.user.user_metadata?.name as string | undefined
-        if (displayName) setName(displayName)
-        setStep('set-password')
-      } else {
-        // Give the hash exchange a moment, then show error if still no session
+    acceptSessionFromUrl().then((ok) => {
+      if (!ok && active) {
         setTimeout(() => {
-          setStep((prev) => prev === 'loading' ? 'error' : prev)
+          setStep((prev) => (prev === 'loading' ? 'error' : prev))
         }, 3000)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 6) { toast.error('Hasło musi mieć co najmniej 6 znaków'); return }
-    if (password !== confirm) { toast.error('Hasła nie są zgodne'); return }
+    setFormError(null)
+    if (password.length < 8) {
+      setFormError('Hasło musi mieć co najmniej 8 znaków')
+      return
+    }
+    if (password !== confirm) {
+      setFormError('Hasła nie są zgodne')
+      return
+    }
 
     setSaving(true)
     const supabase = getSupabaseBrowserClient()
@@ -122,6 +170,15 @@ function AcceptInvitePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="email"
+            name="email"
+            autoComplete="username"
+            value={email}
+            readOnly
+            hidden
+            tabIndex={-1}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="password">Nowe hasło</Label>
             <Input
@@ -129,9 +186,11 @@ function AcceptInvitePage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 6 znaków"
+              placeholder="Min. 8 znaków"
               autoFocus
               autoComplete="new-password"
+              aria-invalid={formError ? true : undefined}
+              aria-describedby={formError ? 'invite-error' : undefined}
             />
           </div>
           <div className="space-y-1.5">
@@ -143,8 +202,19 @@ function AcceptInvitePage() {
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Powtórz hasło"
               autoComplete="new-password"
+              aria-invalid={formError ? true : undefined}
+              aria-describedby={formError ? 'invite-error' : undefined}
             />
           </div>
+          {formError && (
+            <p
+              id="invite-error"
+              role="alert"
+              className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20"
+            >
+              {formError}
+            </p>
+          )}
           <Button type="submit" className="w-full" disabled={saving || !password}>
             {saving ? 'Aktywowanie…' : 'Aktywuj konto'}
           </Button>

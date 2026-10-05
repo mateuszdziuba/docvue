@@ -1,8 +1,26 @@
 'use client'
 
-import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { inviteStaff } from '@/src/server/staff'
 
 interface AddStaffDialogProps {
@@ -11,9 +29,6 @@ interface AddStaffDialogProps {
   onSuccess: () => void
 }
 
-const inputClasses =
-  'w-full px-3 py-2 text-[14px] rounded-md border border-border bg-background text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors'
-
 export function AddStaffDialog({ open, onClose, onSuccess }: AddStaffDialogProps) {
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -21,7 +36,11 @@ export function AddStaffDialog({ open, onClose, onSuccess }: AddStaffDialogProps
     defaultValues: { name: '', email: '', role: 'staff' as 'staff' | 'manager' },
     onSubmit: async ({ value }) => {
       setServerError(null)
-      const result = await inviteStaff({ name: value.name.trim(), email: value.email.trim(), role: value.role })
+      const result = await inviteStaff({
+        name: value.name.trim(),
+        email: value.email.trim(),
+        role: value.role,
+      })
       if (result.error) {
         setServerError(result.error)
         return
@@ -35,49 +54,54 @@ export function AddStaffDialog({ open, onClose, onSuccess }: AddStaffDialogProps
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="w-full max-w-md bg-card rounded-xl border border-border shadow-modal">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-[15px] font-medium text-on-surface">Zaproś pracownika</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose()
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Zaproś pracownika</DialogTitle>
+          <DialogDescription className="sr-only">
+            Wyślij zaproszenie do pracownika salonu.
+          </DialogDescription>
+        </DialogHeader>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); void form.handleSubmit() }}
-          className="p-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            void form.handleSubmit()
+          }}
+          className="space-y-4"
         >
           {serverError && (
-            <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2 border border-destructive/20">
+            <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {serverError}
             </p>
           )}
 
           <form.Field
             name="name"
-            validators={{ onBlur: ({ value }) => (!value.trim() ? 'Imię jest wymagane' : undefined) }}
+            validators={{
+              onBlur: ({ value }) => (!value.trim() ? 'Imię jest wymagane' : undefined),
+            }}
           >
             {(field) => (
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">
-                  Imię i nazwisko
-                </label>
-                <input
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-name">Imię i nazwisko</Label>
+                <Input
+                  id="staff-name"
                   type="text"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   placeholder="np. Anna Kowalska"
-                  className={inputClasses}
+                  aria-invalid={field.state.meta.errors.length > 0}
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="mt-0.5 text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                  <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
                 )}
               </div>
             )}
@@ -86,25 +110,23 @@ export function AddStaffDialog({ open, onClose, onSuccess }: AddStaffDialogProps
           <form.Field
             name="email"
             validators={{
-              onBlur: ({ value }) =>
-                !value.trim() ? 'Email jest wymagany' : undefined,
+              onBlur: ({ value }) => (!value.trim() ? 'Email jest wymagany' : undefined),
             }}
           >
             {(field) => (
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">
-                  Adres email
-                </label>
-                <input
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-email">Adres email</Label>
+                <Input
+                  id="staff-email"
                   type="email"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   placeholder="pracownik@example.com"
-                  className={inputClasses}
+                  aria-invalid={field.state.meta.errors.length > 0}
                 />
                 {field.state.meta.errors.length > 0 && (
-                  <p className="mt-0.5 text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                  <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
                 )}
               </div>
             )}
@@ -112,50 +134,49 @@ export function AddStaffDialog({ open, onClose, onSuccess }: AddStaffDialogProps
 
           <form.Field name="role">
             {(field) => (
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">
-                  Rola
-                </label>
-                <select
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-role">Rola</Label>
+                <Select
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value as 'staff' | 'manager')}
-                  onBlur={field.handleBlur}
-                  className={inputClasses}
+                  onValueChange={(value) => field.handleChange(value as 'staff' | 'manager')}
                 >
-                  <option value="staff">Pracownik — dostęp podstawowy</option>
-                  <option value="manager">Manager — rozszerzony dostęp</option>
-                </select>
+                  <SelectTrigger id="staff-role" onBlur={field.handleBlur}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Pracownik — dostęp podstawowy</SelectItem>
+                    <SelectItem value="manager">Manager — rozszerzony dostęp</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </form.Field>
 
-          <p className="text-[12px] text-on-surface-variant bg-surface-container rounded-md px-3 py-2">
-            Pracownik otrzyma email z zaproszeniem i linkiem do ustawienia hasła.
-            Po zalogowaniu będzie miał dostęp do klientów, wizyt i formularzy.
+          <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Pracownik otrzyma email z zaproszeniem i linkiem do ustawienia hasła. Po zalogowaniu
+            będzie miał dostęp do klientów, wizyt i formularzy.
           </p>
 
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-[14px] text-on-surface-variant border border-border rounded-md hover:bg-surface-container transition-colors"
-            >
+          <DialogFooter className="gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               Anuluj
-            </button>
-            <form.Subscribe selector={(s) => [s.isSubmitting, s.values.name, s.values.email] as const}>
+            </Button>
+            <form.Subscribe
+              selector={(s) => [s.isSubmitting, s.values.name, s.values.email] as const}
+            >
               {([isSubmitting, name, email]) => (
-                <button
+                <Button
                   type="submit"
+                  className="flex-1"
                   disabled={isSubmitting || !name.trim() || !email.trim()}
-                  className="flex-1 px-4 py-2 text-[14px] bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Wysyłanie...' : 'Wyślij zaproszenie'}
-                </button>
+                </Button>
               )}
             </form.Subscribe>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,6 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
+import { Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { ClientCombobox } from '@/components/admin/client-combobox'
+import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Dialog,
   DialogContent,
@@ -8,15 +14,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useRouterCompat } from '@/lib/router-compat'
-import { Treatment } from '@/types/database'
-import { format, addMinutes } from 'date-fns'
-
-import { ClientCombobox } from '@/components/admin/client-combobox'
-import { DatePicker } from '@/components/ui/date-picker'
+import { createClient } from '@/lib/supabase/client'
+import type { Treatment } from '@/types/database'
 
 interface AddAppointmentDialogProps {
   clientId?: string
@@ -31,13 +40,25 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
   const [selectedClientId, setSelectedClientId] = useState<string | undefined>(clientId)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [resolvedSalonId, setResolvedSalonId] = useState<string | undefined>(salonId)
-  
+  const [treatmentId, setTreatmentId] = useState('')
+  const [hour, setHour] = useState('07')
+  const [minute, setMinute] = useState('00')
+
   const supabase = createClient()
   const router = useRouterCompat()
 
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setTreatmentId('')
+      setHour('07')
+      setMinute('00')
+    }
+    setOpen(next)
+  }
+
   useEffect(() => {
     setSelectedClientId(clientId)
-  }, [clientId, open])
+  }, [clientId])
 
   useEffect(() => {
     setResolvedSalonId(salonId)
@@ -48,7 +69,9 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
       const fetchTreatments = async () => {
         let activeSalonId = resolvedSalonId
         if (!activeSalonId) {
-          const { data: { user } } = await supabase.auth.getUser()
+          const {
+            data: { user },
+          } = await supabase.auth.getUser()
           if (user) {
             const { data: salon } = await supabase
               .from('salons')
@@ -78,15 +101,12 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
     setIsLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const treatmentId = formData.get('treatment_id') as string
-    const hour = formData.get('hour') as string
-    const minute = formData.get('minute') as string
     const notes = formData.get('notes') as string
 
     if (!selectedClientId) {
-        toast.error('Wybierz klienta')
-        setIsLoading(false)
-        return
+      toast.error('Wybierz klienta')
+      setIsLoading(false)
+      return
     }
 
     if (!treatmentId || !selectedDate || !hour || !minute) {
@@ -106,33 +126,33 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd')
       const startTime = new Date(`${dateStr}T${time}`)
-      
+
       // Check required forms for this treatment
       const { data: requiredForms } = await supabase
         .from('treatment_forms')
         .select('form_id')
         .eq('treatment_id', treatmentId)
-      
-      const requiredFormIds = requiredForms?.map(r => r.form_id) || []
-      
+
+      const requiredFormIds = requiredForms?.map((r) => r.form_id) || []
+
       let status = 'scheduled'
 
       if (requiredFormIds.length > 0) {
-         // Check if client has already submitted these forms (either via link or public)
-         const { data: clientSubmissions } = await supabase
-            .from('submissions')
-            .select('form_id')
-            .eq('client_id', selectedClientId)
-            .in('form_id', requiredFormIds)
-         
-         const submittedFormIds = clientSubmissions?.map(s => s.form_id) || []
-         const submittedSet = new Set(submittedFormIds)
-         
-         const allRequirementsMet = requiredFormIds.every(id => submittedSet.has(id))
-         
-         if (!allRequirementsMet) {
-             status = 'pending_forms'
-         }
+        // Check if client has already submitted these forms (either via link or public)
+        const { data: clientSubmissions } = await supabase
+          .from('submissions')
+          .select('form_id')
+          .eq('client_id', selectedClientId)
+          .in('form_id', requiredFormIds)
+
+        const submittedFormIds = clientSubmissions?.map((s) => s.form_id) || []
+        const submittedSet = new Set(submittedFormIds)
+
+        const allRequirementsMet = requiredFormIds.every((id) => submittedSet.has(id))
+
+        if (!allRequirementsMet) {
+          status = 'pending_forms'
+        }
       }
 
       const { error } = await supabase.from('appointments').insert({
@@ -141,7 +161,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
         treatment_id: treatmentId,
         start_time: startTime.toISOString(),
         status: status,
-        notes: notes || null
+        notes: notes || null,
       })
 
       if (error) throw error
@@ -158,13 +178,11 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button>
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             Dodaj wizytę
           </Button>
         )}
@@ -174,81 +192,95 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
           <DialogTitle>Umów wizytę</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          
           {!clientId && (
-              <div className="space-y-2">
-                  <label className="text-sm font-medium">Klient</label>
-                  <ClientCombobox 
-                    salonId={resolvedSalonId ?? ''} 
-                    onSelect={setSelectedClientId} 
-                  />
-                  {!selectedClientId && <p className="text-xs text-amber-600">Proszę wybrać klienta z listy</p>}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="client_id" className="text-sm font-medium">
+                Klient
+              </Label>
+              <ClientCombobox
+                id="client_id"
+                salonId={resolvedSalonId ?? ''}
+                onSelect={setSelectedClientId}
+                invalid={!selectedClientId}
+                describedBy={!selectedClientId ? 'client_id-hint' : undefined}
+              />
+              {!selectedClientId && (
+                <p id="client_id-hint" className="text-xs text-on-warning-container">
+                  Proszę wybrać klienta z listy
+                </p>
+              )}
+            </div>
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Zabieg</label>
-            <select
-              name="treatment_id"
-              required
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background"
-            >
-              <option value="">-- Wybierz zabieg --</option>
-              {treatments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.duration_minutes} min) - {t.price} PLN
-                </option>
-              ))}
-            </select>
+            <Label htmlFor="treatment_id" className="text-sm font-medium">
+              Zabieg
+            </Label>
+            <Select value={treatmentId} onValueChange={setTreatmentId}>
+              <SelectTrigger id="treatment_id" className="w-full">
+                <SelectValue placeholder="-- Wybierz zabieg --" />
+              </SelectTrigger>
+              <SelectContent>
+                {treatments.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} ({t.duration_minutes} min) - {t.price} PLN
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Data</label>
+              <Label htmlFor="appointment_date" className="text-sm font-medium">
+                Data
+              </Label>
               <DatePicker
+                id="appointment_date"
                 date={selectedDate}
                 setDate={setSelectedDate}
                 placeholder="Wybierz datę"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Godzina</label>
+              <Label htmlFor="hour" className="text-sm font-medium">
+                Godzina
+              </Label>
               <div className="flex gap-2">
-                <select
-                  name="hour"
-                  required
-                  className="w-full px-2 py-2 rounded-lg border border-border bg-background"
-                >
-                    {Array.from({ length: 15 }, (_, i) => i + 7).map(h => (
-                        <option key={h} value={h.toString().padStart(2, '0')}>
-                            {h.toString().padStart(2, '0')}
-                        </option>
+                <Select value={hour} onValueChange={setHour}>
+                  <SelectTrigger id="hour" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 15 }, (_, i) => i + 7).map((h) => (
+                      <SelectItem key={h} value={h.toString().padStart(2, '0')}>
+                        {h.toString().padStart(2, '0')}
+                      </SelectItem>
                     ))}
-                </select>
+                  </SelectContent>
+                </Select>
                 <span className="self-center">:</span>
-                <select
-                  name="minute"
-                  required
-                  className="w-full px-2 py-2 rounded-lg border border-border bg-background"
-                >
-                    {Array.from({ length: 12 }, (_, i) => i * 5).map(m => (
-                        <option key={m} value={m.toString().padStart(2, '0')}>
-                            {m.toString().padStart(2, '0')}
-                        </option>
+                <Select value={minute} onValueChange={setMinute}>
+                  <SelectTrigger aria-label="Minuty" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                      <SelectItem key={m} value={m.toString().padStart(2, '0')}>
+                        {m.toString().padStart(2, '0')}
+                      </SelectItem>
                     ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Notatki (opcjonalne)</label>
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="Np. Klientka prosi o..."
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background"
-            />
+            <Label htmlFor="notes" className="text-sm font-medium">
+              Notatki (opcjonalne)
+            </Label>
+            <Textarea id="notes" name="notes" rows={3} placeholder="Np. Klientka prosi o..." />
           </div>
 
           <div className="flex justify-end pt-4">

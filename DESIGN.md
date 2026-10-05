@@ -113,7 +113,7 @@ The palette is rooted in organic, earthy tones that evoke nature and skin health
 
 - **Blush Pink (Primary):** Used for primary calls to action and subtle highlights; it represents the "glow" of beauty.
 - **Sage Green (Secondary):** Used for restorative elements, secondary buttons, and success states; it conveys tranquility and botanical wellness.
-- **Cream (Tertiary/Background):** The canvas of the application. Avoid pure white (#FFFFFF) to prevent eye strain and maintain a premium, "paper-like" feel.
+- **Cream (Tertiary/Background):** The canvas of the application. Prefer cream surfaces (card white allowed for documents/print) (#FFFFFF) to prevent eye strain and maintain a premium, "paper-like" feel.
 - **Deep Charcoal (Text):** Used for all primary communication to ensure high legibility and a grounded, sophisticated contrast against the pastels.
 - **Muted Taupe (Accent):** Used for borders, iconography, and subtle separators to maintain a cohesive, soft-focus look.
 

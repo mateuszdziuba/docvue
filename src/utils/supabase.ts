@@ -1,6 +1,6 @@
-import { getCookies, setCookie } from '@tanstack/react-start/server'
-import { createServerClient } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
+import { getCookies, setCookie } from '@tanstack/react-start/server'
 
 export function getSupabaseServerClient() {
   return createServerClient(
@@ -22,7 +22,17 @@ export function getSupabaseServerClient() {
           }>,
         ) {
           cookies.forEach((cookie) => {
-            setCookie(cookie.name, cookie.value)
+            // Przekazujemy opcje od @supabase/ssr (maxAge, sameSite, secure, path),
+            // żeby sesja nie stawała się cookie sesyjnym i miała utwardzone flagi.
+            setCookie(cookie.name, cookie.value, {
+              ...cookie.options,
+              path: cookie.options?.path ?? '/',
+              sameSite: cookie.options?.sameSite ?? 'lax',
+              secure:
+                typeof cookie.options?.secure === 'boolean'
+                  ? cookie.options.secure
+                  : import.meta.env.PROD,
+            })
           })
         },
       },

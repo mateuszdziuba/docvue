@@ -1,451 +1,577 @@
 'use client'
 
+import { Link as LinkIcon, Loader2, Moon, Plus, Sun } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
-import { useRouterCompat } from '@/lib/router-compat'
-import { Loader2, Plus, Link as LinkIcon, Trash2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ClientCombobox } from '@/components/admin/client-combobox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import type { TimeOfDay } from '@/src/lib/beauty-plan-diff'
+import { saveBeautyPlanFn, scrapeProductFn } from '@/src/server/beauty-plans'
+import { DeleteIconButton } from './delete-icon-button'
 
-interface Product {
+export type BeautyPlanProductDraft = {
   id?: string
   name: string
   url: string
-  image_url?: string | null
+  imageUrl?: string | null
   price: number | null
-  usage_description?: string
+  usageDescription: string
 }
 
 interface EditBeautyPlanDialogProps {
   clientId: string
-  salonId: string
   planId?: string
   initialMorningDesc?: string
   initialEveningDesc?: string
-  initialMorningProducts?: Product[]
-  initialEveningProducts?: Product[]
+  initialMorningProducts?: BeautyPlanProductDraft[]
+  initialEveningProducts?: BeautyPlanProductDraft[]
   trigger?: React.ReactNode
+  onSaved?: () => void | Promise<void>
+}
+
+function cloneProducts(products: BeautyPlanProductDraft[]): BeautyPlanProductDraft[] {
+  return products.map((product) => ({ ...product }))
 }
 
 export function EditBeautyPlanDialog({
   clientId,
-  salonId,
   planId,
   initialMorningDesc = '',
   initialEveningDesc = '',
   initialMorningProducts = [],
   initialEveningProducts = [],
-  trigger
+  trigger,
+  onSaved,
 }: EditBeautyPlanDialogProps) {
   const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
   const [morningDesc, setMorningDesc] = useState(initialMorningDesc)
   const [eveningDesc, setEveningDesc] = useState(initialEveningDesc)
-  
-  const [morningProducts, setMorningProducts] = useState<Product[]>(initialMorningProducts)
-  const [eveningProducts, setEveningProducts] = useState<Product[]>(initialEveningProducts)
-  
-  const [scrapingIndex, setScrapingIndex] = useState<{ time: 'morning' | 'evening', index: number } | null>(null)
+  const [morningProducts, setMorningProducts] = useState<BeautyPlanProductDraft[]>(() =>
+    cloneProducts(initialMorningProducts),
+  )
+  const [eveningProducts, setEveningProducts] = useState<BeautyPlanProductDraft[]>(() =>
+    cloneProducts(initialEveningProducts),
+  )
 
-  const supabase = createClient()
-  const router = useRouterCompat()
+  const [scrapingKey, setScrapingKey] = useState<string | null>(null)
+  const [scrapeErrors, setScrapeErrors] = useState<Record<string, string>>({})
 
-  const handleAddProduct = (time: 'morning' | 'evening') => {
-    const newProduct = { name: '', url: '', price: null, usage_description: '' }
-    if (time === 'morning') {
-      setMorningProducts([...morningProducts, newProduct])
-    } else {
-      setEveningProducts([...eveningProducts, newProduct])
-    }
+  const initialSnapshot = JSON.stringify({
+    morningDesc: initialMorningDesc,
+    eveningDesc: initialEveningDesc,
+    morningProducts: initialMorningProducts,
+    eveningProducts: initialEveningProducts,
+  })
+  const currentSnapshot = JSON.stringify({
+    morningDesc,
+    eveningDesc,
+    morningProducts,
+    eveningProducts,
+  })
+  const isDirty = currentSnapshot !== initialSnapshot
+
+  const getProducts = (time: TimeOfDay) => (time === 'morning' ? morningProducts : eveningProducts)
+
+  const mutateProducts = (
+    time: TimeOfDay,
+    updater: (products: BeautyPlanProductDraft[]) => BeautyPlanProductDraft[],
+  ) => {
+    if (time === 'morning') setMorningProducts(updater)
+    else setEveningProducts(updater)
   }
 
-  const handleRemoveProduct = (time: 'morning' | 'evening', index: number) => {
-    if (time === 'morning') {
-      setMorningProducts(morningProducts.filter((_, i) => i !== index))
-    } else {
-      setEveningProducts(eveningProducts.filter((_, i) => i !== index))
-    }
+  const resetDraft = () => {
+    setMorningDesc(initialMorningDesc)
+    setEveningDesc(initialEveningDesc)
+    setMorningProducts(cloneProducts(initialMorningProducts))
+    setEveningProducts(cloneProducts(initialEveningProducts))
+    setScrapeErrors({})
+    setScrapingKey(null)
   }
 
-  const handleProductChange = (time: 'morning' | 'evening', index: number, field: keyof Product, value: any) => {
-    if (time === 'morning') {
-      setMorningProducts(prev => {
-        const newProducts = [...prev]
-        newProducts[index] = { ...newProducts[index], [field]: value }
-        return newProducts
-      })
-    } else {
-      setEveningProducts(prev => {
-        const newProducts = [...prev]
-        newProducts[index] = { ...newProducts[index], [field]: value }
-        return newProducts
-      })
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      resetDraft()
+      setOpen(true)
+      return
     }
+    if (isDirty) {
+      setConfirmCloseOpen(true)
+      return
+    }
+    setOpen(false)
   }
 
-  const handleFetchPrice = async (time: 'morning' | 'evening', index: number, url: string) => {
-    if (!url) return
-    
-    setScrapingIndex({ time, index })
+  const handleDiscard = () => {
+    resetDraft()
+    setConfirmCloseOpen(false)
+    setOpen(false)
+  }
+
+  const handleAddProduct = (time: TimeOfDay) => {
+    mutateProducts(time, (products) => [
+      ...products,
+      { name: '', url: '', price: null, usageDescription: '' },
+    ])
+  }
+
+  const handleRemoveProduct = (time: TimeOfDay, index: number) => {
+    mutateProducts(time, (products) => products.filter((_, productIndex) => productIndex !== index))
+  }
+
+  const handleProductChange = (
+    time: TimeOfDay,
+    index: number,
+    field: keyof BeautyPlanProductDraft,
+    value: string | number | null,
+  ) => {
+    mutateProducts(time, (products) =>
+      products.map((product, productIndex) =>
+        productIndex === index ? { ...product, [field]: value } : product,
+      ),
+    )
+  }
+
+  const handleFetchData = async (time: TimeOfDay, index: number) => {
+    const key = `${time}-${index}`
+    const product = getProducts(time)[index]
+    const url = product?.url.trim() ?? ''
+
+    if (!/^https?:\/\//i.test(url)) {
+      setScrapeErrors((previous) => ({
+        ...previous,
+        [key]: 'Podaj poprawny adres URL (http:// lub https://)',
+      }))
+      return
+    }
+
+    setScrapingKey(key)
+    setScrapeErrors((previous) => ({ ...previous, [key]: '' }))
+
     try {
-      const res = await fetch('/api/scrape-price', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      const result = await scrapeProductFn({ data: { url } })
+      if ('error' in result && result.error) {
+        const message = result.error
+        setScrapeErrors((previous) => ({ ...previous, [key]: message }))
+        toast.error(message)
+        return
+      }
+
+      const scraped = result as {
+        name?: string | null
+        imageUrl?: string | null
+        price?: number | null
+      }
+      mutateProducts(time, (products) =>
+        products.map((item, productIndex) =>
+          productIndex === index
+            ? {
+                ...item,
+                name: scraped.name || item.name,
+                imageUrl: scraped.imageUrl || item.imageUrl,
+                price: scraped.price ?? item.price,
+              }
+            : item,
+        ),
+      )
+      toast.success('Pobrano dane produktu')
+    } catch {
+      const message = 'Nie udało się pobrać danych produktu. Wpisz je ręcznie.'
+      setScrapeErrors((previous) => ({ ...previous, [key]: message }))
+      toast.error(message)
+    } finally {
+      setScrapingKey(null)
+    }
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const products = [
+      ...morningProducts.map((product) => ({
+        id: product.id,
+        timeOfDay: 'morning' as const,
+        name: product.name,
+        url: product.url || null,
+        imageUrl: product.imageUrl || null,
+        price: product.price,
+        usageDescription: product.usageDescription || null,
+      })),
+      ...eveningProducts.map((product) => ({
+        id: product.id,
+        timeOfDay: 'evening' as const,
+        name: product.name,
+        url: product.url || null,
+        imageUrl: product.imageUrl || null,
+        price: product.price,
+        usageDescription: product.usageDescription || null,
+      })),
+    ]
+
+    if (products.some((product) => !product.name.trim() || product.name.trim().length > 200)) {
+      toast.error('Każdy produkt musi mieć nazwę (maksymalnie 200 znaków)')
+      return
+    }
+    if (products.length > 50) {
+      toast.error('Maksymalnie 50 produktów w planie pielęgnacyjnym')
+      return
+    }
+    if (products.some((product) => product.url && !/^https?:\/\//i.test(product.url))) {
+      toast.error('Adresy produktów muszą zaczynać się od http:// lub https://')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const result = await saveBeautyPlanFn({
+        data: {
+          clientId,
+          morningDescription: morningDesc,
+          eveningDescription: eveningDesc,
+          products,
         },
-        body: JSON.stringify({ url })
       })
-      const data = await res.json()
-      
-      let updatedSomething = false
-      if (data.price !== undefined && data.price !== null) {
-        handleProductChange(time, index, 'price', data.price)
-        updatedSomething = true
-      }
-      
-      if (data.imageUrl) {
-        handleProductChange(time, index, 'image_url', data.imageUrl)
-        updatedSomething = true
-      }
-      
-      if (data.name) {
-        // Only update name if it's currently empty, or if we want to overwrite
-        handleProductChange(time, index, 'name', data.name)
-        updatedSomething = true
-      }
-      
-      if (updatedSomething) {
-        toast.success('Pobrano dane produktu!')
-      } else {
-        toast.error('Nie udało się pobrać danych. Wpisz je ręcznie.')
-      }
-    } catch (error) {
-       toast.error('Wystąpił błąd podczas pobierania danych z linku.')
-    } finally {
-      setScrapingIndex(null)
-    }
-  }
 
-  const handleUrlChange = (time: 'morning' | 'evening', index: number, newUrl: string) => {
-    // Standard synchronous state update
-    handleProductChange(time, index, 'url', newUrl)
-    
-    // Auto-fetch if it looks like a full URL was pasted/typed
-    if (newUrl && newUrl.startsWith('http') && newUrl.length > 10) {
-       // Fire fetch immediately without timeout, but debounce it logically via state check
-       if (scrapingIndex?.time !== time || scrapingIndex?.index !== index) {
-           handleFetchPrice(time, index, newUrl)
-       }
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      let currentPlanId = planId
-
-      // 1. Create or Update the main beauty_plan
-      if (currentPlanId) {
-        const { error } = await supabase
-          .from('beauty_plans')
-          .update({
-            morning_description: morningDesc,
-            evening_description: eveningDesc
-          })
-          .eq('id', currentPlanId)
-        
-        if (error) throw error
-      } else {
-        const { data, error } = await supabase
-          .from('beauty_plans')
-          .insert({
-            client_id: clientId,
-            salon_id: salonId,
-            morning_description: morningDesc,
-            evening_description: eveningDesc
-          })
-          .select('id')
-          .single()
-          
-        if (error) throw error
-        currentPlanId = data.id
+      if ('error' in result && result.error) {
+        toast.error(result.error)
+        return
       }
 
-      // 2. Clear old products to simplify sync
-      if (planId) {
-         await supabase
-           .from('beauty_plan_products')
-           .delete()
-           .eq('plan_id', planId)
-      }
-
-      // 3. Insert new products
-      const allProducts = [
-        ...morningProducts.map(p => ({
-          plan_id: currentPlanId,
-          time_of_day: 'morning',
-          name: p.name,
-          url: p.url || null,
-          image_url: p.image_url || null,
-          price: p.price || null,
-          usage_description: p.usage_description || null
-        })),
-        ...eveningProducts.map(p => ({
-          plan_id: currentPlanId,
-          time_of_day: 'evening',
-          name: p.name,
-          url: p.url || null,
-          image_url: p.image_url || null,
-          price: p.price || null,
-          usage_description: p.usage_description || null
-        }))
-      ]
-
-      if (allProducts.length > 0) {
-        const { error: productsError } = await supabase
-          .from('beauty_plan_products')
-          .insert(allProducts)
-          
-        if (productsError) throw productsError
-      }
-
-      toast.success(planId ? 'Zaktualizowano Beauty Plan!' : 'Utworzono Beauty Plan!')
+      toast.success(planId ? 'Zaktualizowano plan pielęgnacyjny' : 'Utworzono plan pielęgnacyjny')
+      await onSaved?.()
       setOpen(false)
-      router.refresh()
-    } catch (error: any) {
-      console.error('Szczegóły błędu Beauty Plan:', error)
-      const errorMsg = error?.message || error?.details || error?.hint || 'Wystąpił nieznany błąd zapisu'
-      toast.error(`Błąd: ${errorMsg}`)
+    } catch {
+      toast.error('Nie udało się zapisać planu. Spróbuj ponownie.')
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
-  const renderProductSection = (time: 'morning' | 'evening', products: Product[]) => (
+  const renderProductSection = (time: TimeOfDay, products: BeautyPlanProductDraft[]) => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Kosmetyki ({time === 'morning' ? 'Rano' : 'Wieczór'})
         </h3>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm" 
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-11 text-xs md:min-h-0"
           onClick={() => handleAddProduct(time)}
-          className="h-8 text-xs border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors"
         >
-          <Plus className="w-3 h-3 mr-1" />
+          <Plus className="mr-1 h-3 w-3" aria-hidden="true" />
           Dodaj kosmetyk
         </Button>
       </div>
 
-      <AnimatePresence>
-        {products.map((product, index) => (
-          <motion.div 
-            key={index}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="p-4 bg-muted/30 border border-border/60 rounded-xl space-y-3 relative group"
-          >
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm"
-                className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => handleRemoveProduct(time, index)}
+      {products.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
+          Brak kosmetyków. Dodaj pierwszy produkt.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {products.map((product, index) => {
+            const key = `${time}-${index}`
+            const fieldId = (field: string) => `${time}-product-${index}-${field}`
+            const isScraping = scrapingKey === key
+            const scrapeError = scrapeErrors[key]
+
+            return (
+              <div
+                key={key}
+                className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4"
               >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-               {/* Top row: Image & URL Input */}
-               <div className="flex gap-4">
-                  {product.image_url ? (
-                     <div className="w-16 h-16 rounded-lg border border-border/50 bg-background overflow-hidden shrink-0 hidden sm:block">
-                        <img src={product.image_url} alt="Produkt" className="w-full h-full object-cover" />
-                     </div>
-                  ) : (
-                     <div className="w-16 h-16 rounded-lg border border-border/50 bg-muted/40 shrink-0 hidden sm:flex items-center justify-center text-muted-foreground">
-                        <LinkIcon className="w-5 h-5 opacity-50" />
-                     </div>
-                  )}
-                  
-                  <div className="flex-1">
-                     <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1">
-                       <LinkIcon className="w-3 h-3" />
-                       Wklej link do sklepu (autouzupełni dane)
-                     </label>
-                     <div className="flex gap-2">
-                       <input
-                         type="url"
-                         required
-                         value={product.url}
-                         onChange={(e) => handleUrlChange(time, index, e.target.value)}
-                         placeholder="https://..."
-                         className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                       />
-                       <Button
-                         type="button"
-                         variant="secondary"
-                         onClick={() => handleFetchPrice(time, index, product.url)}
-                         disabled={!product.url || scrapingIndex?.time === time && scrapingIndex?.index === index}
-                         className="shrink-0 bg-emerald-100/50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-300"
-                       >
-                         {scrapingIndex?.time === time && scrapingIndex?.index === index ? (
-                           <Loader2 className="w-4 h-4 animate-spin" />
-                         ) : (
-                           'Pobierz'
-                         )}
-                       </Button>
-                     </div>
-                  </div>
-               </div>
-
-               {/* Second row: Name and Price (Auto-filled but editable) */}
-               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                 <div className="md:col-span-3">
-                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Nazwa produktu</label>
-                   <input
-                     type="text"
-                     required
-                     value={product.name}
-                     onChange={(e) => handleProductChange(time, index, 'name', e.target.value)}
-                     placeholder="Np. CeraVe Oczyszczający żel"
-                     className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                   />
-                 </div>
-                 <div className="md:col-span-1">
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cena (PLN)</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={product.price || ''}
-                        onChange={(e) => handleProductChange(time, index, 'price', parseFloat(e.target.value) || null)}
-                        placeholder="0.00"
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                      />
-                 </div>
-               </div>
-
-               {/* Third row: Usage Description */}
-               <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Instrukcja użycia dla klienta (opcjonalnie)</label>
-                  <textarea
-                    value={product.usage_description || ''}
-                    onChange={(e) => handleProductChange(time, index, 'usage_description', e.target.value)}
-                    rows={2}
-                    placeholder="Wklep delikatnie w okolicę oka..."
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none"
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Produkt {index + 1}
+                  </span>
+                  <DeleteIconButton
+                    label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+                    className="h-11 w-11 md:h-8 md:w-8"
+                    onClick={() => handleRemoveProduct(time, index)}
                   />
-               </div>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+                </div>
+
+                <div className="flex gap-4">
+                  {product.imageUrl ? (
+                    <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name || 'Zdjęcie produktu'}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
+                      <LinkIcon className="h-5 w-5 opacity-50" />
+                    </div>
+                  )}
+
+                  <div className="flex-1">
+                    <Label
+                      htmlFor={fieldId('url')}
+                      className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
+                    >
+                      <LinkIcon className="h-3 w-3" aria-hidden="true" />
+                      Link do sklepu
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id={fieldId('url')}
+                        type="url"
+                        value={product.url}
+                        onChange={(event) =>
+                          handleProductChange(time, index, 'url', event.target.value)
+                        }
+                        placeholder="https://..."
+                        aria-invalid={scrapeError ? true : undefined}
+                        aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
+                        className="min-h-11 rounded-lg md:min-h-0"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="min-h-11 shrink-0 md:min-h-0"
+                        disabled={!product.url || isScraping}
+                        onClick={() => void handleFetchData(time, index)}
+                      >
+                        {isScraping ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        ) : (
+                          'Pobierz dane'
+                        )}
+                      </Button>
+                    </div>
+                    {scrapeError && (
+                      <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
+                        {scrapeError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <div className="md:col-span-3">
+                    <Label
+                      htmlFor={fieldId('name')}
+                      className="mb-1.5 text-xs font-medium text-muted-foreground"
+                    >
+                      Nazwa produktu
+                    </Label>
+                    <Input
+                      id={fieldId('name')}
+                      type="text"
+                      value={product.name}
+                      onChange={(event) =>
+                        handleProductChange(time, index, 'name', event.target.value)
+                      }
+                      placeholder="Np. CeraVe Oczyszczający żel"
+                      maxLength={200}
+                      className="min-h-11 rounded-lg md:min-h-0"
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label
+                      htmlFor={fieldId('price')}
+                      className="mb-1.5 text-xs font-medium text-muted-foreground"
+                    >
+                      Cena (PLN)
+                    </Label>
+                    <Input
+                      id={fieldId('price')}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={product.price ?? ''}
+                      onChange={(event) => {
+                        const parsed = Number.parseFloat(event.target.value)
+                        handleProductChange(
+                          time,
+                          index,
+                          'price',
+                          Number.isFinite(parsed) ? parsed : null,
+                        )
+                      }}
+                      placeholder="0.00"
+                      className="min-h-11 rounded-lg md:min-h-0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor={fieldId('usage')}
+                    className="mb-1.5 text-xs font-medium text-muted-foreground"
+                  >
+                    Instrukcja użycia dla klienta (opcjonalnie)
+                  </Label>
+                  <Textarea
+                    id={fieldId('usage')}
+                    value={product.usageDescription}
+                    onChange={(event) =>
+                      handleProductChange(time, index, 'usageDescription', event.target.value)
+                    }
+                    rows={2}
+                    placeholder="Np. Wklep delikatnie w okolicę oka..."
+                    className="resize-none rounded-lg"
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 hover:text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-            <Plus className="w-4 h-4 mr-2" />
-            Utwórz Beauty Plan
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            {planId ? 'Edytuj Beauty Plan' : 'Nowy Beauty Plan'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-8 mt-4">
-          
-          {/* Morning Section */}
-          <div className="space-y-5 p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/10 rounded-2xl border border-amber-100/50 dark:border-amber-900/30">
-            <div className="flex items-center gap-2 mb-2">
-               <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-               </div>
-               <h2 className="text-lg font-bold text-amber-800 dark:text-amber-200">Pielęgnacja Poranna</h2>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-amber-900/70 dark:text-amber-100/70">Wskazówki / Opis rutyny</label>
-              <textarea
-                value={morningDesc}
-                onChange={(e) => setMorningDesc(e.target.value)}
-                rows={3}
-                placeholder="Np. 1. Oczyszczanie, 2. Tonizacja, 3. Krem z filtrem..."
-                className="w-full px-4 py-3 text-sm rounded-xl border border-amber-200/50 dark:border-amber-800/50 bg-white/60 dark:bg-black/20 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none transition-all placeholder:text-amber-900/30 dark:placeholder:text-amber-100/20 backdrop-blur-sm"
-              />
-            </div>
-
-            {renderProductSection('morning', morningProducts)}
-          </div>
-
-          {/* Evening Section */}
-          <div className="space-y-5 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/10 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30">
-            <div className="flex items-center gap-2 mb-2">
-               <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-               </div>
-               <h2 className="text-lg font-bold text-indigo-800 dark:text-indigo-200">Pielęgnacja Wieczorna</h2>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-indigo-900/70 dark:text-indigo-100/70">Wskazówki / Opis rutyny</label>
-              <textarea
-                value={eveningDesc}
-                onChange={(e) => setEveningDesc(e.target.value)}
-                rows={3}
-                placeholder="Np. 1. Demakijaż, 2. Mycie twarzy, 3. Serum z retinolem..."
-                className="w-full px-4 py-3 text-sm rounded-xl border border-indigo-200/50 dark:border-indigo-800/50 bg-white/60 dark:bg-black/20 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none transition-all placeholder:text-indigo-900/30 dark:placeholder:text-indigo-100/20 backdrop-blur-sm"
-              />
-            </div>
-
-            {renderProductSection('evening', eveningProducts)}
-          </div>
-
-          <div className="flex justify-end pt-4 border-t border-border">
-            <Button type="button" variant="ghost" className="mr-3 hover:text-emerald-600 hover:bg-emerald-500/10 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/30" onClick={() => setOpen(false)}>
-              Anuluj
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Utwórz plan pielęgnacyjny
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/20">
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Zapisywanie...
-                </>
-              ) : (
-                'Zapisz Plan'
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogTrigger>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle className="text-2xl font-bold text-foreground">
+              {planId ? 'Edytuj plan pielęgnacyjny' : 'Nowy plan pielęgnacyjny'}
+            </DialogTitle>
+            <DialogDescription>
+              Uzupełnij zalecenia na rano i wieczór oraz dodaj kosmetyki wraz z instrukcją użycia.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6 px-6 pt-4 pb-6">
+              <div className="space-y-4 rounded-2xl border border-warning/30 bg-warning-container/50 p-5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning-container text-on-warning-container">
+                    <Sun className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-lg font-bold text-on-warning-container">
+                    Pielęgnacja poranna
+                  </h2>
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="morning-description"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Wskazówki / opis rutyny
+                  </Label>
+                  <Textarea
+                    id="morning-description"
+                    value={morningDesc}
+                    onChange={(event) => setMorningDesc(event.target.value)}
+                    rows={3}
+                    placeholder="Np. 1. Oczyszczanie, 2. Tonizacja, 3. Krem z filtrem..."
+                    className="rounded-xl px-4 py-3"
+                  />
+                </div>
+
+                {renderProductSection('morning', morningProducts)}
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-info/30 bg-info-container/50 p-5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info-container text-on-info-container">
+                    <Moon className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-lg font-bold text-on-info-container">
+                    Pielęgnacja wieczorna
+                  </h2>
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="evening-description"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Wskazówki / opis rutyny
+                  </Label>
+                  <Textarea
+                    id="evening-description"
+                    value={eveningDesc}
+                    onChange={(event) => setEveningDesc(event.target.value)}
+                    rows={3}
+                    placeholder="Np. 1. Demakijaż, 2. Mycie twarzy, 3. Serum z retinolem..."
+                    className="rounded-xl px-4 py-3"
+                  />
+                </div>
+
+                {renderProductSection('evening', eveningProducts)}
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-border bg-background/95 px-6 py-4 backdrop-blur">
+              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+                Anuluj
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Zapisywanie...
+                  </>
+                ) : (
+                  'Zapisz plan'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Niezapisane zmiany</AlertDialogTitle>
+            <AlertDialogDescription>
+              Masz niezapisane zmiany w planie pielęgnacyjnym. Czy na pewno chcesz je odrzucić?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Wróć do edycji</AlertDialogCancel>
+            <AlertDialogAction
+              aria-label="Odrzuć niezapisane zmiany"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDiscard}
+            >
+              Odrzuć zmiany
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

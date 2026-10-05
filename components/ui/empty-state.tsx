@@ -35,9 +35,9 @@ export function EmptyState({
           {icon}
         </div>
       )}
-      <h3 className="font-serif text-lg font-normal text-foreground tracking-tight">
+      <h2 className="font-serif text-lg font-normal text-foreground tracking-tight">
         {title}
-      </h3>
+      </h2>
       {description && (
         <p className="text-sm text-muted-foreground mt-1.5 max-w-sm leading-relaxed">
           {description}

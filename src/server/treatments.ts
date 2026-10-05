@@ -20,7 +20,9 @@ export const getTreatmentsFn = createServerFn({ method: 'GET' })
   })
 
 export const createTreatmentFn = createServerFn({ method: 'POST' })
-  .inputValidator((d: { name: string; description?: string; duration_minutes: number; price?: number | null }) => d)
+  .inputValidator(
+    (d: { name: string; description?: string; duration_minutes: number; price?: number | null }) => d,
+  )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
@@ -30,20 +32,41 @@ export const createTreatmentFn = createServerFn({ method: 'POST' })
 
     const { data: treatment, error } = await supabase
       .from('treatments')
-      .insert({ salon_id: salonId, name: data.name, description: data.description || null, duration_minutes: data.duration_minutes, price: data.price ?? null })
-      .select().single()
+      .insert({
+        salon_id: salonId,
+        name: data.name,
+        description: data.description || null,
+        duration_minutes: data.duration_minutes,
+        price: data.price ?? null,
+      })
+      .select()
+      .single()
 
     if (error) return { error: error.message }
     return { treatment }
   })
 
 export const updateTreatmentFn = createServerFn({ method: 'POST' })
-  .inputValidator((d: { id: string; name?: string; description?: string | null; duration_minutes?: number; price?: number | null }) => d)
+  .inputValidator(
+    (d: {
+      id: string
+      name?: string
+      description?: string | null
+      duration_minutes?: number
+      price?: number | null
+    }) => d,
+  )
   .handler(async ({ data: { id, ...updates } }) => {
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
-    const { data: treatment, error } = await supabase.from('treatments').update(updates).eq('id', id).select().single()
+    const { data: treatment, error } = await supabase
+      .from('treatments')
+      .update(updates)
+      .eq('id', id)
+      .eq('salon_id', caller.salonId)
+      .select()
+      .single()
     if (error) return { error: error.message }
     return { treatment }
   })
@@ -54,7 +77,11 @@ export const deleteTreatmentFn = createServerFn({ method: 'POST' })
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
-    const { error } = await supabase.from('treatments').delete().eq('id', data.id)
+    const { error } = await supabase
+      .from('treatments')
+      .delete()
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
     if (error) return { error: error.message }
     return { success: true }
   })
@@ -65,7 +92,26 @@ export const assignFormToTreatmentFn = createServerFn({ method: 'POST' })
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
-    const { error } = await supabase.from('treatment_forms').insert({ treatment_id: data.treatmentId, form_id: data.formId })
+
+    const [{ data: treatmentRow }, { data: formRow }] = await Promise.all([
+      supabase
+        .from('treatments')
+        .select('id')
+        .eq('id', data.treatmentId)
+        .eq('salon_id', caller.salonId)
+        .maybeSingle(),
+      supabase
+        .from('forms')
+        .select('id')
+        .eq('id', data.formId)
+        .eq('salon_id', caller.salonId)
+        .maybeSingle(),
+    ])
+    if (!treatmentRow || !formRow) return { error: 'Nie znaleziono zabiegu lub formularza' }
+
+    const { error } = await supabase
+      .from('treatment_forms')
+      .insert({ treatment_id: data.treatmentId, form_id: data.formId })
     if (error) return { error: error.message }
     return { success: true }
   })
@@ -76,7 +122,20 @@ export const removeFormFromTreatmentFn = createServerFn({ method: 'POST' })
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
-    const { error } = await supabase.from('treatment_forms').delete().eq('treatment_id', data.treatmentId).eq('form_id', data.formId)
+
+    const { data: treatmentRow } = await supabase
+      .from('treatments')
+      .select('id')
+      .eq('id', data.treatmentId)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!treatmentRow) return { error: 'Nie znaleziono zabiegu' }
+
+    const { error } = await supabase
+      .from('treatment_forms')
+      .delete()
+      .eq('treatment_id', data.treatmentId)
+      .eq('form_id', data.formId)
     if (error) return { error: error.message }
     return { success: true }
   })

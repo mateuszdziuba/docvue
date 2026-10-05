@@ -7,12 +7,7 @@ const bottomNavItems = [
     label: 'Przegląd',
     href: '/dashboard',
     icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -26,12 +21,7 @@ const bottomNavItems = [
     label: 'Klienci',
     href: '/dashboard/clients',
     icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -42,20 +32,25 @@ const bottomNavItems = [
     ),
   },
   {
-    label: 'Wizyty',
-    href: '/dashboard/visits',
+    label: 'Kalendarz',
+    href: '/dashboard/calendar',
     icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect
+          x="3"
+          y="4"
+          width="18"
+          height="18"
+          rx="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+        />
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          d="M16 2v4M8 2v4M3 10h18"
         />
       </svg>
     ),
@@ -64,12 +59,7 @@ const bottomNavItems = [
     label: 'Formularze',
     href: '/dashboard/forms',
     icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -83,12 +73,7 @@ const bottomNavItems = [
     label: 'Odpowiedzi',
     href: '/dashboard/submissions',
     icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -112,18 +97,19 @@ export function MobileBottomNav() {
           const isActive =
             item.href === '/dashboard'
               ? pathname === '/dashboard'
-              : pathname === item.href || pathname.startsWith(item.href + '/')
+              : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
           return (
             <Link
               key={item.label}
               to={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
               {item.icon}
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[11px] font-medium">{item.label}</span>
             </Link>
           )
         })}

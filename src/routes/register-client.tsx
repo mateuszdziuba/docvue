@@ -1,14 +1,10 @@
-import {
-  createFileRoute,
-  Link,
-  useRouter,
-} from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { registerClientUserFn } from '../server/auth'
-import { DocvueLogo } from '@/components/ui/docvue-logo'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { DocvueLogo } from '@/components/ui/docvue-logo'
 import { FloatingLabelInput } from '@/components/ui/floating-label-input'
+import { registerClientUserFn } from '../server/auth'
 
 export const Route = createFileRoute('/register-client')({
   component: RegisterClientPage,
@@ -51,7 +47,7 @@ function RegisterClientPage() {
         data: { email: value.email, password: value.password, name: value.name },
       })
 
-      if (result?.error) {
+      if (result && 'error' in result && result.error) {
         setServerError(result.error)
       } else {
         setSuccess(true)
@@ -83,7 +79,8 @@ function RegisterClientPage() {
 
         <blockquote>
           <p className="text-panel-emphasis text-lg font-serif leading-relaxed font-normal">
-            &ldquo;Rezerwuj wizyty, wypełniaj formularze i zarządzaj swoimi wizytami &mdash; wszystko w jednym miejscu.&rdquo;
+            &ldquo;Rezerwuj wizyty, wypełniaj formularze i zarządzaj swoimi wizytami &mdash;
+            wszystko w jednym miejscu.&rdquo;
           </p>
           <footer className="mt-5">
             <p className="text-panel-on-surface-secondary text-sm font-medium">docvue</p>
@@ -119,7 +116,9 @@ function RegisterClientPage() {
               name="name"
               validators={{
                 onBlur: ({ value }) =>
-                  !value ? 'Imię i nazwisko jest wymagane' : undefined,
+                  !value.trim() ? 'Imię i nazwisko jest wymagane' : undefined,
+                onSubmit: ({ value }) =>
+                  !value.trim() ? 'Imię i nazwisko jest wymagane' : undefined,
               }}
             >
               {(field) => (
@@ -131,6 +130,11 @@ function RegisterClientPage() {
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
+                  error={
+                    field.state.meta.isTouched
+                      ? ((field.state.meta.errors[0] as string | undefined) ?? null)
+                      : null
+                  }
                 />
               )}
             </form.Field>
@@ -138,8 +142,16 @@ function RegisterClientPage() {
             <form.Field
               name="email"
               validators={{
-                onBlur: ({ value }) =>
-                  !value ? 'Email jest wymagany' : undefined,
+                onBlur: ({ value }) => {
+                  if (!value.trim()) return 'Email jest wymagany'
+                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Podaj poprawny adres email'
+                  return undefined
+                },
+                onSubmit: ({ value }) => {
+                  if (!value.trim()) return 'Email jest wymagany'
+                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Podaj poprawny adres email'
+                  return undefined
+                },
               }}
             >
               {(field) => (
@@ -151,6 +163,11 @@ function RegisterClientPage() {
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
+                  error={
+                    field.state.meta.isTouched
+                      ? ((field.state.meta.errors[0] as string | undefined) ?? null)
+                      : null
+                  }
                 />
               )}
             </form.Field>
@@ -158,8 +175,16 @@ function RegisterClientPage() {
             <form.Field
               name="password"
               validators={{
-                onBlur: ({ value }) =>
-                  !value ? 'Hasło jest wymagane' : undefined,
+                onBlur: ({ value }) => {
+                  if (!value) return 'Hasło jest wymagane'
+                  if (value.length < 8) return 'Hasło musi mieć co najmniej 8 znaków'
+                  return undefined
+                },
+                onSubmit: ({ value }) => {
+                  if (!value) return 'Hasło jest wymagane'
+                  if (value.length < 8) return 'Hasło musi mieć co najmniej 8 znaków'
+                  return undefined
+                },
               }}
             >
               {(field) => (
@@ -171,6 +196,11 @@ function RegisterClientPage() {
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
+                  error={
+                    field.state.meta.isTouched
+                      ? ((field.state.meta.errors[0] as string | undefined) ?? null)
+                      : null
+                  }
                 />
               )}
             </form.Field>
@@ -178,8 +208,20 @@ function RegisterClientPage() {
             <form.Field
               name="confirmPassword"
               validators={{
-                onBlur: ({ value }) =>
-                  !value ? 'Potwierdź hasło' : undefined,
+                onBlur: ({ value, fieldApi }) => {
+                  if (!value) return 'Potwierdź hasło'
+                  if (value !== fieldApi.form.getFieldValue('password')) {
+                    return 'Hasła nie są zgodne'
+                  }
+                  return undefined
+                },
+                onSubmit: ({ value, fieldApi }) => {
+                  if (!value) return 'Potwierdź hasło'
+                  if (value !== fieldApi.form.getFieldValue('password')) {
+                    return 'Hasła nie są zgodne'
+                  }
+                  return undefined
+                },
               }}
             >
               {(field) => (
@@ -187,27 +229,31 @@ function RegisterClientPage() {
                   id="confirmPassword"
                   label="Powtórz hasło"
                   type="password"
+                  autoComplete="new-password"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
+                  error={
+                    field.state.meta.isTouched
+                      ? ((field.state.meta.errors[0] as string | undefined) ?? null)
+                      : null
+                  }
                 />
               )}
             </form.Field>
 
             {serverError && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20">
+              <p
+                role="alert"
+                className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20"
+              >
                 {serverError}
               </p>
             )}
 
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full"
-                  size="lg"
-                >
+                <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
                   {isSubmitting ? 'Rejestracja…' : 'Załóż konto'}
                 </Button>
               )}
@@ -216,14 +262,20 @@ function RegisterClientPage() {
 
           <p className="text-center text-sm text-muted-foreground mt-7">
             Masz już konto?{' '}
-            <Link to="/login" className="text-foreground font-medium hover:text-primary transition-colors duration-150">
+            <Link
+              to="/login"
+              className="text-foreground font-medium hover:text-primary transition-colors duration-150"
+            >
               Zaloguj się
             </Link>
           </p>
 
           <p className="text-center text-xs text-muted-foreground mt-4">
             Jesteś gabinetem?{' '}
-            <Link to="/register" className="text-foreground font-medium hover:text-primary transition-colors duration-150">
+            <Link
+              to="/register"
+              className="text-foreground font-medium hover:text-primary transition-colors duration-150"
+            >
               Zarejestruj gabinet
             </Link>
           </p>

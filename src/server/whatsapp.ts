@@ -1,6 +1,5 @@
 import { getSupabaseServerClient } from '../utils/supabase'
 import { callLLM } from './llm'
-import { findAvailableSlots } from './availability'
 
 const WHATSAPP_API = 'https://graph.facebook.com/v21.0'
 
@@ -95,7 +94,7 @@ export async function handleWhatsAppIncoming(from: string, messageText: string) 
     if (response.toolCalls && response.toolCalls.length > 0) {
       // Simple: just return info about tools used
       // In production, you'd implement the full loop
-      const toolNames = response.toolCalls.map((tc) => tc.function.name).join(', ')
+      const toolNames = response.toolCalls.map((tc: { function: { name: string } }) => tc.function.name).join(', ')
       await sendWhatsAppMessage(
         from,
         `Przetwarzam Twoje zapytanie (używam: ${toolNames}). Za chwilę potwierdzę szczegóły.`,

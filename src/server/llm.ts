@@ -1,5 +1,7 @@
 import type { ToolCall } from './chat'
 
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
+
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models'
@@ -31,10 +33,26 @@ interface ToolDefinition {
 export const SYSTEM_PROMPT = `Jesteś asystentem rezerwacji wizyt w gabinetach kosmetycznych w Polsce. Mów wyłącznie po polsku.
 
 Jeśli w kontekście są dostępne zabiegi — poleć je klientowi.
+Jeśli klient prosi o polecenie zabiegu lub chce się umówić na konkretny zabieg — najpierw użyj narzędzia searchTreatments.
 Jeśli klient pyta o termin lub chce umówić — użyj narzędzi.
-Bądź naturalny i krótki. Nie wymyślaj zabiegów — korzystaj tylko z podanych.`
+Bądź naturalny i krótki. Nie wymyślaj zabiegów — korzystaj tylko z podanych.
+Zawsze najpierw sprawdź dostępność narzędziem findAvailableSlots, zanim zaproponujesz lub umówisz termin. Nigdy nie zgaduj dat, godzin ani identyfikatorów — jeśli klient nie podał dnia, zapytaj go, na który dzień szuka terminu. Formularze już wypełnione przez klienta nie są wymagane — nie proponuj ich ponownie.`
 
 const toolDefinitions: ToolDefinition[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'searchTreatments',
+      description: 'Wyszukuje zabiegi w bazie gabinetu po nazwie, opisie lub wskazaniach.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Fraza do wyszukania' },
+        },
+        required: ['query'],
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -71,7 +89,7 @@ const toolDefinitions: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'getRequiredForms',
-      description: 'Sprawdza jakie formularze są wymagane do wybranego zabiegu.',
+      description: 'Sprawdza, które formularze są wymagane do wybranego zabiegu (tylko jeszcze niewypełnione).',
       parameters: {
         type: 'object',
         properties: {
@@ -82,6 +100,42 @@ const toolDefinitions: ToolDefinition[] = [
     },
   },
 ]
+
+// ─── DeepSeek ───────────────────────────────────────────────────────────────
+
+async function callDeepSeek(messages: LLMMessage[]) {
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+
+  const response = await fetch(DEEPSEEK_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      tools: toolDefinitions,
+      tool_choice: 'auto',
+      temperature: 0.7,
+      max_tokens: 2048,
+    }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Błąd DeepSeek (${response.status}): ${text}`)
+  }
+
+  const data = await response.json()
+  const choice = data.choices?.[0]?.message
+  return {
+    content: choice?.content || '',
+    toolCalls: choice?.tool_calls?.map((tc: ToolCall) => ({
+      id: tc.id,
+      type: 'function' as const,
+      function: { name: tc.function.name, arguments: tc.function.arguments },
+    })),
+  }
+}
 
 // ─── Gemini ─────────────────────────────────────────────────────────────────
 
@@ -103,8 +157,9 @@ async function callGemini(messages: LLMMessage[]): Promise<{
         // Find matching function name from previous assistant message
         let fnName = m.tool_call_id || 'unknown'
         for (let i = idx - 1; i >= 0; i--) {
-          if (arr[i].tool_calls?.[0]?.function.name === fnName || arr[i].tool_calls?.[0]?.id === fnName) {
-            fnName = arr[i].tool_calls[0].function.name
+          const call = arr[i].tool_calls?.[0]
+          if (call && (call.function.name === fnName || call.id === fnName)) {
+            fnName = call.function.name
             break
           }
         }
@@ -146,7 +201,6 @@ async function callGemini(messages: LLMMessage[]): Promise<{
       parameters: t.function.parameters,
     })),
   }]
-  }
 
   const response = await fetch(
     `${GEMINI_API}/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -259,7 +313,16 @@ async function callGroq(messages: LLMMessage[]) {
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 export async function callLLM(messages: LLMMessage[]) {
-  // 1. Gemini (najlepsza opcja)
+  // 1. DeepSeek (podstawowa opcja)
+  if (process.env.DEEPSEEK_API_KEY) {
+    try {
+      return await callDeepSeek(messages)
+    } catch (e) {
+      console.error('DeepSeek error:', (e as Error).message)
+    }
+  }
+
+  // 2. Gemini
   if (process.env.GEMINI_API_KEY) {
     try {
       return await callGemini(messages)
@@ -268,14 +331,14 @@ export async function callLLM(messages: LLMMessage[]) {
     }
   }
 
-  // 2. Ollama (lokalny)
+  // 3. Ollama (lokalny)
   const ollamaEndpoint = (process.env.OLLAMA_ENDPOINT || 'http://localhost:11434').replace(/\/$/, '')
   try {
     const health = await fetch(`${ollamaEndpoint}/api/tags`, { signal: AbortSignal.timeout(2000) })
     if (health.ok) return await callOllama(messages)
   } catch { /* ollama unavailable */ }
 
-  // 3. Groq (ostatnia deska)
+  // 4. Groq (ostatnia deska)
   if (process.env.GROQ_API_KEY) {
     try {
       return await callGroq(messages)
@@ -285,7 +348,8 @@ export async function callLLM(messages: LLMMessage[]) {
   }
 
   throw new Error(
-    'Brak skonfigurowanego AI. Dodaj GEMINI_API_KEY do .env (darmowy: https://aistudio.google.com/apikey) ' +
-    'lub GROQ_API_KEY (https://console.groq.com/keys) albo uruchom lokalnie Ollama.',
+    'Brak skonfigurowanego AI. Dodaj DEEPSEEK_API_KEY do .env (https://platform.deepseek.com) ' +
+    'lub GEMINI_API_KEY (https://aistudio.google.com/apikey) albo GROQ_API_KEY (https://console.groq.com/keys), ' +
+    'ewentualnie uruchom lokalnie Ollama.',
   )
 }

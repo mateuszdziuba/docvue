@@ -3,58 +3,64 @@
 import { Link } from '@tanstack/react-router'
 import { format, parseISO } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import { useState } from 'react'
+import { Eye, FileText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { SearchInput } from '@/components/ui/search-input'
+import { SubmissionPreviewDialog } from './submission-preview-dialog'
 
 interface SubmissionsListProps {
   submissions: any[]
   query: string
 }
 
-export function SubmissionsList({ submissions, query }: SubmissionsListProps) {
-  const [search, setSearch] = useState(query)
-
-  const filtered = submissions.filter((s) => {
-    if (!search) return true
-    return (
-      s.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.forms?.title?.toLowerCase().includes(search.toLowerCase())
-    )
-  })
-
+export function SubmissionsList({ submissions }: SubmissionsListProps) {
   return (
     <div className="space-y-4">
-      <input
-        type="text"
-        placeholder="Szukaj odpowiedzi…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20"
-      />
+      <SearchInput placeholder="Szukaj odpowiedzi…" />
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 bg-card rounded-lg border border-border">
-          <p className="text-muted-foreground">Brak odpowiedzi</p>
+      {submissions.length === 0 ? (
+        <div className="rounded-lg border border-border bg-card">
+          <EmptyState
+            icon={<FileText className="h-6 w-6" aria-hidden="true" />}
+            title="Brak odpowiedzi"
+          />
         </div>
       ) : (
         <div className="bg-card rounded-lg border border-border divide-y divide-border overflow-hidden">
-          {filtered.map((sub) => (
-            <Link
+          {submissions.map((sub) => (
+            <div
               key={sub.id}
-              to="/dashboard/submissions/$submissionId"
-              params={{ submissionId: sub.id }}
-              className="flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors"
+              className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-surface-container-low"
             >
-              <div>
-                <p className="font-medium text-foreground">{sub.client_name ?? 'Anonim'}</p>
-                <p className="text-sm text-muted-foreground">
+              <Link
+                to="/dashboard/submissions/$submissionId"
+                params={{ submissionId: sub.id }}
+                className="min-w-0 flex-1"
+              >
+                <p className="font-medium text-foreground truncate">
+                  {sub.client_name ?? 'Anonim'}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
                   {sub.forms?.title ?? 'Formularz'} ·{' '}
                   {format(parseISO(sub.created_at), 'd MMM yyyy, HH:mm', { locale: pl })}
                 </p>
-              </div>
-              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
+              </Link>
+              <SubmissionPreviewDialog
+                submission={sub}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    aria-label={`Podgląd odpowiedzi: ${sub.client_name ?? 'Anonim'}`}
+                  >
+                    <Eye className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                    Podgląd
+                  </Button>
+                }
+              />
+            </div>
           ))}
         </div>
       )}

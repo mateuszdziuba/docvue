@@ -44,6 +44,10 @@ next-env.d.ts
 # Ignore for WebStorm configuration
 .idea
 
+# Dane klientów (PII) — nigdy do repo
+*.xlsx
+klienci.csv
+
 # Capacitor generated files (optional - uncomment to track)
 /android
 /ios

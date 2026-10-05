@@ -33,8 +33,9 @@ docvue is a Polish SaaS for beauty salon form management. Salon owners create co
 ```bash
 pnpm dev          # Vite dev server
 pnpm build        # Production build (Vite)
-pnpm lint         # ESLint
-pnpm test         # Vitest
+pnpm lint         # Biome (lint)
+pnpm lint:styles  # Guard spójności tokenów (palette/hex)
+pnpm test         # Vitest (użyj `pnpm exec vitest run` w CI)
 ```
 
 ---
@@ -113,16 +114,25 @@ src/server/                           # Server functions (createServerFn — rep
 
 ## Design System
 
-### Colors (CSS variables in globals.css)
-- **Primary** (brand teal): `hsl(172, 50%, 36%)` — used for CTAs, active states, brand mark
-- **Accent** (warm amber): `hsl(36, 80%, 56%)` — secondary highlights
-- **Info** (muted blue): `hsl(220, 50%, 50%)` — status badges, chart line
-- **Success** (sage green): `hsl(150, 45%, 45%)` — completed status badges, chart line
-- **Background**: warm stone `hsl(40, 20%, 98%)` — intentional, not default shadcn white
-- **Card**: `hsl(0, 0%, 100%)` — slightly lighter than background
-- **Border**: warm stone tint `hsl(30, 12%, 88%)`
+**Single source of truth:** `src/styles/app.css` (Tailwind v4, CSS-first). `tailwind.config.js` was removed; do not add palette utilities.
 
-Dark mode is supported via `.dark` class (next-themes).
+### Colors (semantic CSS variables)
+- **Primary** (blush brown): `hsl(5 12% 39%)` — CTAs, active states, brand mark
+- **Secondary** (sage): `hsl(115 6% 90%)` / foreground `hsl(115 6% 25%)`
+- **Accent** (blush container): `hsl(10 18% 94%)`
+- **Status**: `success`, `info`, `warning`, `destructive` (+ `-container` / `on-*-container`) — always use these instead of palette colors
+- **Surfaces**: `surface-container-low|base|high|highest`, `card`, `popover`, `muted`
+- **Panel** (auth brand side): `panel-surface`, `panel-on-surface*`, `panel-emphasis`
+- **Input border**: `--input` is darker than `--border` to meet WCAG 1.4.11 (≥3:1)
+
+Dark mode via `.dark` class (custom ThemeProvider in `lib/theme-compat.tsx`).
+
+### Typography
+- Fonts: **Noto Serif** (display, `.font-serif`) + **Manrope** (body, `--font-sans`), Geist Mono for code
+- `.label-caps` utility for uppercase micro-labels; avoid arbitrary `text-[Npx]` except dense calendar labels (10–11px)
+
+### Guardrail
+`pnpm lint:styles` (`scripts/check-styles.mjs`) blocks Tailwind palette utilities and arbitrary hex colors in live code. Run it before commit; `pnpm check` includes it.
 
 ### Typography
 - Font: Geist Sans (local woff), Geist Mono for code

@@ -1,10 +1,30 @@
 // WhatsApp Cloud API webhook
 // Vercel serverless function (Node.js 18+, ES module)
 
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 
 // Groq API client (OpenAI-compatible)
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
+/**
+ * Weryfikuje podpis Meta (X-Hub-Signature-256) na surowym body.
+ * Bez poprawnego podpisu webhook odrzuca żądanie (403).
+ */
+function verifyWhatsAppSignature(rawBody, signatureHeader) {
+  const secret = process.env.WHATSAPP_APP_SECRET
+  if (!secret || !signatureHeader?.startsWith('sha256=')) return false
+  const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')
+  const provided = signatureHeader.slice('sha256='.length)
+  try {
+    const expectedBuf = Buffer.from(expected, 'hex')
+    const providedBuf = Buffer.from(provided, 'hex')
+    if (expectedBuf.length !== providedBuf.length) return false
+    return timingSafeEqual(expectedBuf, providedBuf)
+  } catch {
+    return false
+  }
+}
 
 async function callGroq(messages, systemPrompt) {
   const apiKey = process.env.GROQ_API_KEY
@@ -76,7 +96,13 @@ export default async function handler(req) {
   // POST — incoming WhatsApp message
   if (req.method === 'POST') {
     try {
-      const body = await req.json()
+      const rawBody = await req.text()
+      const signature = req.headers.get('x-hub-signature-256')
+      if (!verifyWhatsAppSignature(rawBody, signature)) {
+        return new Response('Forbidden', { status: 403 })
+      }
+
+      const body = JSON.parse(rawBody)
 
       // Extract message details
       const entry = body?.entry?.[0]
@@ -157,7 +183,7 @@ export default async function handler(req) {
       })
     } catch (error) {
       console.error('WhatsApp webhook error:', error)
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ status: 'error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       })

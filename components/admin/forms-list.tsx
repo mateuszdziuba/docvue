@@ -1,10 +1,28 @@
 'use client'
 
+import { FileText, Pencil, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { SearchInput } from '@/components/ui/search-input'
+import { Switch } from '@/components/ui/switch'
 import { Link } from '@/lib/link-compat'
-import { toggleFormActive, deleteForm } from '@/src/server/forms'
 import { useRouterCompat } from '@/lib/router-compat'
+import { deleteFormFn, toggleFormActiveFn } from '@/src/server/forms'
 import type { Form } from '@/types/database'
+import { DeleteIconButton } from './delete-icon-button'
 
 interface FormsListProps {
   forms: Form[]
@@ -15,27 +33,40 @@ interface FormsListProps {
 export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
   const [formToDelete, setFormToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const router = useRouterCompat()
 
-  const handleToggleActive = async (form: Form) => {
-    await toggleFormActive(form.id, !form.is_active)
-    router.refresh()
-  }
-
-  const handleDeleteClick = (formId: string) => {
-    setFormToDelete(formId)
+  const handleToggleActive = async (form: Form, nextActive: boolean) => {
+    setTogglingId(form.id)
+    try {
+      const result = await toggleFormActiveFn({ data: { id: form.id, is_active: nextActive } })
+      if (result && 'error' in result && result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(nextActive ? 'Formularz aktywowany' : 'Formularz dezaktywowany')
+      router.refresh()
+    } catch {
+      toast.error('Nie udało się zmienić statusu formularza')
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   const handleConfirmDelete = async () => {
     if (!formToDelete) return
     setIsDeleting(true)
     try {
-      await deleteForm(formToDelete)
+      const result = await deleteFormFn({ data: { id: formToDelete } })
+      if (result && 'error' in result && result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Formularz został usunięty')
       setFormToDelete(null)
       router.refresh()
-    } catch (error) {
-      console.error('Error deleting form:', error)
-      alert('Wystąpił błąd podczas usuwania formularza')
+    } catch {
+      toast.error('Wystąpił błąd podczas usuwania formularza')
     } finally {
       setIsDeleting(false)
     }
@@ -44,45 +75,35 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
   if (forms.length === 0) {
     if (query) {
       return (
-        <div className="text-center py-12 bg-card rounded-xl border border-border/60">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary mb-4">
-            <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <div className="space-y-6">
+          <SearchInput placeholder="Szukaj formularzy..." />
+          <div className="rounded-xl border border-border/60 bg-card">
+            <EmptyState
+              icon={<Search className="h-6 w-6" aria-hidden="true" />}
+              title="Brak wyników wyszukiwania"
+              description={`Nie znaleziono formularzy pasujących do zapytania „${query}"`}
+            />
           </div>
-          <h3 className="text-lg font-medium text-foreground mb-1">
-            Brak wyników wyszukiwania
-          </h3>
-          <p className="text-muted-foreground">
-            Nie znaleziono formularzy pasujących do zapytania "{query}"
-          </p>
         </div>
       )
     }
 
     return (
-      <div className="text-center py-16">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-4">
-          <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-foreground mb-2">
-          Brak formularzy
-        </h3>
-        <p className="text-muted-foreground mb-6">
-          Utwórz swój pierwszy formularz, aby rozpocząć zbieranie danych od klientów.
-        </p>
+      <div className="pb-8">
+        <EmptyState
+          icon={<FileText className="h-7 w-7" aria-hidden="true" />}
+          title="Brak formularzy"
+          description="Utwórz swój pierwszy formularz, aby rozpocząć zbieranie danych od klientów."
+        />
         {isOwner && (
-          <Link
-            href="/dashboard/forms/new"
-            className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Utwórz formularz
-          </Link>
+          <div className="flex justify-center">
+            <Button asChild className="gap-2">
+              <Link href="/dashboard/forms/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Utwórz formularz
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
     )
@@ -90,17 +111,15 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <SearchInput placeholder="Szukaj formularzy..." />
         {isOwner && (
-          <Link
-            href="/dashboard/forms/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nowy formularz
-          </Link>
+          <Button asChild className="gap-2">
+            <Link href="/dashboard/forms/new">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Nowy formularz
+            </Link>
+          </Button>
         )}
       </div>
 
@@ -108,22 +127,25 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
         {forms.map((form) => (
           <div
             key={form.id}
-            className="bg-card rounded-xl p-5 border border-border/60 hover:shadow-md transition-shadow"
+            className="rounded-xl border border-border/60 bg-card p-5 transition-shadow hover:shadow-md"
           >
             <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold text-foreground truncate">
-                    {form.title}
-                  </h3>
-                  {!form.is_active && (
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground">
-                      Nieaktywny
-                    </span>
-                  )}
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-3">
+                  <h3 className="truncate text-lg font-semibold text-foreground">{form.title}</h3>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      form.is_active
+                        ? 'rounded-full border-transparent bg-success/15 px-2 py-1 text-xs font-medium text-success'
+                        : 'rounded-full border-transparent bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground'
+                    }
+                  >
+                    {form.is_active ? 'Aktywny' : 'Nieaktywny'}
+                  </Badge>
                 </div>
                 {form.description && (
-                  <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
+                  <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
                     {form.description}
                   </p>
                 )}
@@ -132,31 +154,41 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
                 </p>
               </div>
 
-              {/* Actions */}
               <div className="flex items-center gap-2">
                 {isOwner && (
                   <>
-                    {/* Edit */}
-                    <Link
-                      href={`/dashboard/forms/${form.id}/edit`}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors"
-                      title="Edytuj"
+                    <label
+                      htmlFor={`form-active-${form.id}`}
+                      className="flex h-11 w-11 items-center justify-center cursor-pointer"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </Link>
-
-                    {/* Delete */}
-                    <button
-                      onClick={() => handleDeleteClick(form.id)}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
-                      title="Usuń"
+                      <Switch
+                        id={`form-active-${form.id}`}
+                        checked={form.is_active}
+                        disabled={togglingId === form.id}
+                        onCheckedChange={(checked) => handleToggleActive(form, checked)}
+                        aria-label={`Formularz aktywny: ${form.title}`}
+                      />
+                    </label>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                      <Link
+                        href={`/dashboard/forms/${form.id}/edit`}
+                        aria-label={`Edytuj formularz ${form.title}`}
+                        title="Edytuj"
+                      >
+                        <Pencil className="h-5 w-5" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                    <DeleteIconButton
+                      label={`Usuń formularz ${form.title}`}
+                      onClick={() => setFormToDelete(form.id)}
+                      className="h-11 w-11"
+                      iconClassName="h-5 w-5"
+                    />
                   </>
                 )}
               </div>
@@ -165,60 +197,36 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
         ))}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {formToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-destructive/10 rounded-full">
-                  <svg className="w-6 h-6 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">Usuń formularz</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Czy na pewno chcesz usunąć ten formularz? Ta operacja jest nieodwracalna.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="bg-destructive/8 border border-destructive/20 rounded-xl p-4 mb-6">
-                <p className="text-sm text-destructive font-medium flex gap-2">
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Usunięcie formularza spowoduje również usunięcie wszystkich przypisań do klientów oraz ich odpowiedzi!
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setFormToDelete(null)}
-                  disabled={isDeleting}
-                  className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium disabled:opacity-50"
-                >
-                  Anuluj
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={isDeleting}
-                  className="px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isDeleting && (
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  )}
-                  {isDeleting ? 'Usuwanie...' : 'Usuń formularz'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertDialog
+        open={formToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setFormToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń formularz</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć ten formularz? Ta operacja jest nieodwracalna. Usunięcie
+              formularza spowoduje również usunięcie wszystkich przypisań do klientów oraz ich
+              odpowiedzi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleConfirmDelete()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Usuwanie...' : 'Usuń formularz'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

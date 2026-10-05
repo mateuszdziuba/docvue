@@ -1,7 +1,8 @@
 /* Google Fonts — must precede all other rules */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap");
 
-@import 'tailwindcss';
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 /* ==========================================================================
    docvue — Atmospheric Luxury Design System
@@ -79,6 +80,18 @@
 
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-warning-container: var(--warning-container);
+  --color-on-warning-container: var(--on-warning-container);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-container: var(--success-container);
+  --color-on-success-container: var(--on-success-container);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-container: var(--info-container);
+  --color-on-info-container: var(--on-info-container);
 
   --color-panel-surface: var(--panel-surface);
   --color-panel-on-surface: var(--panel-on-surface);
@@ -114,14 +127,25 @@
   --destructive-foreground: hsl(0 0% 98%);
 
   --border: hsl(10 17% 82%); /* #d2c3c1 outline-variant */
-  --input: hsl(10 17% 82%);
+  --input: hsl(10 12% 56%); /* granica pól ≥3:1 na bieli (WCAG 1.4.11) */
   --ring: hsl(5 12% 39%);
 
   /* docvue semantic tokens */
   --color-primary: hsl(5 12% 39%); /* blush */
   --color-secondary: hsl(115 6% 36%); /* sage */
-  --color-success: hsl(115 6% 36%);
+  --color-success: hsl(115 25% 30%);
   --color-error: hsl(0 65% 40%);
+
+  /* Statusy: zieleń (sukces) i spokojny błękit (info) — AA na tle kremowym */
+  --success: hsl(115 25% 30%);
+  --success-foreground: hsl(0 0% 100%);
+  --success-container: hsl(115 25% 92%);
+  --on-success-container: hsl(115 30% 22%);
+
+  --info: hsl(220 45% 38%);
+  --info-foreground: hsl(0 0% 100%);
+  --info-container: hsl(220 55% 94%);
+  --on-info-container: hsl(220 50% 28%);
 
   /* primary-container (light blush for chip backgrounds etc) */
   --primary-container: hsl(10 18% 94%); /* #f4d7d4 */
@@ -141,14 +165,16 @@
   --surface-container-highest: hsl(0 3% 89%); /* #e4e2e1 */
 
   /* Warning / caution */
-  --warning: hsl(36 80% 48%);
+  --warning: hsl(28 80% 32%); /* tekst warning ≥4.5:1 na kremowym tle */
   --warning-foreground: hsl(0 0% 100%);
+  --warning-container: hsl(40 85% 90%);
+  --on-warning-container: hsl(28 80% 24%);
 
   /* Panel surface (login/register left brand panel) */
   --panel-surface: hsl(5 12% 20%);
   --panel-on-surface: hsl(10 18% 94%);
   --panel-on-surface-secondary: hsl(10 18% 70%);
-  --panel-on-surface-tertiary: hsl(10 18% 50%);
+  --panel-on-surface-tertiary: hsl(10 18% 65%); /* ≥4.5:1 na panel-surface */
   --panel-emphasis: hsl(10 18% 88%);
 }
 
@@ -175,7 +201,7 @@
   --accent: hsl(5 15% 20%);
   --accent-foreground: hsl(5 25% 82%);
 
-  --destructive: hsl(0 55% 55%);
+  --destructive: hsl(0 70% 66%); /* tekst błędu na ciemnym tle ≥4.5:1 */
   --destructive-foreground: hsl(0 0% 98%);
 
   --border: hsl(20 5% 20%);
@@ -184,8 +210,18 @@
 
   --color-primary: hsl(5 25% 68%);
   --color-secondary: hsl(115 12% 60%);
-  --color-success: hsl(115 12% 60%);
+  --color-success: hsl(115 20% 65%);
   --color-error: hsl(0 55% 65%);
+
+  --success: hsl(115 20% 65%);
+  --success-foreground: hsl(115 30% 10%);
+  --success-container: hsl(115 15% 20%);
+  --on-success-container: hsl(115 25% 82%);
+
+  --info: hsl(220 55% 72%);
+  --info-foreground: hsl(220 40% 12%);
+  --info-container: hsl(220 30% 20%);
+  --on-info-container: hsl(220 60% 84%);
 
   --primary-container: hsl(5 15% 22%);
   --on-primary-container: hsl(5 25% 82%);
@@ -202,11 +238,13 @@
 
   --warning: hsl(36 80% 60%);
   --warning-foreground: hsl(0 0% 100%);
+  --warning-container: hsl(33 35% 20%);
+  --on-warning-container: hsl(40 85% 80%);
 
   --panel-surface: hsl(10 18% 94%);
   --panel-on-surface: hsl(5 12% 20%);
   --panel-on-surface-secondary: hsl(5 12% 30%);
-  --panel-on-surface-tertiary: hsl(5 12% 45%);
+  --panel-on-surface-tertiary: hsl(5 12% 42%);
   --panel-emphasis: hsl(5 12% 20%);
 }
 
@@ -242,7 +280,9 @@ body {
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -269,10 +309,60 @@ body {
   border-radius: 9999px;
 }
 
+/* ── Search inputs: spójny przycisk czyszczenia (zamiast niebieskiego X przeglądarki) ── */
+input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  cursor: pointer;
+  background-color: currentColor;
+  opacity: 0.5;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  transition: opacity 150ms ease;
+}
+input[type='search']::-webkit-search-cancel-button:hover {
+  opacity: 0.9;
+}
+
 /* ── Focus ring ── */
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* ── Print / PDF ── */
+@media print {
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+  .print-hidden {
+    display: none !important;
+  }
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .print-document {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  @page {
+    margin: 16mm;
+  }
 }
 
 /* ── Capacitor / iOS safe area utilities ── */

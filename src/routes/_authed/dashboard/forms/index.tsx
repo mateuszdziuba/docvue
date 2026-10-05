@@ -1,8 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getFormsFn } from '@/src/server/forms'
-import { FormsList } from '@/components/admin/forms-list'
-
 import { z } from 'zod'
+import { FormsList } from '@/components/admin/forms-list'
+import { getFormsFn } from '@/src/server/forms'
 
 const searchSchema = z.object({
   query: z.string().optional(),
@@ -29,7 +28,9 @@ function FormsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-normal text-foreground tracking-tight">Formularze</h1>
+        <h1 className="font-serif text-2xl font-normal text-foreground tracking-tight">
+          Formularze
+        </h1>
         <p className="text-muted-foreground text-sm mt-1">
           Twórz formularze zgód i ankiety dla klientów
         </p>

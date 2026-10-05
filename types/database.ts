@@ -9,6 +9,10 @@ export interface Salon {
   address: string | null
   pin_code: string | null
   created_at: string
+  email?: string | null
+  website?: string | null
+  social_media?: string | null
+  city?: string | null
 }
 
 export interface Client {
@@ -21,6 +25,24 @@ export interface Client {
   notes: string | null
   user_id: string | null // Linked auth user
   created_at: string
+  external_code?: string | null
+  gender?: string | null
+  referral_source?: string | null
+  consent_notifications_sms?: boolean
+  consent_notifications_email?: boolean
+  consent_marketing_sms?: boolean
+  consent_marketing_email?: boolean
+  discount_services?: number
+  discount_products?: number
+  important_info?: string | null
+  address?: string | null
+  postal_code?: string | null
+  city?: string | null
+  last_visit_at?: string | null
+  last_visit_staff_id?: string | null
+  referred_by?: string | null
+  next_visit_at?: string | null
+  location?: string | null
 }
 
 export interface Form {
@@ -30,6 +52,7 @@ export interface Form {
   description: string | null
   schema: FormSchema
   is_active: boolean
+  is_public?: boolean
   created_at: string
   updated_at: string
 }
@@ -79,6 +102,11 @@ export interface Treatment {
   indications: string[] | null
   // required_form_id: string | null -- DEPRECATED
   created_at: string
+  category?: string | null
+  external_code?: string | null
+  price_max?: number | null
+  online_booking?: boolean
+  single_service_only?: boolean
 }
 
 export interface TreatmentForm {

@@ -1,16 +1,11 @@
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useRouter,
-} from '@tanstack/react-router'
-import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { loginFn, getClientUserFn } from '../server/auth'
-import { DocvueLogo } from '@/components/ui/docvue-logo'
+import { createFileRoute, Link, redirect, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { DocvueLogo } from '@/components/ui/docvue-logo'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getClientUserFn, loginFn } from '../server/auth'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: async ({ context }) => {
@@ -32,7 +27,7 @@ function LoginPage() {
     onSubmit: async ({ value }) => {
       setServerError(null)
       const result = await loginFn({ data: value })
-      if (result?.error) {
+      if (result && 'error' in result && result.error) {
         setServerError(result.error)
       } else {
         await router.invalidate()
@@ -52,12 +47,14 @@ function LoginPage() {
         <div className="space-y-10">
           <blockquote>
             <p className="text-panel-emphasis text-lg font-serif leading-relaxed font-normal">
-              &ldquo;Klientki wypełniają formularze jeszcze przed wizytą. Wchodzą i od
-              razu zaczynamy zabieg.&rdquo;
+              &ldquo;Klientki wypełniają formularze jeszcze przed wizytą. Wchodzą i od razu
+              zaczynamy zabieg.&rdquo;
             </p>
             <footer className="mt-5">
               <p className="text-panel-on-surface-secondary text-sm font-medium">Kasia M.</p>
-              <p className="text-panel-on-surface-tertiary text-xs mt-0.5">Gabinet lashowy, Warszawa</p>
+              <p className="text-panel-on-surface-tertiary text-xs mt-0.5">
+                Gabinet lashowy, Warszawa
+              </p>
             </footer>
           </blockquote>
 
@@ -67,9 +64,7 @@ function LoginPage() {
               { value: '4.9★', label: 'ocena' },
             ].map((s) => (
               <div key={s.label}>
-                <p className="text-panel-emphasis text-2xl font-serif tabular-nums">
-                  {s.value}
-                </p>
+                <p className="text-panel-emphasis text-2xl font-serif tabular-nums">{s.value}</p>
                 <p className="text-panel-on-surface-tertiary text-xs mt-1 tracking-[0.1em] uppercase">
                   {s.label}
                 </p>
@@ -106,8 +101,7 @@ function LoginPage() {
             <form.Field
               name="email"
               validators={{
-                onBlur: ({ value }) =>
-                  !value ? 'Email jest wymagany' : undefined,
+                onBlur: ({ value }) => (!value ? 'Email jest wymagany' : undefined),
               }}
             >
               {(field) => (
@@ -121,9 +115,15 @@ function LoginPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    aria-invalid={field.state.meta.errors.length > 0 ? true : undefined}
+                    aria-describedby={
+                      field.state.meta.errors.length > 0 ? 'email-error' : undefined
+                    }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                    <p id="email-error" role="alert" className="text-sm text-destructive">
+                      {String(field.state.meta.errors[0])}
+                    </p>
                   )}
                 </div>
               )}
@@ -132,8 +132,7 @@ function LoginPage() {
             <form.Field
               name="password"
               validators={{
-                onBlur: ({ value }) =>
-                  !value ? 'Hasło jest wymagane' : undefined,
+                onBlur: ({ value }) => (!value ? 'Hasło jest wymagane' : undefined),
               }}
             >
               {(field) => (
@@ -147,28 +146,41 @@ function LoginPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    aria-invalid={field.state.meta.errors.length > 0 ? true : undefined}
+                    aria-describedby={
+                      field.state.meta.errors.length > 0 ? 'password-error' : undefined
+                    }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                    <p id="password-error" role="alert" className="text-sm text-destructive">
+                      {String(field.state.meta.errors[0])}
+                    </p>
                   )}
                 </div>
               )}
             </form.Field>
 
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+              >
+                Nie pamiętasz hasła?
+              </Link>
+            </div>
+
             {serverError && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20">
+              <p
+                role="alert"
+                className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20"
+              >
                 {serverError}
               </p>
             )}
 
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full"
-                  size="lg"
-                >
+                <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
                   {isSubmitting ? 'Logowanie…' : 'Zaloguj się'}
                 </Button>
               )}
@@ -177,13 +189,19 @@ function LoginPage() {
 
           <p className="text-center text-sm text-muted-foreground mt-7">
             Nie masz konta?{' '}
-            <Link to="/register" className="text-foreground font-medium hover:text-primary transition-colors duration-150">
+            <Link
+              to="/register"
+              className="text-foreground font-medium hover:text-primary transition-colors duration-150"
+            >
               Zarejestruj gabinet
             </Link>
           </p>
           <p className="text-center text-xs text-muted-foreground mt-3">
             Jesteś klientem?{' '}
-            <Link to="/register-client" className="text-foreground font-medium hover:text-primary transition-colors duration-150">
+            <Link
+              to="/register-client"
+              className="text-foreground font-medium hover:text-primary transition-colors duration-150"
+            >
               Załóż konto klienta
             </Link>
           </p>

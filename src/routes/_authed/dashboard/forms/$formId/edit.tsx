@@ -1,6 +1,7 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/react-router'
+import { FormBuilder } from '@/components/admin/form-builder'
+import { checkFormUsageFn } from '@/src/server/form-usage'
 import { getFormFn } from '@/src/server/forms'
-import EditFormClient from '@/components/admin/edit-form-client'
 import type { FormField } from '@/types/database'
 
 export const Route = createFileRoute('/_authed/dashboard/forms/$formId/edit')({
@@ -12,20 +13,30 @@ export const Route = createFileRoute('/_authed/dashboard/forms/$formId/edit')({
   loader: async ({ params }) => {
     const result = await getFormFn({ data: { id: params.formId } })
     if (result.error || !result.form) throw notFound()
-    return { form: result.form }
+    const usage = await checkFormUsageFn({ data: { formId: params.formId } })
+    return {
+      form: result.form,
+      usageCount: usage.count ?? 0,
+      isLocked: usage.isUsed ?? false,
+    }
   },
   component: EditFormPage,
 })
 
 function EditFormPage() {
-  const { form } = Route.useLoaderData()
+  const { form, usageCount, isLocked } = Route.useLoaderData()
+  const schema = (form.schema as { fields: FormField[] } | null) ?? { fields: [] }
   return (
-    <EditFormClient
-      form={{
-        ...form,
-        description: form.description ?? null,
-        schema: ((form.schema as { fields: FormField[] }) ?? { fields: [] }),
-      }}
-    />
+    <div className="mx-auto max-w-3xl p-6">
+      <FormBuilder
+        mode="edit"
+        formId={form.id}
+        initialTitle={form.title}
+        initialDescription={form.description ?? ''}
+        initialSchema={schema.fields ?? []}
+        isLocked={isLocked}
+        usageCount={usageCount}
+      />
+    </div>
   )
 }

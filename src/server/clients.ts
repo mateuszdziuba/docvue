@@ -65,6 +65,7 @@ export const updateClientFn = createServerFn({ method: 'POST' })
       .from('clients')
       .update(updates)
       .eq('id', id)
+      .eq('salon_id', caller.salonId)
       .select()
       .single()
     if (error) return { error: error.message }
@@ -77,34 +78,63 @@ export const deleteClientFn = createServerFn({ method: 'POST' })
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
-    const { error } = await supabase.from('clients').delete().eq('id', data.id)
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
     if (error) return { error: error.message }
     return { success: true }
   })
 
+export const CLIENTS_PAGE_SIZE = 50
+
 export const getClientsFn = createServerFn({ method: 'GET' })
-  .inputValidator((d: { query?: string }) => d)
+  .inputValidator((d: { query?: string; page?: number }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
-    if (!caller) return { clients: [] }
+    if (!caller) return { clients: [], total: 0, page: 1, pageSize: CLIENTS_PAGE_SIZE }
     const { salonId } = caller
 
-    let q = supabase.from('clients').select('*').eq('salon_id', salonId).order('name')
-    if (data.query) q = q.ilike('name', `%${data.query}%`)
-    const { data: clients } = await q
-    return { clients: clients || [] }
+    const page = Math.max(1, Math.floor(data.page ?? 1))
+    const from = (page - 1) * CLIENTS_PAGE_SIZE
+
+    let q = supabase
+      .from('clients')
+      .select('*', { count: 'exact' })
+      .eq('salon_id', salonId)
+      .order('name')
+      .range(from, from + CLIENTS_PAGE_SIZE - 1)
+    if (data.query) {
+      const term = data.query.replace(/[%,()]/g, '')
+      if (term) {
+        q = q.or(
+          `name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,location.ilike.%${term}%`,
+        )
+      }
+    }
+    const { data: clients, count } = await q
+    return {
+      clients: clients || [],
+      total: count ?? 0,
+      page,
+      pageSize: CLIENTS_PAGE_SIZE,
+    }
   })
 
 export const getClientFn = createServerFn({ method: 'GET' })
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
     const { data: client, error } = await supabase
       .from('clients')
       .select('*')
       .eq('id', data.id)
-      .single()
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
     if (error || !client) return { error: 'Klient nie istnieje' }
     return { client }
   })

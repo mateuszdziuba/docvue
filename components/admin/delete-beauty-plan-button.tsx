@@ -1,82 +1,76 @@
 'use client'
 
+import { Loader2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Trash2, AlertTriangle, Loader2 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useRouterCompat } from '@/lib/router-compat'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 
 interface DeleteBeautyPlanButtonProps {
-  planId: string
+  onConfirm: () => Promise<{ error?: string }>
 }
 
-export function DeleteBeautyPlanButton({ planId }: DeleteBeautyPlanButtonProps) {
+export function DeleteBeautyPlanButton({ onConfirm }: DeleteBeautyPlanButtonProps) {
   const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const supabase = createClient()
-  const router = useRouterCompat()
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleDelete = async () => {
-    setIsLoading(true)
+  const handleDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    setIsDeleting(true)
     try {
-      const { error } = await supabase
-        .from('beauty_plans')
-        .delete()
-        .eq('id', planId)
-
-      if (error) throw error
-
-      toast.success('Beauty Plan został usunięty')
+      const result = await onConfirm()
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Plan pielęgnacyjny został usunięty')
       setOpen(false)
-      router.refresh()
-    } catch (error: any) {
-      console.error('Error deleting beauty plan:', error)
-      toast.error('Nie udało się usunąć planu. Upewnij się, że masz uprawnienia.')
+    } catch {
+      toast.error('Nie udało się usunąć planu. Spróbuj ponownie.')
     } finally {
-      setIsLoading(false)
+      setIsDeleting(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="px-3 py-1.5 bg-destructive/10 hover:bg-destructive/20 text-destructive text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer">
-          <Trash2 className="w-4 h-4" />
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button type="button" variant="destructive" size="sm" aria-label="Usuń plan pielęgnacyjny">
+          <Trash2 className="mr-1.5 h-4 w-4" aria-hidden="true" />
           Usuń
-        </button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="w-5 h-5" />
-            Usuwanie Beauty Planu
-          </DialogTitle>
-          <DialogDescription>
-            Czy na pewno chcesz trwale usunąć ten Beauty Plan? 
-            Znikną wszystkie wskazówki i przypisane kosmetyki. 
-            Tej operacji nie można cofnąć!
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
-            Anuluj
-          </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
-            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Tak, usuń plan
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Usunąć plan pielęgnacyjny?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Plan pielęgnacyjny tego klienta zostanie trwale usunięty wraz ze wszystkimi produktami.
+            Tej operacji nie można cofnąć.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Anuluj</AlertDialogCancel>
+          <AlertDialogAction
+            aria-label="Potwierdź usunięcie planu pielęgnacyjnego"
+            disabled={isDeleting}
+            onClick={handleDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isDeleting ? 'Usuwanie...' : 'Usuń plan'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

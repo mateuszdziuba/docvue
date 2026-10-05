@@ -1,26 +1,28 @@
 'use client'
 
-import { useMemo, useState } from 'react'
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
   addDays,
+  endOfMonth,
+  endOfWeek,
+  format,
   isSameMonth,
   isToday,
-  format,
   parseISO,
+  startOfMonth,
+  startOfWeek,
 } from 'date-fns'
 import { pl } from 'date-fns/locale'
+import { useMemo, useState } from 'react'
+import { APPOINTMENT_STATUS_CONFIG, type AppointmentStatus } from '@/components/admin/status-badge'
 import type { CalendarAppointment } from '@/src/server/appointments'
-import { AppointmentPopover } from './appointment-popover'
+import type { StaffMember } from '@/types/database'
+import { AppointmentPopover, type AppointmentUpdateChanges } from './appointment-popover'
 
-const STATUS_CHIP: Record<CalendarAppointment['status'], string> = {
-  scheduled: 'bg-primary/15 text-primary',
-  completed: 'bg-success/15 text-success',
-  cancelled: 'bg-muted text-muted-foreground line-through',
-  pending_forms: 'bg-accent/20 text-accent-foreground',
+const STATUS_CHIP: Record<AppointmentStatus, string> = {
+  scheduled: 'bg-info-container text-on-info-container border-info/30',
+  pending_forms: 'bg-warning-container text-on-warning-container border-warning/40',
+  completed: 'bg-success-container text-on-success-container border-success/35',
+  cancelled: 'bg-muted text-muted-foreground border-border',
 }
 
 const DAY_NAMES = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie']
@@ -29,21 +31,21 @@ interface CalendarMonthViewProps {
   monthStart: Date
   appointments: CalendarAppointment[]
   onDayClick: (day: Date) => void
-  onSlotSelect: (
-    date: Date,
-    hour: number,
-    minute: number,
-    durationMinutes: number | undefined,
-    cursorX: number,
-    cursorY: number,
-  ) => void
+  staffMembers?: Pick<StaffMember, 'id' | 'name'>[]
+  onUpdateAppointment?: (
+    id: string,
+    changes: AppointmentUpdateChanges,
+  ) => Promise<{ error?: string | null }>
+  onStatusChange?: (id: string, status: CalendarAppointment['status']) => void
 }
 
 export function CalendarMonthView({
   monthStart,
   appointments,
   onDayClick,
-  onSlotSelect,
+  staffMembers = [],
+  onUpdateAppointment,
+  onStatusChange,
 }: CalendarMonthViewProps) {
   const [popoverApt, setPopoverApt] = useState<string | null>(null)
 
@@ -64,7 +66,7 @@ export function CalendarMonthView({
     for (const apt of appointments) {
       const key = format(parseISO(apt.start_time), 'yyyy-MM-dd')
       if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(apt)
+      map.get(key)?.push(apt)
     }
     return map
   }, [appointments])
@@ -72,11 +74,11 @@ export function CalendarMonthView({
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Day name header row */}
-      <div className="grid grid-cols-7 border-b border-border/40 bg-card shrink-0">
+      <div className="grid grid-cols-7 border-b border-border/60 bg-card shrink-0">
         {DAY_NAMES.map((name) => (
           <div
             key={name}
-            className="py-2.5 text-center text-[11px] font-semibold uppercase tracking-widest text-muted-foreground"
+            className="py-2.5 text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground"
           >
             {name}
           </div>
@@ -85,33 +87,44 @@ export function CalendarMonthView({
 
       {/* Month grid */}
       <div className="flex-1 overflow-y-auto">
-        <div
-          className="grid grid-cols-7"
-          style={{ gridAutoRows: 'minmax(110px, 1fr)' }}
-        >
+        <div className="grid grid-cols-7 [grid-auto-rows:minmax(176px,1fr)] md:[grid-auto-rows:minmax(110px,1fr)]">
           {monthGrid.map((day) => {
             const key = format(day, 'yyyy-MM-dd')
             const dayApts = aptsByDay.get(key) ?? []
             const inMonth = isSameMonth(day, monthStart)
             const today = isToday(day)
+            const dayLabel = format(day, 'EEEE, d MMMM yyyy', { locale: pl })
 
             return (
+              // biome-ignore lint/a11y/useSemanticElements: day cell contains its own focusable buttons (day number, chips)
               <div
                 key={key}
-                className={`border-r border-b border-border/30 p-1.5 flex flex-col cursor-pointer hover:bg-secondary/30 transition-colors group ${
+                role="button"
+                tabIndex={0}
+                aria-label={`Otwórz widok dnia: ${dayLabel}`}
+                className={`border-r border-b border-border/40 p-1.5 flex flex-col cursor-pointer hover:bg-secondary/30 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   !inMonth ? 'opacity-40' : ''
                 }`}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onDayClick(day)
+                  }
+                }}
                 onClick={(e) => {
                   const target = e.target as HTMLElement
-                  if (target.closest('[data-apt-chip]') || target.closest('[data-day-number]')) return
-                  onSlotSelect(day, 9, 0, undefined, e.clientX, e.clientY)
+                  if (target.closest('[data-apt-chip]')) return
+                  onDayClick(day)
                 }}
               >
-                {/* Date number */}
+                {/* Date number — keyboard route to the day view */}
                 <div className="flex items-center justify-between mb-1">
                   <button
+                    type="button"
                     data-day-number
-                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold transition-colors shrink-0 ${
+                    aria-label={`Otwórz widok dnia ${dayLabel}`}
+                    className={`w-11 h-11 md:w-7 md:h-7 flex items-center justify-center rounded-md text-xs font-semibold transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       today
                         ? 'bg-primary text-primary-foreground'
                         : 'text-foreground hover:bg-primary hover:text-primary-foreground'
@@ -120,7 +133,7 @@ export function CalendarMonthView({
                       e.stopPropagation()
                       onDayClick(day)
                     }}
-                    title={format(day, 'EEEE, d MMMM yyyy', { locale: pl })}
+                    title={dayLabel}
                   >
                     {format(day, 'd')}
                   </button>
@@ -128,29 +141,49 @@ export function CalendarMonthView({
 
                 {/* Appointment chips */}
                 <div className="flex flex-col gap-0.5 flex-1 min-h-0">
-                  {dayApts.slice(0, 3).map((apt) => (
-                    <AppointmentPopover
-                      key={apt.id}
-                      appointment={apt}
-                      open={popoverApt === apt.id}
-                      onOpenChange={(o) => setPopoverApt(o ? apt.id : null)}
-                    >
-                      <button
-                        data-apt-chip
-                        className={`w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate transition-opacity hover:opacity-80 ${STATUS_CHIP[apt.status]}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setPopoverApt(popoverApt === apt.id ? null : apt.id)
-                        }}
+                  {dayApts.slice(0, 3).map((apt) => {
+                    const chipConfig = APPOINTMENT_STATUS_CONFIG[apt.status]
+                    const ChipIcon = chipConfig.icon
+                    return (
+                      <AppointmentPopover
+                        key={apt.id}
+                        appointment={apt}
+                        open={popoverApt === apt.id}
+                        onOpenChange={(o) => setPopoverApt(o ? apt.id : null)}
+                        staffMembers={staffMembers}
+                        onUpdate={onUpdateAppointment}
+                        onStatusChange={onStatusChange}
                       >
-                        {format(parseISO(apt.start_time), 'HH:mm')} {apt.client.name}
-                      </button>
-                    </AppointmentPopover>
-                  ))}
+                        <button
+                          type="button"
+                          data-apt-chip
+                          aria-label={`${format(parseISO(apt.start_time), 'HH:mm')} ${apt.client.name}, ${chipConfig.label}${
+                            apt.staff_member ? `, ${apt.staff_member.name}` : ''
+                          }`}
+                          className={`w-full text-left rounded border px-1.5 py-1 md:py-0.5 text-[11px] font-medium truncate transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex items-center gap-1 min-h-11 md:min-h-0 ${
+                            STATUS_CHIP[apt.status]
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPopoverApt(popoverApt === apt.id ? null : apt.id)
+                          }}
+                        >
+                          <ChipIcon className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                          <span
+                            className={`truncate ${apt.status === 'cancelled' ? 'line-through' : ''}`}
+                          >
+                            {format(parseISO(apt.start_time), 'HH:mm')} {apt.client.name}
+                          </span>
+                        </button>
+                      </AppointmentPopover>
+                    )
+                  })}
                   {dayApts.length > 3 && (
                     <button
+                      type="button"
                       data-apt-chip
-                      className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 text-left transition-colors"
+                      aria-label={`Pokaż wszystkie wizyty: ${dayLabel} (${dayApts.length})`}
+                      className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 text-left transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex items-center min-h-11 md:min-h-0"
                       onClick={(e) => {
                         e.stopPropagation()
                         onDayClick(day)

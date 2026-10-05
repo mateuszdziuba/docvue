@@ -1,19 +1,35 @@
-import {
-  createFileRoute,
-  Link,
-  notFound,
-  useNavigate,
-} from '@tanstack/react-router'
-import {
-  getAppointmentFn,
-  updateAppointmentFn,
-  deleteAppointmentFn,
-} from '@/src/server/appointments'
+import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
 import { format, parseISO } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import { toast } from 'sonner'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { APPOINTMENT_STATUS_CONFIG, type AppointmentStatus } from '@/components/admin/status-badge'
 import { VisitPhotos } from '@/components/admin/visit-photos'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  deleteAppointmentFn,
+  getAppointmentFn,
+  updateAppointmentFn,
+} from '@/src/server/appointments'
 
 export const Route = createFileRoute('/_authed/dashboard/visits/$visitId')({
   loader: async ({ params, context }) => {
@@ -25,20 +41,17 @@ export const Route = createFileRoute('/_authed/dashboard/visits/$visitId')({
   component: VisitDetailPage,
 })
 
-const statusOptions = [
-  { value: 'scheduled', label: 'Zaplanowana' },
-  { value: 'pending_forms', label: 'Oczekuje na formularze' },
-  { value: 'completed', label: 'Zakończona' },
-  { value: 'cancelled', label: 'Anulowana' },
-]
+const statusKeys = Object.keys(APPOINTMENT_STATUS_CONFIG) as AppointmentStatus[]
 
 function VisitDetailPage() {
   const { appointment: initial, isOwner } = Route.useLoaderData()
   const navigate = useNavigate()
   const apt = initial as any
-  const [status, setStatus] = useState(apt.status)
+  const [status, setStatus] = useState<AppointmentStatus>(apt.status)
   const [notes, setNotes] = useState(apt.notes ?? '')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   async function handleSave() {
     setSaving(true)
@@ -51,18 +64,20 @@ function VisitDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm('Usunąć tę wizytę?')) return
+    setDeleting(true)
     const result = await deleteAppointmentFn({ data: { id: apt.id } })
-    if (result?.error) toast.error(result.error)
-    else {
-      toast.success('Wizyta usunięta')
-      navigate({ to: '/dashboard/visits' })
+    setDeleting(false)
+    if (result?.error) {
+      toast.error(result.error)
+      return
     }
+    toast.success('Wizyta usunięta')
+    navigate({ to: '/dashboard/visits' })
   }
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Link
           to="/dashboard/visits"
           className="text-sm text-muted-foreground hover:text-foreground"
@@ -70,12 +85,34 @@ function VisitDetailPage() {
           ← Wizyty
         </Link>
         {isOwner && (
-          <button
-            onClick={handleDelete}
-            className="text-sm text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-lg"
-          >
-            Usuń
-          </button>
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={deleting}>
+                Usuń
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Usuń wizytę</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Czy na pewno chcesz usunąć tę wizytę? Tej operacji nie można cofnąć.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(event) => {
+                    event.preventDefault()
+                    void handleDelete()
+                  }}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? 'Usuwanie…' : 'Usuń'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
 
@@ -92,48 +129,53 @@ function VisitDetailPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => isOwner && setStatus(e.target.value)}
-              disabled={!isOwner}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground outline-none disabled:opacity-60"
-            >
-              {statusOptions.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
+        <div>
+          <label
+            htmlFor="visit-status"
+            className="block text-xs font-medium text-muted-foreground mb-1.5"
+          >
+            Status
+          </label>
+          <Select
+            value={status}
+            onValueChange={(value) => setStatus(value as AppointmentStatus)}
+            disabled={!isOwner}
+          >
+            <SelectTrigger id="visit-status" className="w-full sm:max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {statusKeys.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {APPOINTMENT_STATUS_CONFIG[key].label}
+                </SelectItem>
               ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+          <label
+            htmlFor="visit-notes"
+            className="block text-xs font-medium text-muted-foreground mb-1.5"
+          >
             Notatki
           </label>
-          <textarea
+          <Textarea
+            id="visit-notes"
             value={notes}
             onChange={(e) => isOwner && setNotes(e.target.value)}
             readOnly={!isOwner}
             rows={3}
-            className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground outline-none resize-none disabled:opacity-60"
+            className="resize-none"
             placeholder="Dodatkowe informacje o wizycie…"
           />
         </div>
 
         {isOwner && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
-          >
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Zapisywanie…' : 'Zapisz zmiany'}
-          </button>
+          </Button>
         )}
       </div>
 

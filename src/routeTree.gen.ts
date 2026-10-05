@@ -9,10 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UpdatePasswordRouteImport } from './routes/update-password'
 import { Route as RegisterClientRouteImport } from './routes/register-client'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as ClientRouteImport } from './routes/_client'
 import { Route as AuthedRouteImport } from './routes/_authed'
@@ -20,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FTokenRouteImport } from './routes/f.$token'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
+import { Route as ShareBeautyPlanPlanIdRouteImport } from './routes/share.beauty-plan.$planId'
 import { Route as FTokenSuccessRouteImport } from './routes/f.$token_.success'
 import { Route as ClientClientProfileRouteImport } from './routes/_client/client/profile'
 import { Route as ClientClientChatRouteImport } from './routes/_client/client/chat'
@@ -38,6 +41,11 @@ import { Route as AuthedDashboardFormsNewRouteImport } from './routes/_authed/da
 import { Route as AuthedDashboardClientsClientIdRouteImport } from './routes/_authed/dashboard/clients/$clientId'
 import { Route as AuthedDashboardFormsFormIdEditRouteImport } from './routes/_authed/dashboard/forms/$formId/edit'
 
+const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
+  id: '/update-password',
+  path: '/update-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterClientRoute = RegisterClientRouteImport.update({
   id: '/register-client',
   path: '/register-client',
@@ -56,6 +64,11 @@ const LogoutRoute = LogoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
@@ -90,6 +103,11 @@ const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedDashboardRoute,
+} as any)
+const ShareBeautyPlanPlanIdRoute = ShareBeautyPlanPlanIdRouteImport.update({
+  id: '/share/beauty-plan/$planId',
+  path: '/share/beauty-plan/$planId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FTokenSuccessRoute = FTokenSuccessRouteImport.update({
   id: '/f/$token_/success',
@@ -192,16 +210,19 @@ const AuthedDashboardFormsFormIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/register': typeof RegisterRoute
   '/register-client': typeof RegisterClientRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/dashboard': typeof AuthedDashboardRouteWithChildren
   '/f/$token': typeof FTokenRoute
   '/client/calendar': typeof ClientClientCalendarRoute
   '/client/chat': typeof ClientClientChatRoute
   '/client/profile': typeof ClientClientProfileRoute
   '/f/$token/success': typeof FTokenSuccessRoute
+  '/share/beauty-plan/$planId': typeof ShareBeautyPlanPlanIdRoute
   '/dashboard/': typeof AuthedDashboardIndexRoute
   '/dashboard/clients/$clientId': typeof AuthedDashboardClientsClientIdRoute
   '/dashboard/forms/new': typeof AuthedDashboardFormsNewRoute
@@ -220,15 +241,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/register': typeof RegisterRoute
   '/register-client': typeof RegisterClientRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/f/$token': typeof FTokenRoute
   '/client/calendar': typeof ClientClientCalendarRoute
   '/client/chat': typeof ClientClientChatRoute
   '/client/profile': typeof ClientClientProfileRoute
   '/f/$token/success': typeof FTokenSuccessRoute
+  '/share/beauty-plan/$planId': typeof ShareBeautyPlanPlanIdRoute
   '/dashboard': typeof AuthedDashboardIndexRoute
   '/dashboard/clients/$clientId': typeof AuthedDashboardClientsClientIdRoute
   '/dashboard/forms/new': typeof AuthedDashboardFormsNewRoute
@@ -250,16 +274,19 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/_client': typeof ClientRouteWithChildren
   '/accept-invite': typeof AcceptInviteRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/register': typeof RegisterRoute
   '/register-client': typeof RegisterClientRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/_authed/dashboard': typeof AuthedDashboardRouteWithChildren
   '/f/$token': typeof FTokenRoute
   '/_client/client/calendar': typeof ClientClientCalendarRoute
   '/_client/client/chat': typeof ClientClientChatRoute
   '/_client/client/profile': typeof ClientClientProfileRoute
   '/f/$token_/success': typeof FTokenSuccessRoute
+  '/share/beauty-plan/$planId': typeof ShareBeautyPlanPlanIdRoute
   '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
   '/_authed/dashboard/clients/$clientId': typeof AuthedDashboardClientsClientIdRoute
   '/_authed/dashboard/forms/new': typeof AuthedDashboardFormsNewRoute
@@ -280,16 +307,19 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accept-invite'
+    | '/forgot-password'
     | '/login'
     | '/logout'
     | '/register'
     | '/register-client'
+    | '/update-password'
     | '/dashboard'
     | '/f/$token'
     | '/client/calendar'
     | '/client/chat'
     | '/client/profile'
     | '/f/$token/success'
+    | '/share/beauty-plan/$planId'
     | '/dashboard/'
     | '/dashboard/clients/$clientId'
     | '/dashboard/forms/new'
@@ -308,15 +338,18 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accept-invite'
+    | '/forgot-password'
     | '/login'
     | '/logout'
     | '/register'
     | '/register-client'
+    | '/update-password'
     | '/f/$token'
     | '/client/calendar'
     | '/client/chat'
     | '/client/profile'
     | '/f/$token/success'
+    | '/share/beauty-plan/$planId'
     | '/dashboard'
     | '/dashboard/clients/$clientId'
     | '/dashboard/forms/new'
@@ -337,16 +370,19 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/_client'
     | '/accept-invite'
+    | '/forgot-password'
     | '/login'
     | '/logout'
     | '/register'
     | '/register-client'
+    | '/update-password'
     | '/_authed/dashboard'
     | '/f/$token'
     | '/_client/client/calendar'
     | '/_client/client/chat'
     | '/_client/client/profile'
     | '/f/$token_/success'
+    | '/share/beauty-plan/$planId'
     | '/_authed/dashboard/'
     | '/_authed/dashboard/clients/$clientId'
     | '/_authed/dashboard/forms/new'
@@ -368,16 +404,26 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
   AcceptInviteRoute: typeof AcceptInviteRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   RegisterRoute: typeof RegisterRoute
   RegisterClientRoute: typeof RegisterClientRoute
+  UpdatePasswordRoute: typeof UpdatePasswordRoute
   FTokenRoute: typeof FTokenRoute
   FTokenSuccessRoute: typeof FTokenSuccessRoute
+  ShareBeautyPlanPlanIdRoute: typeof ShareBeautyPlanPlanIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/update-password': {
+      id: '/update-password'
+      path: '/update-password'
+      fullPath: '/update-password'
+      preLoaderRoute: typeof UpdatePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register-client': {
       id: '/register-client'
       path: '/register-client'
@@ -404,6 +450,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invite': {
@@ -454,6 +507,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof AuthedDashboardIndexRouteImport
       parentRoute: typeof AuthedDashboardRoute
+    }
+    '/share/beauty-plan/$planId': {
+      id: '/share/beauty-plan/$planId'
+      path: '/share/beauty-plan/$planId'
+      fullPath: '/share/beauty-plan/$planId'
+      preLoaderRoute: typeof ShareBeautyPlanPlanIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/f/$token_/success': {
       id: '/f/$token_/success'
@@ -647,12 +707,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
   AcceptInviteRoute: AcceptInviteRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   RegisterRoute: RegisterRoute,
   RegisterClientRoute: RegisterClientRoute,
+  UpdatePasswordRoute: UpdatePasswordRoute,
   FTokenRoute: FTokenRoute,
   FTokenSuccessRoute: FTokenSuccessRoute,
+  ShareBeautyPlanPlanIdRoute: ShareBeautyPlanPlanIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

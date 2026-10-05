@@ -6,7 +6,18 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!!**/dist", "!!**/node_modules", "!!**/.tanstack", "!!**/src/routeTree.gen.ts"]
+		"includes": [
+			"**",
+			"!!**/dist",
+			"!!**/node_modules",
+			"!!**/.tanstack",
+			"!!**/src/routeTree.gen.ts",
+			"!!**/playwright-report",
+			"!!**/test-results",
+			"!!**/android",
+			"!!**/ios",
+			"!!**/supabase"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -34,6 +45,11 @@
 			"trailingCommas": "all"
 		}
 	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
 	"assist": {
 		"enabled": true,
 		"actions": {
@@ -41,5 +57,17 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["src/styles/app.css"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noImportantStyles": "off"
+					}
+				}
+			}
+		}
+	]
 }

@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { Menu } from 'lucide-react'
+import { useState } from 'react'
 import { DocvueLogo } from '@/components/ui/docvue-logo'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
@@ -33,36 +42,81 @@ const staggerItem = {
 const viewportOpts = { once: true, margin: '-60px' } as const
 
 function LandingPage() {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const navLinks = [
+    { href: '#features', label: 'Funkcje' },
+    { href: '#how-it-works', label: 'Jak to działa' },
+    { href: '#pricing', label: 'Cennik' },
+  ]
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Nav — ghost until scroll */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center backdrop-blur-[12px] bg-background/70 border-b border-border/40">
+      <header className="fixed top-0 left-0 right-0 z-50 h-[calc(4rem+env(safe-area-inset-top))] flex items-center backdrop-blur-[12px] bg-background/70 border-b border-border/40">
         <div className="max-w-6xl mx-auto px-6 w-full flex items-center justify-between">
           <DocvueLogo className="text-xl" />
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
-              Funkcje
-            </a>
-            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
-              Jak to działa
-            </a>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
-              Cennik
-            </a>
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/login"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150 px-4 py-2"
+              className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors duration-150 px-4 py-2"
             >
               Zaloguj się
             </Link>
             <Link
               to="/register"
-              className="bg-primary text-primary-foreground text-sm px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity duration-150"
+              className="bg-primary text-primary-foreground text-sm px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity duration-150 whitespace-nowrap"
             >
               Wypróbuj za darmo
             </Link>
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Otwórz menu"
+                  className="md:hidden grid h-11 w-11 place-items-center rounded-md text-foreground hover:bg-surface-container transition-colors"
+                >
+                  <Menu className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="w-72 p-0 pt-[calc(3.5rem+env(safe-area-inset-top))]"
+              >
+                <SheetHeader className="px-4 pb-2 text-left">
+                  <SheetTitle className="font-serif text-lg font-normal">Menu</SheetTitle>
+                </SheetHeader>
+                <nav aria-label="Menu strony" className="flex flex-col gap-1 px-2 py-2">
+                  {navLinks.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center min-h-11 rounded-md px-3 text-sm font-medium text-foreground hover:bg-surface-container transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                  <Link
+                    to="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center min-h-11 rounded-md px-3 text-sm font-medium text-foreground hover:bg-surface-container transition-colors"
+                  >
+                    Zaloguj się
+                  </Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>

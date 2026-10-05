@@ -1,7 +1,8 @@
 'use client'
 
+import { Check, Eraser, Pen, Pencil, RotateCcw } from 'lucide-react'
 import * as React from 'react'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,21 +12,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-// Progress is now inline in the button
 import { cn } from '@/lib/utils'
-import { Eraser, Pen, Check, Pencil, RotateCcw } from 'lucide-react'
 
 type SignaturePadProps = {
   value?: string | null
   onChange: (signature: string | null) => void
   disabled?: boolean
   className?: string
-  holdToSignDuration?: number // Duration in ms to hold for confirming signature
+  id?: string
+  holdToSignDuration?: number
 }
 
 const CANVAS_WIDTH = 400
 const CANVAS_HEIGHT = 200
-const DEFAULT_HOLD_DURATION = 1500 // 1.5 seconds
+const DEFAULT_HOLD_DURATION = 1500
 
 const disableTouchScroll = (canvas: HTMLCanvasElement) => {
   const preventScroll = (e: TouchEvent) => {
@@ -48,6 +48,7 @@ export default function SignaturePad({
   onChange,
   disabled = false,
   className,
+  id,
   holdToSignDuration = DEFAULT_HOLD_DURATION,
 }: SignaturePadProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -59,25 +60,20 @@ export default function SignaturePad({
   const [hasDrawn, setHasDrawn] = useState(false)
   const [holdProgress, setHoldProgress] = useState(0)
   const [isHolding, setIsHolding] = useState(false)
+  const [typedMode, setTypedMode] = useState(false)
+  const [typedName, setTypedName] = useState('')
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null)
   const holdStartRef = useRef<number | null>(null)
+  const holdActiveRef = useRef(false)
   const animationFrameRef = useRef<number | null>(null)
+  const typedInputId = React.useId()
 
-  // Helper function to get the correct stroke color based on theme
-  const getStrokeColor = () => {
-    const isDarkClass = document.documentElement.classList.contains('dark')
-    const isLightClass = document.documentElement.classList.contains('light')
-    const systemPrefersDark = window.matchMedia(
-      '(prefers-color-scheme: dark)',
-    ).matches
+  // Podpis zawsze ciemnym tuszem na białej kanwie — spójnie z wydrukiem/PDF
+  // i czytelnie w obu motywach.
+  const getStrokeColor = useCallback(() => '#1b1c1c', [])
 
-    const isDarkMode = isDarkClass || (!isLightClass && systemPrefersDark)
-    return isDarkMode ? '#ffffff' : '#000000'
-  }
-
-  // Setup canvas when dialog opens
   useEffect(() => {
     if (!isDialogOpen) return
 
@@ -92,37 +88,20 @@ export default function SignaturePad({
       ctx.strokeStyle = getStrokeColor()
     }
 
-    const updateStrokeColor = () => {
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.strokeStyle = getStrokeColor()
-    }
-
     const cleanupTouchScroll = disableTouchScroll(canvas)
-
-    const observer = new MutationObserver(updateStrokeColor)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    })
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', updateStrokeColor)
 
     return () => {
       cleanupTouchScroll()
-      observer.disconnect()
-      mediaQuery.removeEventListener('change', updateStrokeColor)
     }
-  }, [isDialogOpen])
+  }, [isDialogOpen, getStrokeColor])
 
-  // Reset canvas state when dialog opens
   useEffect(() => {
     if (isDialogOpen) {
       setHasDrawn(false)
       setHoldProgress(0)
       setIsHolding(false)
-      // Clear canvas on open
+      setTypedMode(false)
+      setTypedName('')
       const canvas = canvasRef.current
       const ctx = canvas?.getContext('2d')
       if (canvas && ctx) {
@@ -132,9 +111,7 @@ export default function SignaturePad({
   }, [isDialogOpen])
 
   const startDrawing = (
-    e:
-      | React.MouseEvent<HTMLCanvasElement>
-      | React.TouchEvent<HTMLCanvasElement>,
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
   ) => {
     e.preventDefault()
     setIsDrawing(true)
@@ -153,29 +130,20 @@ export default function SignaturePad({
     }
   }
 
-  const draw = (
-    e:
-      | React.MouseEvent<HTMLCanvasElement>
-      | React.TouchEvent<HTMLCanvasElement>,
-  ) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault()
     if (!isDrawing) return
 
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (canvas && ctx) {
-      // Ensure correct stroke color before drawing
       ctx.strokeStyle = getStrokeColor()
-      
+
       const rect = canvas.getBoundingClientRect()
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
-      const x =
-        (('touches' in e ? e.touches[0].clientX : e.clientX) - rect.left) *
-        scaleX
-      const y =
-        (('touches' in e ? e.touches[0].clientY : e.clientY) - rect.top) *
-        scaleY
+      const x = (('touches' in e ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX
+      const y = (('touches' in e ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY
 
       if (lastPosition) {
         const midX = (lastPosition.x + x) / 2
@@ -201,6 +169,7 @@ export default function SignaturePad({
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       setHasDrawn(false)
       setHoldProgress(0)
+      setTypedName('')
     }
   }
 
@@ -216,68 +185,74 @@ export default function SignaturePad({
     }
   }, [holdToSignDuration])
 
-  const handleHoldStart = useCallback(
-    (e: React.PointerEvent) => {
-      if (!hasDrawn) return
+  const exportDrawnSignature = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-      e.preventDefault()
+    const exportCanvas = document.createElement('canvas')
+    exportCanvas.width = canvas.width
+    exportCanvas.height = canvas.height
+    const exportCtx = exportCanvas.getContext('2d')
+
+    if (exportCtx) {
+      exportCtx.fillStyle = '#ffffff'
+      exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
+
+      const originalCtx = canvas.getContext('2d')
+      if (originalCtx) {
+        // Kreski zawsze na czarno (także w trybie ciemnym, gdzie rysujemy na
+        // biało) i na nieprzezroczystym białym tle — podpis musi być czytelny
+        // na wydruku/PDF niezależnie od motywu.
+        const imageData = originalCtx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3]
+          if (alpha > 0) {
+            data[i] = 0
+            data[i + 1] = 0
+            data[i + 2] = 0
+          }
+        }
+
+        const strokeCanvas = document.createElement('canvas')
+        strokeCanvas.width = canvas.width
+        strokeCanvas.height = canvas.height
+        const strokeCtx = strokeCanvas.getContext('2d')
+        if (strokeCtx) {
+          strokeCtx.putImageData(imageData, 0, 0)
+          exportCtx.drawImage(strokeCanvas, 0, 0)
+        }
+      }
+
+      onChange(exportCanvas.toDataURL('image/png'))
+    }
+    setIsDialogOpen(false)
+  }, [onChange])
+
+  const handleHoldStart = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!hasDrawn || holdActiveRef.current) return
+
+      event.preventDefault()
+      holdActiveRef.current = true
       setIsHolding(true)
       holdStartRef.current = Date.now()
       setHoldProgress(0)
 
-      // Start progress animation
       animationFrameRef.current = requestAnimationFrame(updateHoldProgress)
 
-      // Set timer for completion
       holdTimerRef.current = setTimeout(() => {
-        const canvas = canvasRef.current
-        if (canvas) {
-          // Create a new canvas with white background for export
-          const exportCanvas = document.createElement('canvas')
-          exportCanvas.width = canvas.width
-          exportCanvas.height = canvas.height
-          const exportCtx = exportCanvas.getContext('2d')
-          
-          if (exportCtx) {
-            // Fill with white background
-            exportCtx.fillStyle = '#ffffff'
-            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
-            
-            // Get the current canvas content
-            const originalCtx = canvas.getContext('2d')
-            if (originalCtx) {
-              // Get image data from original canvas
-              const imageData = originalCtx.getImageData(0, 0, canvas.width, canvas.height)
-              const data = imageData.data
-              
-              // Convert any non-transparent pixels to black (for consistent display)
-              for (let i = 0; i < data.length; i += 4) {
-                const alpha = data[i + 3]
-                if (alpha > 0) {
-                  // Make it black with the same alpha
-                  data[i] = 0     // R
-                  data[i + 1] = 0 // G
-                  data[i + 2] = 0 // B
-                }
-              }
-              
-              // Put the modified image data onto export canvas
-              exportCtx.putImageData(imageData, 0, 0)
-            }
-            
-            const dataUrl = exportCanvas.toDataURL('image/png')
-            onChange(dataUrl)
-          }
-          setIsDialogOpen(false)
-        }
+        holdActiveRef.current = false
+        exportDrawnSignature()
         setIsHolding(false)
         setHoldProgress(0)
       }, holdToSignDuration)
     },
-    [hasDrawn, holdToSignDuration, onChange, updateHoldProgress],
+    [hasDrawn, holdToSignDuration, exportDrawnSignature, updateHoldProgress],
   )
 
   const handleHoldEnd = useCallback(() => {
+    holdActiveRef.current = false
     setIsHolding(false)
     holdStartRef.current = null
 
@@ -307,7 +282,33 @@ export default function SignaturePad({
     setIsDialogOpen(true)
   }
 
-  // Cleanup timers on unmount
+  const confirmTypedSignature = () => {
+    const name = typedName.trim()
+    if (!name) return
+
+    const exportCanvas = document.createElement('canvas')
+    exportCanvas.width = CANVAS_WIDTH
+    exportCanvas.height = CANVAS_HEIGHT
+    const ctx = exportCanvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+    ctx.fillStyle = '#000000'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    let fontSize = 44
+    do {
+      ctx.font = `600 ${fontSize}px Georgia, 'Times New Roman', serif`
+      fontSize -= 2
+    } while (ctx.measureText(name).width > CANVAS_WIDTH - 48 && fontSize > 16)
+
+    ctx.fillText(name, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+    onChange(exportCanvas.toDataURL('image/png'))
+    setIsDialogOpen(false)
+  }
+
   useEffect(() => {
     return () => {
       if (holdTimerRef.current) {
@@ -319,201 +320,203 @@ export default function SignaturePad({
     }
   }, [])
 
-  // If we have a signature value, show the signature image
-  if (value) {
-    return (
-      <div
-        className={cn(
-          'relative inline-flex items-center justify-start mt-2',
-          className,
-        )}
-      >
-        <div className="relative border border-input rounded-md overflow-hidden bg-white dark:bg-zinc-900">
+  return (
+    <div
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      className={cn('mt-2 inline-flex items-center justify-start', className)}
+    >
+      {value ? (
+        <div className="relative overflow-hidden rounded-md border border-input bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={value}
-            alt="Signature"
-            className="w-[200px] h-[100px] object-contain"
-          />
+          <img src={value} alt="Podpis klienta" className="h-[100px] w-[200px] object-contain" />
           <div className="absolute bottom-1 right-1 flex gap-1">
             <Button
               type="button"
               size="icon"
               variant="outline"
-              className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-sm"
+              className="relative h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm before:absolute before:-inset-1.5 before:content-['']"
               onClick={handleEditSignature}
               disabled={disabled}
+              aria-label="Edytuj podpis"
+              title="Edytuj podpis"
             >
-              <Pencil className="w-3 h-3 text-muted-foreground hover:text-primary" />
+              <Pencil
+                className="h-3 w-3 text-muted-foreground hover:text-primary"
+                aria-hidden="true"
+              />
             </Button>
             <Button
               type="button"
               size="icon"
               variant="outline"
-              className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-sm"
+              className="relative h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm before:absolute before:-inset-1.5 before:content-['']"
               onClick={handleClearValue}
               disabled={disabled}
+              aria-label="Usuń podpis"
+              title="Usuń podpis"
             >
-              <Eraser className="w-3 h-3 text-muted-foreground hover:text-primary" />
+              <Eraser
+                className="h-3 w-3 text-muted-foreground hover:text-primary"
+                aria-hidden="true"
+              />
             </Button>
           </div>
         </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Pen className="w-4 h-4" />
-                Draw Signature
-              </DialogTitle>
-              <DialogDescription>
-                Draw your signature below, then hold the confirm button to sign.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="border border-input rounded-md overflow-hidden relative bg-background">
-              <canvas
-                ref={canvasRef}
-                width={CANVAS_WIDTH}
-                height={CANVAS_HEIGHT}
-                className="w-full h-[200px] cursor-crosshair touch-none"
-                onMouseDown={startDrawing}
-                onMouseUp={stopDrawing}
-                onMouseOut={stopDrawing}
-                onMouseMove={draw}
-                onTouchStart={startDrawing}
-                onTouchEnd={stopDrawing}
-                onTouchMove={draw}
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                className="absolute left-2 bottom-2 rounded-full h-8 w-8"
-                onClick={clearSignature}
-              >
-                <Eraser className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            </div>
-
-            <DialogFooter className="flex-row gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="destructive"
-                className="flex-shrink-0"
-                onClick={handleReset}
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Reset
-              </Button>
-              <Button
-                type="button"
-                className={cn(
-                  'flex-1 relative overflow-hidden transition-all border-2 border-transparent',
-                  hasDrawn
-                    ? 'bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300'
-                    : 'bg-muted text-muted-foreground cursor-not-allowed',
-                )}
-                disabled={!hasDrawn}
-                onPointerDown={handleHoldStart}
-                onPointerUp={handleHoldEnd}
-                onPointerLeave={handleHoldEnd}
-                onPointerCancel={handleHoldEnd}
-              >
-                {/* Progress fill background */}
-                <span
-                  className="absolute left-0 top-0 bottom-0 bg-emerald-500 transition-none"
-                  style={{ width: `${holdProgress}%` }}
-                />
-                <span className="relative z-10 flex items-center gap-2">
-                  <Check className={cn('w-4 h-4', isHolding && 'animate-pulse')} />
-                  {isHolding ? 'Keep holding...' : 'Hold to confirm'}
-                </span>
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    )
-  }
-
-  // Initial state: show pen button
-  return (
-    <div className={cn('inline-flex mt-2', className)}>
-      <Button
-        type="button"
-        size="icon"
-        variant="outline"
-        className="rounded-full"
-        onClick={() => setIsDialogOpen(true)}
-        disabled={disabled}
-      >
-        <Pen className="w-4 h-4" />
-      </Button>
+      ) : (
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="h-11 w-11 rounded-full"
+          onClick={() => setIsDialogOpen(true)}
+          disabled={disabled}
+          aria-label="Dodaj podpis"
+          title="Dodaj podpis"
+        >
+          <Pen className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Pen className="w-4 h-4" />
-              Draw Signature
+              <Pen className="h-4 w-4" aria-hidden="true" />
+              Podpis
             </DialogTitle>
             <DialogDescription>
-              Draw your signature below, then hold the confirm button to sign.
+              Narysuj podpis poniżej, a następnie przytrzymaj przycisk, aby potwierdzić. Możesz też
+              wpisać imię i nazwisko.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border border-input rounded-md overflow-hidden relative bg-background">
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_WIDTH}
-              height={CANVAS_HEIGHT}
-              className="w-full h-[200px] cursor-crosshair touch-none"
-              onMouseDown={startDrawing}
-              onMouseUp={stopDrawing}
-              onMouseOut={stopDrawing}
-              onMouseMove={draw}
-              onTouchStart={startDrawing}
-              onTouchEnd={stopDrawing}
-              onTouchMove={draw}
-            />
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              className="absolute left-2 bottom-2 rounded-full h-8 w-8"
-              onClick={clearSignature}
-            >
-              <Eraser className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </div>
+          {typedMode ? (
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor={typedInputId}
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Imię i nazwisko
+                </label>
+                <input
+                  id={typedInputId}
+                  type="text"
+                  value={typedName}
+                  onChange={(event) => setTypedName(event.target.value)}
+                  placeholder="np. Anna Kowalska"
+                  autoComplete="name"
+                  className="min-h-11 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <Button
+                type="button"
+                className="min-h-11 w-full"
+                onClick={confirmTypedSignature}
+                disabled={!typedName.trim()}
+              >
+                Zatwierdź podpis
+              </Button>
+              <button
+                type="button"
+                onClick={() => setTypedMode(false)}
+                className="flex min-h-11 w-full items-center justify-center text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                Wróć do rysowania
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="relative overflow-hidden rounded-md border border-input bg-white">
+                <canvas
+                  ref={canvasRef}
+                  width={CANVAS_WIDTH}
+                  height={CANVAS_HEIGHT}
+                  role="img"
+                  aria-label="Obszar rysowania podpisu"
+                  className="aspect-[2/1] h-auto w-full cursor-crosshair touch-none"
+                  onMouseDown={startDrawing}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onMouseMove={draw}
+                  onTouchStart={startDrawing}
+                  onTouchEnd={stopDrawing}
+                  onTouchMove={draw}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="absolute bottom-2 left-2 h-8 w-8 rounded-full before:absolute before:-inset-1.5 before:content-['']"
+                  onClick={clearSignature}
+                  aria-label="Wyczyść rysunek"
+                  title="Wyczyść rysunek"
+                >
+                  <Eraser className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                </Button>
+              </div>
 
-          <DialogFooter className="flex-row gap-2 sm:flex-row">
-            <Button
-              type="button"
-              className={cn(
-                'flex-1 relative overflow-hidden transition-all border-2 border-transparent',
-                hasDrawn
-                  ? 'bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed',
-              )}
-              disabled={!hasDrawn}
-              onPointerDown={handleHoldStart}
-              onPointerUp={handleHoldEnd}
-              onPointerLeave={handleHoldEnd}
-              onPointerCancel={handleHoldEnd}
-            >
-              {/* Progress fill background */}
-              <span
-                className="absolute left-0 top-0 bottom-0 bg-emerald-500 transition-none"
-                style={{ width: `${holdProgress}%` }}
-              />
-              <span className="relative z-10 flex items-center gap-2">
-                <Check className={cn('w-4 h-4', isHolding && 'animate-pulse')} />
-                {isHolding ? 'Keep holding...' : 'Hold to confirm'}
-              </span>
-            </Button>
-          </DialogFooter>
+              <button
+                type="button"
+                onClick={() => setTypedMode(true)}
+                className="flex min-h-11 w-full items-center justify-center text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                Nie mogę podpisać odręcznie - wpisz imię i nazwisko
+              </button>
+
+              <DialogFooter className="flex-row gap-2 sm:flex-row">
+                {value ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="flex-shrink-0"
+                    onClick={handleReset}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Wyczyść
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  className={cn(
+                    'relative flex-1 min-h-11 overflow-hidden border-2 border-transparent transition-all',
+                    hasDrawn
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'cursor-not-allowed bg-muted text-muted-foreground',
+                  )}
+                  disabled={!hasDrawn}
+                  onPointerDown={handleHoldStart}
+                  onPointerUp={handleHoldEnd}
+                  onPointerLeave={handleHoldEnd}
+                  onPointerCancel={handleHoldEnd}
+                  onKeyDown={(event) => {
+                    if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
+                      handleHoldStart(event)
+                    }
+                  }}
+                  onKeyUp={(event) => {
+                    if (event.key === ' ' || event.key === 'Enter') {
+                      handleHoldEnd()
+                    }
+                  }}
+                >
+                  <span
+                    className="absolute bottom-0 left-0 top-0 bg-success transition-none"
+                    style={{ width: `${holdProgress}%` }}
+                    aria-hidden="true"
+                  />
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Check
+                      className={cn('h-4 w-4', isHolding && 'animate-pulse')}
+                      aria-hidden="true"
+                    />
+                    {isHolding ? 'Trzymaj...' : 'Przytrzymaj, aby potwierdzić'}
+                  </span>
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

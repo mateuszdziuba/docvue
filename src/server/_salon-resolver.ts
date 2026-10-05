@@ -1,4 +1,4 @@
-import { getSupabaseServerClient } from '../utils/supabase'
+import type { getSupabaseServerClient } from '../utils/supabase'
 
 export type CallerInfo = {
   salonId: string
@@ -21,11 +21,7 @@ export async function getCallerSalonId(
   if (!user) return null
 
   // Owner path
-  const { data: salon } = await supabase
-    .from('salons')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
+  const { data: salon } = await supabase.from('salons').select('id').eq('user_id', user.id).single()
   if (salon) return { salonId: salon.id, userId: user.id, isOwner: true }
 
   // Staff path

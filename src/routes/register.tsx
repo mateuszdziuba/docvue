@@ -1,16 +1,11 @@
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useRouter,
-} from '@tanstack/react-router'
-import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { signupFn } from '../server/auth'
-import { DocvueLogo } from '@/components/ui/docvue-logo'
+import { createFileRoute, Link, redirect, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { DocvueLogo } from '@/components/ui/docvue-logo'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { signupFn } from '../server/auth'
 
 export const Route = createFileRoute('/register')({
   beforeLoad: ({ context }) => {
@@ -35,7 +30,7 @@ function RegisterPage() {
           phone: value.phone || undefined,
         },
       })
-      if (result?.error) {
+      if (result && 'error' in result && result.error) {
         setServerError(result.error)
       } else {
         await router.invalidate()
@@ -59,20 +54,27 @@ function RegisterPage() {
               'Zdjęcia przed/po zabiegu',
             ].map((text) => (
               <div key={text} className="flex items-start gap-3">
-                <svg className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-4 h-4 text-primary mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
-                <span className="text-panel-emphasis text-sm leading-relaxed">
-                  {text}
-                </span>
+                <span className="text-panel-emphasis text-sm leading-relaxed">{text}</span>
               </div>
             ))}
           </div>
 
           <div className="pt-6 border-t border-white/10">
-            <p className="text-panel-emphasis text-sm font-medium">
-              14 dni Pro za darmo
-            </p>
+            <p className="text-panel-emphasis text-sm font-medium">14 dni Pro za darmo</p>
             <p className="text-panel-on-surface-tertiary text-xs mt-1">
               Bez karty kredytowej. Anuluj kiedy chcesz.
             </p>
@@ -106,7 +108,9 @@ function RegisterPage() {
           >
             <form.Field
               name="name"
-              validators={{ onBlur: ({ value }) => (!value ? 'Nazwa gabinetu jest wymagana' : undefined) }}
+              validators={{
+                onBlur: ({ value }) => (!value ? 'Nazwa gabinetu jest wymagana' : undefined),
+              }}
             >
               {(field) => (
                 <div className="space-y-1.5">
@@ -119,9 +123,19 @@ function RegisterPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    aria-invalid={field.state.meta.errors.length > 0 ? true : undefined}
+                    aria-describedby={
+                      field.state.meta.errors.length > 0 ? `${field.name}-error` : undefined
+                    }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                    <p
+                      id={`${field.name}-error`}
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {String(field.state.meta.errors[0])}
+                    </p>
                   )}
                 </div>
               )}
@@ -142,9 +156,19 @@ function RegisterPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    aria-invalid={field.state.meta.errors.length > 0 ? true : undefined}
+                    aria-describedby={
+                      field.state.meta.errors.length > 0 ? `${field.name}-error` : undefined
+                    }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                    <p
+                      id={`${field.name}-error`}
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {String(field.state.meta.errors[0])}
+                    </p>
                   )}
                 </div>
               )}
@@ -154,8 +178,7 @@ function RegisterPage() {
               {(field) => (
                 <div className="space-y-1.5">
                   <Label htmlFor="phone">
-                    Telefon{' '}
-                    <span className="text-muted-foreground font-normal">(opcjonalnie)</span>
+                    Telefon <span className="text-muted-foreground font-normal">(opcjonalnie)</span>
                   </Label>
                   <Input
                     id="phone"
@@ -192,28 +215,36 @@ function RegisterPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    aria-invalid={field.state.meta.errors.length > 0 ? true : undefined}
+                    aria-describedby={
+                      field.state.meta.errors.length > 0 ? `${field.name}-error` : undefined
+                    }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                    <p
+                      id={`${field.name}-error`}
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {String(field.state.meta.errors[0])}
+                    </p>
                   )}
                 </div>
               )}
             </form.Field>
 
             {serverError && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20">
+              <p
+                role="alert"
+                className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5 border border-destructive/20"
+              >
                 {serverError}
               </p>
             )}
 
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full"
-                  size="lg"
-                >
+                <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
                   {isSubmitting ? 'Tworzenie konta…' : 'Zarejestruj się bezpłatnie'}
                 </Button>
               )}
@@ -222,7 +253,10 @@ function RegisterPage() {
 
           <p className="text-center text-sm text-muted-foreground mt-7">
             Masz już konto?{' '}
-            <Link to="/login" className="text-foreground font-medium hover:text-primary transition-colors duration-150">
+            <Link
+              to="/login"
+              className="text-foreground font-medium hover:text-primary transition-colors duration-150"
+            >
               Zaloguj się
             </Link>
           </p>

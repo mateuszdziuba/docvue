@@ -1,6 +1,7 @@
-import { createServerFn } from '@tanstack/react-start'
 import { createClient } from '@supabase/supabase-js'
+import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { resolveSiteUrl } from './_site-url'
 
 // Admin client — uses SERVICE_ROLE key (server-only, never exposed to browser)
 function getSupabaseAdminClient() {
@@ -12,7 +13,9 @@ function getSupabaseAdminClient() {
 
 /** Get current user's salon ownership + staff status */
 async function resolveCallerSalon(supabase: ReturnType<typeof getSupabaseServerClient>) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return null
 
   // Try owner
@@ -20,7 +23,11 @@ async function resolveCallerSalon(supabase: ReturnType<typeof getSupabaseServerC
   if (salon) return { salonId: salon.id, userId: user.id, isOwner: true }
 
   // Try staff
-  const { data: staff } = await supabase.from('staff_members').select('salon_id, role').eq('user_id', user.id).single()
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('salon_id, role')
+    .eq('user_id', user.id)
+    .single()
   if (staff) return { salonId: staff.salon_id, userId: user.id, isOwner: false, role: staff.role }
 
   return null
@@ -31,7 +38,7 @@ async function resolveCallerSalon(supabase: ReturnType<typeof getSupabaseServerC
 export const getStaffFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
   const caller = await resolveCallerSalon(supabase)
-  if (!caller || !caller.isOwner) return { error: 'Brak uprawnień', data: null }
+  if (!caller) return { error: 'Brak uprawnień', data: null }
 
   const { data, error } = await supabase
     .from('staff_members')
@@ -50,7 +57,7 @@ export const inviteStaffFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await resolveCallerSalon(supabase)
-    if (!caller || !caller.isOwner) return { error: 'Brak uprawnień' }
+    if (!caller?.isOwner) return { error: 'Brak uprawnień' }
 
     // Check if email already invited to this salon
     const { data: existing } = await supabase
@@ -84,7 +91,7 @@ export const inviteStaffFn = createServerFn({ method: 'POST' })
         role: data.role || 'staff',
         name: data.name,
       },
-      redirectTo: `${process.env.VITE_SITE_URL ?? import.meta.env.VITE_SITE_URL ?? 'http://localhost:3000'}/accept-invite`,
+      redirectTo: `${resolveSiteUrl()}/accept-invite`,
     })
     if (inviteError) {
       // Clean up the staff record if invite failed
@@ -96,26 +103,40 @@ export const inviteStaffFn = createServerFn({ method: 'POST' })
   })
 
 export const updateStaffFn = createServerFn({ method: 'POST' })
-  .inputValidator((d: {
-    id: string
-    name?: string
-    role?: 'staff' | 'manager'
-    is_active?: boolean
-    avatar_path?: string | null
-  }) => d)
+  .inputValidator(
+    (d: {
+      id: string
+      name?: string
+      email?: string
+      role?: 'staff' | 'manager'
+      is_active?: boolean
+      avatar_path?: string | null
+    }) => d,
+  )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await resolveCallerSalon(supabase)
-    if (!caller || !caller.isOwner) return { error: 'Brak uprawnień' }
+    if (!caller?.isOwner) return { error: 'Brak uprawnień' }
 
-    const { id, ...updates } = data
+    const { id, ...rest } = data
+    const updates: Record<string, unknown> = { ...rest }
+    if (typeof updates.name === 'string') updates.name = updates.name.trim()
+    if (typeof updates.email === 'string') updates.email = updates.email.trim().toLowerCase()
+    if (updates.name === '') return { error: 'Imię i nazwisko jest wymagane' }
+    if (updates.email === '') return { error: 'Adres e-mail jest wymagany' }
+
     const { error } = await supabase
       .from('staff_members')
       .update(updates)
       .eq('id', id)
       .eq('salon_id', caller.salonId)
 
-    if (error) return { error: error.message }
+    if (error) {
+      if (/duplicate key|unique constraint/i.test(error.message)) {
+        return { error: 'Pracownik z tym adresem e-mail już istnieje' }
+      }
+      return { error: error.message }
+    }
     return { error: null }
   })
 
@@ -124,7 +145,7 @@ export const deleteStaffFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await resolveCallerSalon(supabase)
-    if (!caller || !caller.isOwner) return { error: 'Brak uprawnień' }
+    if (!caller?.isOwner) return { error: 'Brak uprawnień' }
 
     // Get user_id before deleting
     const { data: staff } = await supabase
@@ -146,9 +167,8 @@ export const deleteStaffFn = createServerFn({ method: 'POST' })
     if (staff?.user_id) {
       try {
         const admin = getSupabaseAdminClient()
-        await admin.auth.admin.updateUserById(staff.user_id, { ban_duration: 'none' })
-        // Note: to fully delete: admin.auth.admin.deleteUser(staff.user_id)
-        // We soft-ban instead to preserve audit trail
+        // Ban indefinitely so the account cannot sign in after losing access.
+        await admin.auth.admin.updateUserById(staff.user_id, { ban_duration: '876000h' })
       } catch {
         // Non-fatal if admin client unavailable
       }
@@ -161,18 +181,37 @@ export const deleteStaffFn = createServerFn({ method: 'POST' })
 // Called from /accept-invite after user sets password.
 export const linkStaffUserFn = createServerFn({ method: 'POST' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return { error: 'Brak sesji' }
 
-  // staff_member_id was stored in user metadata when the invite was sent
+  // staff_member_id was stored in user metadata when the invite was sent.
+  // Metadata is user-writable, so we additionally verify that the invite
+  // e-mail matches the authenticated user's e-mail before linking.
   const staffMemberId = user.user_metadata?.staff_member_id as string | undefined
   if (!staffMemberId) return { error: null } // Not an invite flow — no-op
 
-  const { error } = await supabase
+  const admin = getSupabaseAdminClient()
+  const { data: staffRow } = await admin
+    .from('staff_members')
+    .select('id, email, user_id')
+    .eq('id', staffMemberId)
+    .maybeSingle()
+
+  if (!staffRow || staffRow.user_id) return { error: null }
+
+  const userEmail = user.email?.trim().toLowerCase()
+  const staffEmail = staffRow.email?.trim().toLowerCase()
+  if (!userEmail || !staffEmail || userEmail !== staffEmail) {
+    return { error: 'Zaproszenie nie pasuje do tego adresu e-mail' }
+  }
+
+  const { error } = await admin
     .from('staff_members')
     .update({ user_id: user.id })
     .eq('id', staffMemberId)
-    .is('user_id', null) // Only link if not already linked
+    .is('user_id', null)
 
   if (error) return { error: error.message }
   return { error: null }

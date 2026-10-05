@@ -1,10 +1,12 @@
 'use client'
 
+import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 import { FormRenderer } from '@/components/form-renderer'
 import { useRouterCompat } from '@/lib/router-compat'
+import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placeholders'
 import { submitClientForm } from '@/src/server/client-forms'
-import type { Form } from '@/types/database'
+import type { Form, FormField } from '@/types/database'
 
 interface TokenFormClientProps {
   token: string
@@ -13,12 +15,24 @@ interface TokenFormClientProps {
   filledBy?: 'client' | 'staff'
   client?: unknown
   clientForm?: unknown
+  salon?: SalonContact | null
 }
 
-export function TokenFormClient({ token, form, filledBy = 'client' }: TokenFormClientProps) {
+export function TokenFormClient({
+  token,
+  form,
+  filledBy = 'client',
+  clientName,
+  client,
+  salon = null,
+}: TokenFormClientProps) {
   const router = useRouterCompat()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const fields: FormField[] = (form.schema as any)?.fields || []
+  const countableCount = fields.filter((f) => f.type !== 'separator').length
+  const resolvedClientName = clientName ?? (client as { name?: string } | null)?.name
 
   const handleSubmit = async (formData: Record<string, unknown>) => {
     setIsSubmitting(true)
@@ -47,23 +61,77 @@ export function TokenFormClient({ token, form, filledBy = 'client' }: TokenFormC
       signature: (signatureValue as string) || undefined,
     })
 
-    if (result.error) {
+    if ('error' in result && result.error) {
       setError(result.error)
       setIsSubmitting(false)
       return
     }
 
+    try {
+      sessionStorage.setItem(
+        'docvue.lastSubmission',
+        JSON.stringify({ formTitle: form.title, clientName: resolvedClientName ?? null }),
+      )
+    } catch {
+      // sessionStorage may be unavailable (private mode) — the success page has fallbacks.
+    }
     router.push(`/f/${token}/success`)
   }
 
   return (
-    <>
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400">
-          {error}
+    <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:py-16">
+      <div className="rounded-xl border border-border bg-background/70 shadow-[0_10px_30px_rgba(27,28,28,0.1)] backdrop-blur-xl">
+        <div className="p-6 sm:p-8">
+          <header className="mb-8 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+              Formularz przed wizytą
+            </p>
+            <h1 className="font-serif text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
+              {applySalonPlaceholders(form.title, salon)}
+            </h1>
+            {form.description && (
+              <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {applySalonPlaceholders(form.description, salon)}
+              </p>
+            )}
+            {salon?.name && (
+              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                {salon.name}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              {resolvedClientName && (
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                  {resolvedClientName}
+                </span>
+              )}
+              {countableCount > 0 && (
+                <span className="rounded-full bg-secondary-container px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-on-primary-container">
+                  {countableCount}{' '}
+                  {countableCount === 1 ? 'pole do wypełnienia' : 'pól do wypełnienia'}
+                </span>
+              )}
+            </div>
+          </header>
+
+          {error && (
+            <div
+              role="alert"
+              className="mb-6 flex items-start gap-2.5 rounded-xl border border-destructive/25 bg-destructive/10 p-4 text-sm leading-relaxed text-destructive"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          <FormRenderer
+            form={form}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            salon={salon}
+          />
         </div>
-      )}
-      <FormRenderer form={form} onSubmit={handleSubmit} isSubmitting={isSubmitting} />
-    </>
+      </div>
+    </div>
   )
 }

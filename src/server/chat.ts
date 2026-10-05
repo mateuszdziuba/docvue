@@ -1,7 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
+import { consumeRateLimit, rateLimitError } from '@/lib/rate-limit'
+import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
-import { callLLM, type LLMMessage } from './llm'
 import { findAvailableSlots } from './availability'
+import { callLLM, type LLMMessage } from './llm'
 
 export interface ToolCall {
   id: string
@@ -10,15 +12,6 @@ export interface ToolCall {
     name: string
     arguments: string
   }
-}
-
-interface ChatMessage {
-  id: string
-  salon_id: string
-  client_id: string
-  role: string
-  content: string
-  created_at: string
 }
 
 async function getClientId(supabase: ReturnType<typeof getSupabaseServerClient>) {
@@ -35,22 +28,34 @@ async function getClientId(supabase: ReturnType<typeof getSupabaseServerClient>)
 export const sendChatMessageFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { message: string }) => d)
   .handler(async ({ data }) => {
+    const message = (data.message ?? '').trim()
+    if (!message) return { error: 'Wiadomość nie może być pusta' }
+    if (message.length > 4000) {
+      return { error: 'Wiadomość jest zbyt długa (maks. 4000 znaków)' }
+    }
+
     const supabase = getSupabaseServerClient()
     const clientInfo = await getClientId(supabase)
     if (!clientInfo) return { error: 'Nie znaleziono profilu klienta' }
 
     const { clientId, salonId } = clientInfo
 
+    const limit = consumeRateLimit(`chat:${clientId}`, 20, 5 * 60_000)
+    if (!limit.ok) return { error: rateLimitError(limit).error }
+
+    const admin = await createAdminClient()
+
     // Save user message
-    await supabase.from('chat_messages').insert({
+    const { error: saveUserError } = await admin.from('chat_messages').insert({
       salon_id: salonId,
       client_id: clientId,
       role: 'user',
-      content: data.message,
+      content: message,
     })
+    if (saveUserError) console.error('Save user message error:', saveUserError.message)
 
     // Get conversation history
-    const { data: history } = await supabase
+    const { data: history } = await admin
       .from('chat_messages')
       .select('role, content, tool_calls')
       .eq('client_id', clientId)
@@ -65,15 +70,20 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
         tool_call_id: undefined,
       })) || []
 
+    const toolResults: Array<{ name: string; result: any }> = []
+
     // ----- Rule-based intent detection (fallback gdy AI nie woła narzędzi) -----
     const userMsg = data.message.toLowerCase()
-    const treatmentIntent = /szukam|poleć|pokaż|co (macie|polecasz)|na (twarz|cerę|skórę)|mam (suchą|tłustą|problem|trądzik|zmarszczki)|potrzebuję/.test(userMsg)
+    const treatmentIntent = /szukam|poleć|pokaż|co (macie|polecasz)|na (twarz|cerę|skórę)|mam (suchą|tłustą|problem|trądzik|zmarszczki)|potrzebuję|umów|zapis|chcę na|ile kosztuje|rezerwuj/.test(userMsg)
 
     if (treatmentIntent) {
-      const { data: allTx } = await supabase
+      let txQuery = admin
         .from('treatments')
         .select('id, name, description, duration_minutes, price, salon_id, indications')
+        .order('name')
         .limit(50)
+      if (salonId) txQuery = txQuery.eq('salon_id', salonId)
+      const { data: allTx } = await txQuery
 
       // Filter by relevance
       const searchWords = userMsg.replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 2)
@@ -87,7 +97,7 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
 
       if (matched.length > 0) {
         const ctx = matched.map((t: any) => {
-          return `- ${t.name}: ${t.description || ''} (${t.duration_minutes}min${t.price ? `, ${t.price}zł` : ''})`
+          return `- ${t.name} (id: ${t.id}, salon_id: ${t.salon_id}): ${t.description || ''} (${t.duration_minutes}min${t.price ? `, ${t.price}zł` : ''})`
         }).join('\n')
         messages.unshift({ role: 'system', content: `Znalezione zabiegi pasujące do zapytania:\n${ctx}\n\nPoleć je klientowi.` })
         toolResults.push({ name: 'searchTreatments', result: { treatments: matched } })
@@ -99,7 +109,6 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
     // Main LLM loop
     const MAX_ITERATIONS = 5
     let iterations = 0
-    const toolResults: Array<{ name: string; result: any }> = []
 
     try {
       while (iterations < MAX_ITERATIONS) {
@@ -109,12 +118,16 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
 
         if (!response.toolCalls || response.toolCalls.length === 0) {
           // LLM finished - return final response
-          await supabase.from('chat_messages').insert({
+          const { error: saveAssistantError } = await admin.from('chat_messages').insert({
             salon_id: salonId,
             client_id: clientId,
             role: 'assistant',
             content: response.content,
+            tool_calls: toolResults,
           })
+          if (saveAssistantError) {
+            console.error('Save assistant message error:', saveAssistantError.message)
+          }
 
           return {
             message: response.content,
@@ -135,14 +148,40 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
           let result: string
 
           try {
-            const toolResult = await executeTool(name, args, { supabase, clientId, salonId })
+            const toolResult = await executeTool(name, args, { supabase, admin, clientId, salonId })
             result = JSON.stringify(toolResult)
             // Track for frontend rendering
             if (name === 'searchTreatments' || name === 'findAvailableSlots' || name === 'getRequiredForms' || name === 'bookAppointment') {
-              toolResults.push({ name, result: toolResult })
+              if (name === 'findAvailableSlots') {
+                toolResults.push({
+                  name,
+                  result: {
+                    ...(toolResult as Record<string, unknown>),
+                    treatmentId: (args.treatmentId as string | undefined) ?? null,
+                    salonId: (args.salonId as string | undefined) || salonId,
+                  },
+                })
+              } else {
+                toolResults.push({ name, result: toolResult })
+              }
             }
           } catch (e) {
-            result = JSON.stringify({ error: (e as Error).message })
+            const rawMessage = (e as Error).message
+            const isDateError =
+              rawMessage.includes('Invalid time value') ||
+              rawMessage.includes('Invalid Date') ||
+              e instanceof RangeError
+            if (isDateError) {
+              result = JSON.stringify({
+                error:
+                  'Nieprawidłowy format daty. Podaj datę i godzinę w formacie ISO 8601, np. 2026-08-10T10:00:00.',
+              })
+            } else {
+              console.error('Tool execution error:', rawMessage)
+              result = JSON.stringify({
+                error: 'Wystąpił błąd podczas przetwarzania narzędzia. Spróbuj ponownie.',
+              })
+            }
           }
 
         // Add assistant message with tool call
@@ -171,8 +210,8 @@ export const sendChatMessageFn = createServerFn({ method: 'POST' })
   } catch (e) {
     const errorMessage = (e as Error).message
     console.error('Chat LLM error:', errorMessage)
-    if (errorMessage.includes('GROQ_API_KEY')) {
-      return { error: 'Klucz API AI nie jest skonfigurowany. Dodaj GROQ_API_KEY do .env.' }
+    if (errorMessage.includes('Brak skonfigurowanego AI')) {
+      return { error: 'Asystent AI nie jest skonfigurowany. Dodaj DEEPSEEK_API_KEY, GEMINI_API_KEY lub GROQ_API_KEY do .env.' }
     }
     if (errorMessage.includes('rate_limit') || errorMessage.includes('429')) {
       return { error: 'Zbyt wiele zapytań. Odczekaj chwilę i spróbuj ponownie.' }
@@ -189,18 +228,21 @@ async function executeTool(
   args: Record<string, unknown>,
   context: {
     supabase: ReturnType<typeof getSupabaseServerClient>
+    admin: Awaited<ReturnType<typeof createAdminClient>>
     clientId: string
     salonId: string | null
   },
 ): Promise<unknown> {
-  const { supabase, clientId, salonId } = context
+  const { supabase, admin, clientId, salonId } = context
 
-  const targetSalonId = (args.salonId as string | undefined) || salonId
+  // Salon z sesji klienta ma pierwszeństwo — argumenty narzędzi LLM nie mogą
+  // przekierować rozmowy do innego gabinetu (ochrona przed prompt injection).
+  const targetSalonId = salonId ?? (args.salonId as string | undefined) ?? null
 
   switch (name) {
     case 'searchTreatments': {
       const query = (args.query as string) || ''
-      let dbQuery = supabase
+      let dbQuery = admin
         .from('treatments')
         .select(`
           id, name, description, duration_minutes, price, salon_id, indications,
@@ -252,11 +294,12 @@ async function executeTool(
 
       let durationMinutes = 60
       if (treatmentId) {
-        const { data: treatment } = await supabase
+        let treatmentQuery = supabase
           .from('treatments')
           .select('duration_minutes')
           .eq('id', treatmentId)
-          .single()
+        if (targetSalonId) treatmentQuery = treatmentQuery.eq('salon_id', targetSalonId)
+        const { data: treatment } = await treatmentQuery.maybeSingle()
         if (treatment) durationMinutes = treatment.duration_minutes
       }
 
@@ -264,14 +307,14 @@ async function executeTool(
       const dayEnd = `${date}T23:59:59`
 
       const [aptResult, blockResult] = await Promise.all([
-        supabase
+        admin
           .from('appointments')
           .select('start_time, duration_minutes')
           .eq('salon_id', targetSalonId)
           .gte('start_time', dayStart)
           .lt('start_time', dayEnd)
           .neq('status', 'cancelled'),
-        supabase
+        admin
           .from('time_blocks')
           .select('start_time, end_time')
           .eq('salon_id', targetSalonId)
@@ -297,7 +340,7 @@ async function executeTool(
 
     case 'getRequiredForms': {
       const treatmentId = args.treatmentId as string
-      const { data: treatmentForms } = await supabase
+      const { data: treatmentForms } = await admin
         .from('treatment_forms')
         .select('form_id, forms (id, title, description)')
         .eq('treatment_id', treatmentId)
@@ -306,7 +349,7 @@ async function executeTool(
       let submittedFormIds: string[] = []
 
       if (formIds.length > 0) {
-        const { data: submissions } = await supabase
+        const { data: submissions } = await admin
           .from('submissions')
           .select('form_id')
           .eq('client_id', clientId)
@@ -314,14 +357,33 @@ async function executeTool(
         submittedFormIds = submissions?.map((s) => s.form_id) || []
       }
 
-      const forms = (treatmentForms || []).map((tf) => ({
-        id: tf.form_id,
-        title: (tf.forms as { title?: string } | null)?.title || '',
-        description: (tf.forms as { description?: string | null } | null)?.description || null,
-        filled: submittedFormIds.includes(tf.form_id),
-      }))
+      let pendingClientForms: Array<{ form_id: string; token: string }> = []
+      if (formIds.length > 0) {
+        const { data } = await admin
+          .from('client_forms')
+          .select('form_id, token')
+          .eq('client_id', clientId)
+          .in('form_id', formIds)
+          .eq('status', 'pending')
+        pendingClientForms = (data || []) as Array<{ form_id: string; token: string }>
+      }
+      const tokenMap = new Map(pendingClientForms.map((cf) => [cf.form_id, cf.token]))
 
-      return { forms }
+      const forms = (treatmentForms || []).map((tf) => {
+        const filled = submittedFormIds.includes(tf.form_id)
+        const token = tokenMap.get(tf.form_id)
+        return {
+          id: tf.form_id,
+          title: (tf.forms as { title?: string } | null)?.title || '',
+          description: (tf.forms as { description?: string | null } | null)?.description || null,
+          filled,
+          ...(token ? { token, fillUrl: `/f/${token}` } : {}),
+        }
+      })
+
+      const unfilledForms = forms.filter((f) => !f.filled)
+
+      return { forms: unfilledForms }
     }
 
     case 'bookAppointment': {
@@ -329,46 +391,94 @@ async function executeTool(
       const startTime = args.startTime as string
       if (!targetSalonId) return { error: 'Nie określono gabinetu.' }
 
-      const { data: requiredForms } = await supabase
-        .from('treatment_forms')
-        .select('form_id')
-        .eq('treatment_id', treatmentId)
+      let treatmentQuery = admin
+        .from('treatments')
+        .select(`
+          id, name, duration_minutes, price, salon_id,
+          salons!inner(id, name, address)
+        `)
+        .eq('id', treatmentId)
+      if (targetSalonId) {
+        treatmentQuery = treatmentQuery.eq('salon_id', targetSalonId)
+      }
 
-      const requiredFormIds = requiredForms?.map((r) => r.form_id) || []
-      let status: 'scheduled' | 'pending_forms' = 'scheduled'
+      const { data: treatment } = await treatmentQuery.single()
+      if (!treatment) {
+        return { error: 'Nie znaleziono zabiegu. Użyj narzędzia searchTreatments, aby znaleźć dostępne zabiegi.' }
+      }
 
-      if (requiredFormIds.length > 0) {
-        const { data: clientSubmissions } = await supabase
-          .from('submissions')
-          .select('form_id')
-          .eq('client_id', clientId)
-          .in('form_id', requiredFormIds)
-        const submittedSet = new Set(clientSubmissions?.map((s) => s.form_id) || [])
-        if (!requiredFormIds.every((id) => submittedSet.has(id))) {
-          status = 'pending_forms'
+      const durationMinutes = treatment.duration_minutes as number
+      const start = new Date(startTime)
+      const end = new Date(start.getTime() + durationMinutes * 60000)
+
+      const dayStart = new Date(start)
+      dayStart.setHours(0, 0, 0, 0)
+      const dayEnd = new Date(start)
+      dayEnd.setHours(23, 59, 59, 999)
+
+      const parsedStart = new Date(startTime)
+      if (Number.isNaN(parsedStart.getTime())) {
+        return {
+          error:
+            'Nieprawidłowy format daty. Podaj datę i godzinę w formacie ISO 8601, np. 2026-08-10T10:00:00.',
         }
       }
 
-      const { data: appointment, error } = await supabase
-        .from('appointments')
-        .insert({
-          salon_id: targetSalonId,
-          client_id: clientId,
-          treatment_id: treatmentId,
-          start_time: startTime,
-          status,
-        })
-        .select('*, treatments (name, duration_minutes, price)')
-        .single()
-
-      if (error) return { error: error.message }
-
-      // Auto-assign client to salon after first booking
-      if (!salonId && targetSalonId) {
-        await supabase.from('clients').update({ salon_id: targetSalonId }).eq('id', clientId)
+      if (parsedStart.getTime() <= Date.now()) {
+        return { error: 'Nie można umówić wizyty w przeszłości. Sprawdź dostępne terminy narzędziem findAvailableSlots.' }
       }
 
-      return { appointment, status }
+      const { data: blocks } = await admin
+        .from('time_blocks')
+        .select('start_time, end_time')
+        .eq('salon_id', treatment.salon_id)
+        .lt('start_time', dayEnd.toISOString())
+        .gt('end_time', dayStart.toISOString())
+
+      const hasBlockOverlap = (blocks || []).some((block) => {
+        const blockStart = new Date(block.start_time)
+        const blockEnd = new Date(block.end_time)
+        return start < blockEnd && end > blockStart
+      })
+
+      if (hasBlockOverlap) {
+        return { error: 'Ten termin jest niedostępny. Sprawdź dostępne terminy narzędziem findAvailableSlots.' }
+      }
+
+      const { data: existing } = await admin
+        .from('appointments')
+        .select('start_time, duration_minutes')
+        .eq('salon_id', treatment.salon_id)
+        .gte('start_time', dayStart.toISOString())
+        .lt('start_time', dayEnd.toISOString())
+        .neq('status', 'cancelled')
+
+      const hasOverlap = (existing || []).some((apt) => {
+        const aptStart = new Date(apt.start_time)
+        const aptEnd = new Date(aptStart.getTime() + apt.duration_minutes * 60000)
+        return start < aptEnd && end > aptStart
+      })
+
+      if (hasOverlap) return { error: 'Termin jest już zajęty.' }
+
+      const salon = treatment.salons as unknown as {
+        name: string
+        address: string | null
+      } | null
+
+      return {
+        needsConfirmation: true,
+        offer: {
+          treatmentId: treatment.id,
+          treatmentName: treatment.name,
+          price: treatment.price as number | null,
+          durationMinutes,
+          salonId: treatment.salon_id,
+          salonName: salon?.name || '',
+          salonAddress: salon?.address ?? null,
+          startTime,
+        },
+      }
     }
 
     case 'getClientInfo': {
@@ -400,10 +510,92 @@ export const getChatHistoryFn = createServerFn({ method: 'GET' }).handler(async 
 
   const { data } = await supabase
     .from('chat_messages')
-    .select('id, salon_id, client_id, role, content, created_at')
+    .select('id, salon_id, client_id, role, content, tool_calls, created_at')
     .eq('client_id', clientInfo.clientId)
     .order('created_at', { ascending: false })
     .limit(20)
 
-  return { history: data || [] }
+  const history =
+    data?.map((m) => {
+      const tc = m.tool_calls
+      let toolCalls: any[] = []
+      if (typeof tc === 'string') {
+        try {
+          toolCalls = JSON.parse(tc)
+        } catch {
+          toolCalls = []
+        }
+      } else if (Array.isArray(tc)) {
+        toolCalls = tc
+      }
+      return {
+        id: m.id,
+        salon_id: m.salon_id,
+        client_id: m.client_id,
+        role: m.role,
+        content: m.content,
+        tool_calls: toolCalls,
+        created_at: m.created_at,
+      }
+    }) || []
+
+  const formToolIds = new Set<string>()
+  for (const msg of history) {
+    for (const tool of msg.tool_calls) {
+      if (
+        (tool?.name === 'bookingResult' || tool?.name === 'getRequiredForms') &&
+        Array.isArray(tool.result?.forms)
+      ) {
+        for (const form of tool.result.forms) {
+          if (form?.id) formToolIds.add(form.id)
+        }
+      }
+    }
+  }
+
+  let filledFormIds = new Set<string>()
+  if (formToolIds.size > 0) {
+    const admin = await createAdminClient()
+    const { data: submissions } = await admin
+      .from('submissions')
+      .select('form_id')
+      .eq('client_id', clientInfo.clientId)
+      .in('form_id', [...formToolIds])
+    filledFormIds = new Set((submissions ?? []).map((s) => s.form_id))
+  }
+
+  const historyWithFreshFillStatus = history.map((msg) => {
+    const toolCalls = msg.tool_calls.map((tool) => {
+      if (tool?.name === 'getRequiredForms' && Array.isArray(tool.result?.forms)) {
+        return {
+          ...tool,
+          result: {
+            ...tool.result,
+            forms: tool.result.forms.filter(
+              (form: { id: string }) => !filledFormIds.has(form.id),
+            ),
+          },
+        }
+      }
+      if (tool?.name !== 'bookingResult' || !Array.isArray(tool.result?.forms)) return tool
+      return {
+        ...tool,
+        result: {
+          ...tool.result,
+          forms: tool.result.forms.map(
+            (form: { id: string; title: string; token: string; fillUrl: string }) => ({
+              id: form.id,
+              title: form.title,
+              token: form.token,
+              fillUrl: form.fillUrl,
+              filled: filledFormIds.has(form.id),
+            }),
+          ),
+        },
+      }
+    })
+    return { ...msg, tool_calls: toolCalls }
+  })
+
+  return { history: historyWithFreshFillStatus }
 })

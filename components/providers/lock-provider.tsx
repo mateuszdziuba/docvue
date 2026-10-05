@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { LockScreen } from '@/components/admin/lock-screen'
 
 interface LockContextType {
@@ -35,7 +35,10 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
   return (
     <LockContext.Provider value={{ isLocked, lock, unlock }}>
       {mounted && isLocked && <LockScreen onUnlock={unlock} />}
-      <div aria-hidden={mounted && isLocked ? true : undefined} style={mounted && isLocked ? { position: 'fixed', inset: 0, overflow: 'hidden' } : undefined}>
+      <div
+        aria-hidden={mounted && isLocked ? true : undefined}
+        inert={mounted && isLocked ? true : undefined}
+      >
         {children}
       </div>
     </LockContext.Provider>

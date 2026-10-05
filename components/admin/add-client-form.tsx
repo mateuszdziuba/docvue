@@ -1,17 +1,18 @@
 'use client'
 
-import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { createClientAction } from '@/src/server/clients'
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { createClientAction } from '@/src/server/clients'
 
 interface AddClientFormProps {
   onSuccess?: () => void
   onCancel?: () => void
 }
-
-const inputClasses =
-  'w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-ring/40 focus:border-primary outline-none transition-all'
 
 export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
   const [serverError, setServerError] = useState<string | null>(null)
@@ -20,7 +21,10 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
     defaultValues: { name: '', phone: '+48 ', email: '', birthDate: '', notes: '' },
     onSubmit: async ({ value }) => {
       setServerError(null)
-      if (!value.name.trim()) { setServerError('Imię i nazwisko jest wymagane'); return }
+      if (!value.name.trim()) {
+        setServerError('Imię i nazwisko jest wymagane')
+        return
+      }
       if (!value.phone.trim() || value.phone.trim() === '+48') {
         setServerError('Numer telefonu jest wymagany')
         return
@@ -46,7 +50,11 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); void form.handleSubmit() }}
+      onSubmit={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        void form.handleSubmit()
+      }}
       className="space-y-4"
     >
       {serverError && (
@@ -62,16 +70,16 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
         >
           {(field) => (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <Label htmlFor="client-name" className="text-sm font-medium text-foreground mb-1">
                 Imię i nazwisko *
-              </label>
-              <input
+              </Label>
+              <Input
+                id="client-name"
                 type="text"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 placeholder="Anna Kowalska"
-                className={inputClasses}
               />
               {field.state.meta.errors.length > 0 && (
                 <p className="mt-0.5 text-xs text-destructive">{field.state.meta.errors[0]}</p>
@@ -89,16 +97,16 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
         >
           {(field) => (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <Label htmlFor="client-phone" className="text-sm font-medium text-foreground mb-1">
                 Telefon *
-              </label>
-              <input
+              </Label>
+              <Input
+                id="client-phone"
                 type="tel"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 placeholder="+48 123 456 789"
-                className={inputClasses}
               />
               {field.state.meta.errors.length > 0 && (
                 <p className="mt-0.5 text-xs text-destructive">{field.state.meta.errors[0]}</p>
@@ -112,16 +120,16 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
         <form.Field name="email">
           {(field) => (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <Label htmlFor="client-email" className="text-sm font-medium text-foreground mb-1">
                 Email (opcjonalnie)
-              </label>
-              <input
+              </Label>
+              <Input
+                id="client-email"
                 type="email"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 placeholder="anna@example.com"
-                className={inputClasses}
               />
             </div>
           )}
@@ -130,9 +138,7 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
         <form.Field name="birthDate">
           {(field) => (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Data urodzenia
-              </label>
+              <Label className="text-sm font-medium text-foreground mb-1">Data urodzenia</Label>
               <DatePicker
                 date={field.state.value ? new Date(field.state.value) : undefined}
                 setDate={(date) => field.handleChange(date ? date.toISOString() : '')}
@@ -146,16 +152,16 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
       <form.Field name="notes">
         {(field) => (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <Label htmlFor="client-notes" className="text-sm font-medium text-foreground mb-1">
               Notatki
-            </label>
-            <textarea
+            </Label>
+            <Textarea
+              id="client-notes"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               placeholder="Dodatkowe informacje o kliencie..."
               rows={2}
-              className={inputClasses}
             />
           </div>
         )}
@@ -163,23 +169,15 @@ export function AddClientForm({ onSuccess, onCancel }: AddClientFormProps) {
 
       <div className="flex justify-end gap-3 pt-2">
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-muted-foreground hover:text-foreground"
-          >
+          <Button type="button" variant="ghost" onClick={onCancel}>
             Anuluj
-          </button>
+          </Button>
         )}
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors disabled:opacity-50"
-            >
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Dodawanie...' : 'Dodaj klienta'}
-            </button>
+            </Button>
           )}
         </form.Subscribe>
       </div>

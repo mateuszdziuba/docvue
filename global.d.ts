@@ -59,5 +59,9 @@ interface ImportMeta {
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
+  readonly VITE_SITE_URL: string | undefined
+  readonly DEV: boolean
+  readonly PROD: boolean
+  readonly MODE: string
   [key: string]: string | boolean | undefined
 }

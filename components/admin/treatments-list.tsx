@@ -1,30 +1,106 @@
 'use client'
 
-import { useState } from 'react'
-import { Treatment, Form } from '@/types/database'
-import { AddTreatmentDialog } from './add-treatment-dialog'
-import { EditTreatmentDialog } from './edit-treatment-dialog'
-import { createClient } from '@/lib/supabase/client'
+import { Briefcase, FileText } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Combobox } from '@/components/ui/combobox'
+import { EmptyState } from '@/components/ui/empty-state'
+import { SearchInput } from '@/components/ui/search-input'
 import { useRouterCompat } from '@/lib/router-compat'
+import { deleteTreatmentFn } from '@/src/server/treatments'
+import type { Form, Treatment } from '@/types/database'
+import { AddTreatmentDialog } from './add-treatment-dialog'
+import { DeleteIconButton } from './delete-icon-button'
+import { EditTreatmentDialog } from './edit-treatment-dialog'
 
 interface TreatmentsListProps {
-  treatments: (Treatment & { treatment_forms: { forms: { id: string, title: string } | null }[] })[]
+  treatments: (Treatment & { treatment_forms: { forms: { id: string; title: string } | null }[] })[]
   forms: Pick<Form, 'id' | 'title'>[]
   query?: string
   isOwner?: boolean
 }
 
-export function TreatmentsList({ treatments, forms, isOwner = false }: TreatmentsListProps) {
+const currency = new Intl.NumberFormat('pl-PL', {
+  style: 'currency',
+  currency: 'PLN',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
+function formatPrice(treatment: Treatment): string | null {
+  if (treatment.price === null || treatment.price === undefined) return null
+  if (treatment.price_max && treatment.price_max > treatment.price) {
+    return `${currency.format(treatment.price)} – ${currency.format(treatment.price_max)}`
+  }
+  return currency.format(treatment.price)
+}
+
+export function TreatmentsList({
+  treatments,
+  forms,
+  query = '',
+  isOwner = false,
+}: TreatmentsListProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
-  const supabase = createClient()
+  const [category, setCategory] = useState<string>('all')
   const router = useRouterCompat()
+
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of treatments) set.add(t.category?.trim() || 'Bez kategorii')
+    return [...set].sort((a, b) => a.localeCompare(b, 'pl'))
+  }, [treatments])
+
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of treatments) {
+      const key = t.category?.trim() || 'Bez kategorii'
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  }, [treatments])
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Wszystkie kategorie', hint: String(treatments.length) },
+      ...categories.map((c) => ({
+        value: c,
+        label: c,
+        hint: String(categoryCounts.get(c) ?? 0),
+      })),
+    ],
+    [categories, categoryCounts, treatments.length],
+  )
+
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof treatments>()
+    for (const t of treatments) {
+      const key = t.category?.trim() || 'Bez kategorii'
+      if (category !== 'all' && key !== category) continue
+      const list = map.get(key) ?? []
+      list.push(t)
+      map.set(key, list)
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'pl'))
+  }, [treatments, category])
 
   const handleDelete = async (id: string) => {
     try {
       setIsDeleting(id)
-      const { error } = await supabase.from('treatments').delete().eq('id', id)
-      if (error) throw error
+      const result = await deleteTreatmentFn({ data: { id } })
+      if ('error' in result && result.error) throw new Error(result.error)
       toast.success('Zabieg został usunięty')
       router.refresh()
     } catch (error) {
@@ -37,88 +113,156 @@ export function TreatmentsList({ treatments, forms, isOwner = false }: Treatment
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        {isOwner && <AddTreatmentDialog forms={forms} />}
-      </div>
-
-      <div className="grid gap-4">
-        {treatments.map((treatment) => (
-          <div
-            key={treatment.id}
-            className="flex items-center justify-between p-4 bg-card rounded-xl border border-border/60"
-          >
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">
-                {treatment.name}
-              </h3>
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {treatment.duration_minutes} min
-                </span>
-                {treatment.price && (
-                  <span className="flex items-center gap-1 font-medium text-foreground">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {treatment.price} PLN
-                  </span>
-                )}
-              </div>
-              {treatment.treatment_forms && treatment.treatment_forms.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {treatment.treatment_forms.map((tf, idx) => (
-                    tf.forms && (
-                      <div key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-medium text-primary">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l5.414 5.414a1 1 0 01.586 1.414V19a2 2 0 01-2 2z" />
-                        </svg>
-                        {tf.forms.title}
-                      </div>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {isOwner && (
-                <>
-                  <EditTreatmentDialog treatment={treatment as any} forms={forms} />
-                  <button
-                    onClick={() => handleDelete(treatment.id)}
-                    disabled={isDeleting === treatment.id}
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    title="Usuń zabieg"
-                  >
-                    {isDeleting === treatment.id ? (
-                      <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    )}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {treatments.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground bg-secondary/30 rounded-xl border border-dashed border-border">
-            <svg className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <h3 className="text-lg font-medium text-foreground">Brak zabiegów</h3>
-            <p className="max-w-sm mx-auto mt-1">
-              Dodaj pierwszy zabieg do swojej oferty, aby móc umawiać wizyty.
-            </p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <SearchInput placeholder="Szukaj zabiegów…" />
+        {categories.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span
+              id="treatment-category-label"
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
+              Kategoria
+            </span>
+            <Combobox
+              options={categoryOptions}
+              value={category}
+              onChange={setCategory}
+              aria-labelledby="treatment-category-label"
+              placeholder="Wybierz kategorię"
+              searchPlaceholder="Szukaj kategorii…"
+              emptyText="Brak kategorii."
+              className="h-10 w-full bg-card sm:w-72"
+            />
           </div>
         )}
+        <div className="sm:ml-auto">{isOwner && <AddTreatmentDialog forms={forms} />}</div>
       </div>
+
+      {groups.map(([groupName, items]) => (
+        <section key={groupName} aria-label={groupName} className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-serif text-lg text-foreground">{groupName}</h2>
+            <span className="text-xs text-muted-foreground">{items.length}</span>
+          </div>
+          <div className="grid gap-3">
+            {items.map((treatment) => {
+              const price = formatPrice(treatment)
+              return (
+                <div
+                  key={treatment.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-card rounded-xl border border-border/60"
+                >
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-foreground">{treatment.name}</h3>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        {treatment.duration_minutes} min
+                      </span>
+                      {price && <span className="font-medium text-foreground">{price}</span>}
+                      {treatment.online_booking && (
+                        <Badge className="border-transparent rounded-full bg-info-container px-2.5 py-0.5 text-xs font-medium text-on-info-container">
+                          Rezerwacja online
+                        </Badge>
+                      )}
+                    </div>
+                    {treatment.treatment_forms && treatment.treatment_forms.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {treatment.treatment_forms.map(
+                          (tf) =>
+                            tf.forms && (
+                              <Badge
+                                key={tf.forms.id}
+                                className="gap-1.5 rounded-md border-transparent bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                              >
+                                <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                                {tf.forms.title}
+                              </Badge>
+                            ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {isOwner && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <EditTreatmentDialog treatment={treatment} forms={forms} />
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DeleteIconButton
+                            label={`Usuń zabieg ${treatment.name}`}
+                            disabled={isDeleting === treatment.id}
+                            className="h-11 w-11"
+                            iconClassName="h-5 w-5"
+                          >
+                            {isDeleting === treatment.id ? (
+                              <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : undefined}
+                          </DeleteIconButton>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Usuń zabieg</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Czy na pewno chcesz usunąć zabieg „{treatment.name}”? Tej operacji nie
+                              można cofnąć.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(treatment.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Usuń zabieg
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      ))}
+
+      {treatments.length === 0 && (
+        <div className="rounded-xl border border-dashed border-border bg-secondary/30">
+          <EmptyState
+            icon={<Briefcase className="h-6 w-6" aria-hidden="true" />}
+            title={query ? 'Brak wyników wyszukiwania' : 'Brak zabiegów'}
+            description={
+              query
+                ? `Nie znaleziono zabiegów pasujących do zapytania „${query}”.`
+                : 'Dodaj pierwszy zabieg do swojej oferty, aby móc umawiać wizyty.'
+            }
+          />
+        </div>
+      )}
+
+      {treatments.length > 0 && groups.length === 0 && (
+        <div className="rounded-xl border border-dashed border-border bg-secondary/30">
+          <EmptyState
+            title="Brak zabiegów w tej kategorii"
+            description="Zmień filtr kategorii, aby zobaczyć pozostałe zabiegi."
+          />
+        </div>
+      )}
     </div>
   )
 }

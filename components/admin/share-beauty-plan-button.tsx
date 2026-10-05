@@ -1,51 +1,54 @@
 'use client'
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Check, Copy, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 
 export function ShareBeautyPlanButton({ planId }: { planId: string }) {
   const [copied, setCopied] = useState(false)
 
-  const shareUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/share/beauty-plan/${planId}`
-    : ''
+  const buildShareUrl = () => `${window.location.origin}/share/beauty-plan/${planId}`
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(buildShareUrl())
       setCopied(true)
-      toast.success('Link skopiowany do schowka!')
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+      toast.success('Link do planu skopiowany do schowka')
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
       toast.error('Nie udało się skopiować linku')
     }
   }
 
   const handleOpen = () => {
-    window.open(shareUrl, '_blank')
+    window.open(buildShareUrl(), '_blank', 'noopener,noreferrer')
   }
 
   return (
     <div className="flex items-center gap-2">
-      <Button 
-        variant="outline" 
-        size="sm" 
+      <Button
+        variant="outline"
+        size="sm"
         onClick={handleCopy}
-        className="h-8 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors px-3 font-semibold"
+        aria-label={copied ? 'Skopiowano link do planu' : 'Skopiuj link do planu'}
+        className="border-success/30 bg-success-container font-semibold text-on-success-container hover:bg-success-container/80"
       >
-        {copied ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-        Kopiuj link
+        {copied ? (
+          <Check className="mr-1.5 h-3.5 w-3.5" />
+        ) : (
+          <Copy className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        {copied ? 'Skopiowano' : 'Kopiuj link'}
       </Button>
-      <Button 
-        variant="ghost" 
-        size="icon" 
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleOpen}
-        title="Otwórz podgląd w nowej karcie"
-        className="h-8 w-8 text-muted-foreground hover:text-emerald-500"
+        aria-label="Podgląd planu pielęgnacyjnego w nowej karcie"
       >
-        <ExternalLink className="w-4 h-4" />
+        <ExternalLink className="mr-1.5 h-4 w-4" />
+        Podgląd
       </Button>
     </div>
   )

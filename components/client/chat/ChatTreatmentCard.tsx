@@ -1,5 +1,5 @@
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 interface Treatment {
   id: string
@@ -36,7 +36,7 @@ export function ChatTreatmentCard({ treatments, onSelect }: ChatTreatmentCardPro
                   {t.description}
                 </p>
               )}
-              <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                 <span>{t.duration_minutes} min</span>
                 {t.price && <span>{t.price} zł</span>}
                 <span className="truncate">{t.salon_name}</span>
