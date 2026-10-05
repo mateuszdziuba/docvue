@@ -9,8 +9,8 @@ import { consumeRateLimit, rateLimitError, requestIp } from '@/lib/rate-limit'
 import { generateSecureToken, isValidFormToken } from '@/lib/secure-token'
 import type { FormField, FormSchema } from '@/types/database'
 import { createAdminClient } from '../../lib/supabase/admin'
-import { getVerifiedUser } from './_auth'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 
 const SALON_PUBLIC_COLUMNS = 'name, address, phone, email, website, social_media'
 
@@ -117,6 +117,57 @@ export const assignFormToClientFn = createServerFn({ method: 'POST' })
 
     if (error) return { error: error.message }
     return { clientForm, token }
+  })
+
+export const getOrCreateFormTokenFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { clientId: string; formId: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const salonId = await getSalonId(supabase)
+    if (!salonId) return { error: 'Nie jesteś zalogowany' }
+
+    const [{ data: clientRow }, { data: formRow }] = await Promise.all([
+      supabase
+        .from('clients')
+        .select('id')
+        .eq('id', data.clientId)
+        .eq('salon_id', salonId)
+        .maybeSingle(),
+      supabase
+        .from('forms')
+        .select('id')
+        .eq('id', data.formId)
+        .eq('salon_id', salonId)
+        .maybeSingle(),
+    ])
+    if (!clientRow) return { error: 'Nie znaleziono klienta' }
+    if (!formRow) return { error: 'Nie znaleziono formularza' }
+
+    const { data: existing } = await supabase
+      .from('client_forms')
+      .select('token')
+      .eq('client_id', data.clientId)
+      .eq('form_id', data.formId)
+      .eq('salon_id', salonId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (existing?.token) return { token: existing.token }
+
+    const token = generateSecureToken()
+    const { data: created, error } = await supabase
+      .from('client_forms')
+      .insert({
+        salon_id: salonId,
+        client_id: data.clientId,
+        form_id: data.formId,
+        token,
+        status: 'pending',
+      })
+      .select('token')
+      .single()
+    if (error || !created) return { error: 'Nie udało się utworzyć linku do formularza' }
+    return { token: created.token }
   })
 
 export const getClientFormsFn = createServerFn({ method: 'GET' })

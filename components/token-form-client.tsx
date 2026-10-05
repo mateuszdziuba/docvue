@@ -70,12 +70,17 @@ export function TokenFormClient({
     try {
       sessionStorage.setItem(
         'docvue.lastSubmission',
-        JSON.stringify({ formTitle: form.title, clientName: resolvedClientName ?? null }),
+        JSON.stringify({
+          formTitle: form.title,
+          clientName: resolvedClientName ?? null,
+          filledBy,
+          source: filledBy === 'staff' ? 'salon' : 'client',
+        }),
       )
     } catch {
       // sessionStorage may be unavailable (private mode) — the success page has fallbacks.
     }
-    router.push(`/f/${token}/success`)
+    router.replace(`/f/${token}/success`)
   }
 
   return (

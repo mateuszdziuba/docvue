@@ -1,7 +1,7 @@
 'use client'
 
 import { Link, useRouterState } from '@tanstack/react-router'
-import { CalendarDays, MessageCircle, User, type LucideIcon } from 'lucide-react'
+import { CalendarDays, type LucideIcon, MessageCircle, User } from 'lucide-react'
 
 export const clientNavItems: Array<{
   label: string
@@ -34,12 +34,18 @@ export function ClientBottomNav() {
               key={to}
               to={to}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors ${
+              className={`relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors ${
                 active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
+              {active && (
+                <span
+                  className="absolute top-0 h-0.5 w-7 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              )}
               <Icon className="h-5 w-5" aria-hidden="true" />
-              <span className="text-xs font-medium">{label}</span>
+              <span className={`text-xs ${active ? 'font-semibold' : 'font-medium'}`}>{label}</span>
             </Link>
           )
         })}

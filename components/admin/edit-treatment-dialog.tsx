@@ -36,9 +36,17 @@ export function EditTreatmentDialog({ treatment, forms }: EditTreatmentDialogPro
     .filter(Boolean) as string[]
 
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>(defaultFormIds)
+  const [formSearch, setFormSearch] = useState('')
+
+  const filteredForms = forms.filter((form) =>
+    form.title.toLowerCase().includes(formSearch.trim().toLowerCase()),
+  )
 
   const handleOpenChange = (next: boolean) => {
-    if (next) setSelectedFormIds(defaultFormIds)
+    if (next) {
+      setSelectedFormIds(defaultFormIds)
+      setFormSearch('')
+    }
     setOpen(next)
   }
 
@@ -185,12 +193,21 @@ export function EditTreatmentDialog({ treatment, forms }: EditTreatmentDialogPro
 
           <div className="space-y-3">
             <Label className="text-sm font-medium text-foreground">Wymagane formularze</Label>
+            <Input
+              type="search"
+              value={formSearch}
+              onChange={(event) => setFormSearch(event.target.value)}
+              placeholder="Szukaj formularza…"
+              aria-label="Szukaj formularza"
+            />
             <ScrollArea className="h-40 rounded-lg border border-border">
               <div className="space-y-3 p-3">
                 {forms.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Brak dostępnych formularzy.</p>
+                ) : filteredForms.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Brak pasujących formularzy.</p>
                 ) : (
-                  forms.map((form) => (
+                  filteredForms.map((form) => (
                     <div key={form.id} className="flex min-h-11 items-center gap-2 md:min-h-0">
                       <Checkbox
                         id={`edit-form-${form.id}`}

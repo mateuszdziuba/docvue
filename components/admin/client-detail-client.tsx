@@ -299,7 +299,7 @@ export function ClientDetailClient({
                         type="button"
                         onClick={() => {
                           lock()
-                          window.open(`/f/${cf.token}`, '_blank')
+                          window.open(`/f/${cf.token}?source=salon`, '_blank')
                         }}
                         className="px-3 py-2 min-h-11 sm:min-h-0 sm:py-1.5 text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
                       >

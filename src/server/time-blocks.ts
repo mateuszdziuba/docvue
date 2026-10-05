@@ -60,13 +60,17 @@ export const createTimeBlockFn = createServerFn({ method: 'POST' })
     const user = await getVerifiedUser(supabase)
     if (!user) return { error: 'Brak autoryzacji' }
 
-    const { error } = await supabase.from('time_blocks').insert({
+    // staff_id dodajemy tylko, gdy blokada dotyczy konkretnej osoby —
+    // dzięki temu blokowanie całego czasu działa też przed migracją 20261009.
+    const payload: Record<string, unknown> = {
       salon_id: data.salonId,
       start_time: data.startTime,
       end_time: data.endTime,
       label: data.label ?? null,
-      staff_id: data.staffId || null,
-    })
+    }
+    if (data.staffId) payload.staff_id = data.staffId
+
+    const { error } = await supabase.from('time_blocks').insert(payload)
     if (error) {
       if (/staff_id/i.test(error.message) && /column|schema cache/i.test(error.message)) {
         return {

@@ -1,10 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CheckCircle2, EyeOff } from 'lucide-react'
+import { z } from 'zod'
 import { TokenFormClient } from '@/components/token-form-client'
 import { DocvueLogo } from '@/components/ui/docvue-logo'
 import { getClientFormByTokenFn } from '@/src/server/client-forms'
 
 export const Route = createFileRoute('/f/$token')({
+  validateSearch: z.object({
+    // ?source=salon — formularz wypełniany na urządzeniu w gabinecie
+    source: z.enum(['salon']).optional(),
+  }),
   loader: async ({ params }) => {
     const result = await getClientFormByTokenFn({
       data: { token: params.token },
@@ -50,6 +55,7 @@ function ErrorState({ completed }: { completed?: boolean }) {
 function PublicFormPage() {
   const data = Route.useLoaderData()
   const { token } = Route.useParams()
+  const { source } = Route.useSearch()
 
   if ('error' in data && data.error) {
     return <ErrorState completed={'completed' in data ? data.completed : undefined} />
@@ -84,6 +90,7 @@ function PublicFormPage() {
       <TokenFormClient
         token={token}
         form={form}
+        filledBy={source === 'salon' ? 'staff' : 'client'}
         clientName={(clientForm.clients as any)?.name}
         client={clientForm.clients as any}
         clientForm={clientForm}

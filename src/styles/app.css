@@ -334,6 +334,11 @@ input[type='search']::-webkit-search-cancel-button:hover {
   outline-offset: 2px;
 }
 
+/* Wyszukiwarka w comboboxie ma własny stan focus — bez globalnej obwódki */
+[cmdk-input]:focus-visible {
+  outline: none;
+}
+
 /* ── Print / PDF ── */
 @media print {
   aside,

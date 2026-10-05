@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from '@tanstack/react-form'
-import { AlertCircle, ChevronDown, Loader2 } from 'lucide-react'
+import { AlertCircle, ChevronDown, Loader2, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -109,6 +109,37 @@ export function FormRenderer({
     (field) =>
       normalizeFieldType(field.type) !== 'separator' && normalizeFieldType(field.type) !== 'info',
   )
+  // Pasek postępu liczy tylko pytania wymagane (fallback: wszystkie pytania).
+  const requiredCountableFields = countableFields.filter((field) => field.required)
+  const progressFields =
+    requiredCountableFields.length > 0 ? requiredCountableFields : countableFields
+  // Automatyczna numeracja pytań (stara numeracja w etykietach jest zdejmowana).
+  const questionNumbers = new Map<string, number>()
+  {
+    let index = 0
+    for (const field of fields) {
+      const type = normalizeFieldType(field.type)
+      if (type === 'separator' || type === 'info' || type === 'signature') continue
+      index += 1
+      questionNumbers.set(field.name, index)
+    }
+  }
+  const fieldLabel = (field: FormField) => {
+    const base = (field.label ?? '').replace(/^\s*\d{1,2}\s*[.)]\s+/, '').trimStart()
+    const number = questionNumbers.get(field.name)
+    return number ? `${number}. ${base}` : base
+  }
+
+  // Pytania tak/nie z pełnym zestawem odpowiedzi — dla przycisku „wszystkie na nie”.
+  const yesNoFields = fields.filter((field) => {
+    if (normalizeFieldType(field.type) !== 'radio') return false
+    const options = field.options ?? []
+    if (options.length !== 2) return false
+    const labels = options.map((option) => option.label.trim().toLowerCase())
+    return labels.includes('tak') && labels.includes('nie')
+  })
+  const noValueFor = (field: FormField) =>
+    field.options?.find((option) => option.label.trim().toLowerCase() === 'nie')?.value
   const hasCustomSignatureField = fields.some(
     (field) => normalizeFieldType(field.type) === 'signature',
   )
@@ -181,6 +212,22 @@ export function FormRenderer({
       scope.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+  }
+
+  const markAllYesNoAsNo = () => {
+    let count = 0
+    for (const field of yesNoFields) {
+      const value = noValueFor(field)
+      if (value === undefined) continue
+      tsForm.setFieldValue(field.name as never, value as never)
+      count++
+    }
+    setSubmitErrors((previous) => {
+      const next = { ...previous }
+      for (const field of yesNoFields) delete next[field.name]
+      return next
+    })
+    setAnnouncement(`Ustawiono odpowiedź „Nie” w ${count} pytaniach.`)
   }
 
   const resolveErrors = (name: string, metaErrors: unknown[]) =>
@@ -371,7 +418,7 @@ export function FormRenderer({
                     className="m-0 space-y-2 border-0 p-0"
                   >
                     <legend className={LABEL_CLASSES}>
-                      {field.label}
+                      {fieldLabel(field)}
                       {field.required && (
                         <span className="ml-1 text-destructive" aria-hidden="true">
                           *
@@ -446,7 +493,7 @@ export function FormRenderer({
                       className="h-6 w-6 rounded border-border text-primary focus:ring-primary/30 transition-all"
                     />
                     <span className="text-foreground transition-colors">
-                      {field.label}
+                      {fieldLabel(field)}
                       {field.required && (
                         <span className="ml-1 text-destructive" aria-hidden="true">
                           *
@@ -482,7 +529,7 @@ export function FormRenderer({
                     className="m-0 space-y-2"
                   >
                     <p id={`${fieldId}-legend`} className={LABEL_CLASSES}>
-                      {field.label}
+                      {fieldLabel(field)}
                       {field.required && (
                         <span className="ml-1 text-destructive" aria-hidden="true">
                           *
@@ -566,7 +613,7 @@ export function FormRenderer({
                     className="m-0 border-0 p-0"
                   >
                     <legend className={LABEL_CLASSES}>
-                      {field.label}
+                      {fieldLabel(field)}
                       {field.required && (
                         <span className="ml-1 text-destructive" aria-hidden="true">
                           *
@@ -656,7 +703,7 @@ export function FormRenderer({
                       focusField(field.name)
                     }}
                   >
-                    {field.label || field.name}: {submitErrors[field.name][0]}
+                    {fieldLabel(field) || field.name}: {submitErrors[field.name][0]}
                   </a>
                 </li>
               ))}
@@ -664,29 +711,29 @@ export function FormRenderer({
         </div>
       )}
 
-      {countableFields.length > 0 && (
+      {progressFields.length > 0 && (
         <tsForm.Subscribe selector={(state) => state.values}>
           {(values) => {
-            const filledCount = countableFields.filter((field) =>
+            const filledCount = progressFields.filter((field) =>
               isFieldFilled(field, values),
             ).length
-            const progress = (filledCount / countableFields.length) * 100
+            const progress = (filledCount / progressFields.length) * 100
             return (
               <div
                 className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 space-y-2 border-b border-border/60 bg-background/95 px-6 pb-3 pt-6 backdrop-blur sm:-mx-8 sm:-mt-8 sm:px-8 sm:pt-8"
                 role="progressbar"
                 aria-label="Postęp formularza"
                 aria-valuemin={0}
-                aria-valuemax={countableFields.length}
+                aria-valuemax={progressFields.length}
                 aria-valuenow={filledCount}
-                aria-valuetext={`Wypełniono ${filledCount} z ${countableFields.length} pól`}
+                aria-valuetext={`Wypełniono ${filledCount} z ${progressFields.length} wymaganych pól`}
               >
                 <div className="flex items-baseline justify-between gap-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     Postęp formularza
                   </p>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary tabular-nums">
-                    {filledCount} / {countableFields.length}
+                    {filledCount} / {progressFields.length}
                   </p>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/10">
@@ -715,7 +762,7 @@ export function FormRenderer({
           <div key={field.name} data-field-name={field.name} className="scroll-mt-28 space-y-1.5">
             {!selfLabeled && (
               <label htmlFor={fieldId} className={LABEL_CLASSES}>
-                {field.label}
+                {fieldLabel(field)}
                 {field.required && (
                   <span className="ml-1 text-destructive" aria-hidden="true">
                     *
@@ -779,20 +826,60 @@ export function FormRenderer({
         )
       })}
 
+      {!readOnly && yesNoFields.length >= 5 && (
+        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-4 z-40 print-hidden">
+          <Button
+            type="button"
+            size="lg"
+            onClick={markAllYesNoAsNo}
+            className="min-h-12 gap-2 rounded-full px-5 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_8px_24px_rgb(111_89_87/0.35)]"
+            aria-label={`Zaznacz wszystkie ${yesNoFields.length} pytań tak/nie na „Nie”`}
+          >
+            <XCircle className="h-4 w-4" aria-hidden="true" />
+            Wszystkie na nie
+          </Button>
+        </div>
+      )}
+
       {!readOnly && (
-        <tsForm.Subscribe selector={(state) => state.isSubmitting}>
-          {(submitting) => {
-            const busy = isSubmitting || submitting
+        <tsForm.Subscribe
+          selector={(state) => ({ values: state.values, isSubmitting: state.isSubmitting })}
+        >
+          {({ values, isSubmitting: formSubmitting }) => {
+            const busy = isSubmitting || formSubmitting
+            const requiredFields = allFields.filter(
+              (field) =>
+                field.required &&
+                normalizeFieldType(field.type) !== 'separator' &&
+                normalizeFieldType(field.type) !== 'info',
+            )
+            const missingRequired = requiredFields.filter(
+              (field) => !isFieldFilled(field, values),
+            ).length
+            const canSubmit = missingRequired === 0
+
             return (
-              <Button
-                type="submit"
-                disabled={busy}
-                size="lg"
-                className="mt-2 w-full min-h-12 gap-2 text-xs font-semibold uppercase tracking-[0.12em]"
-              >
-                {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                {busy ? 'Wysyłanie...' : 'Wyślij formularz'}
-              </Button>
+              <>
+                <Button
+                  type="submit"
+                  disabled={busy || !canSubmit}
+                  size="lg"
+                  className="mt-2 w-full min-h-12 gap-2 text-xs font-semibold uppercase tracking-[0.12em]"
+                  aria-describedby={!canSubmit ? 'form-submit-hint' : undefined}
+                >
+                  {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                  {busy ? 'Wysyłanie...' : 'Wyślij formularz'}
+                </Button>
+                {!canSubmit && (
+                  <p
+                    id="form-submit-hint"
+                    role="status"
+                    className="text-center text-xs leading-relaxed text-muted-foreground"
+                  >
+                    Uzupełnij wszystkie wymagane pola oraz podpis, aby wysłać formularz.
+                  </p>
+                )}
+              </>
             )
           }}
         </tsForm.Subscribe>

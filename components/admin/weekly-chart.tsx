@@ -1,6 +1,14 @@
 'use client'
 
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 
 interface WeeklyChartProps {
   data: { day: string; wizyty: number; odpowiedzi: number }[]
@@ -17,15 +25,11 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
               <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="fillSubmissions" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.2} />
-              <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--color-info)" stopOpacity={0.2} />
+              <stop offset="95%" stopColor="var(--color-info)" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--color-border)"
-            vertical={false}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
           <XAxis
             dataKey="day"
             axisLine={false}
@@ -60,7 +64,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
           <Area
             type="monotone"
             dataKey="odpowiedzi"
-            stroke="var(--color-accent)"
+            stroke="var(--color-info)"
             strokeWidth={2}
             fill="url(#fillSubmissions)"
             dot={false}

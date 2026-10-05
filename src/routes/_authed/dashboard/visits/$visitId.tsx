@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { APPOINTMENT_STATUS_CONFIG, type AppointmentStatus } from '@/components/admin/status-badge'
 import { VisitPhotos } from '@/components/admin/visit-photos'
+import { useLock } from '@/components/providers/lock-provider'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,18 +26,32 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useInvalidateOnFocus } from '@/lib/use-invalidate-on-focus'
 import {
   deleteAppointmentFn,
   getAppointmentFn,
   updateAppointmentFn,
 } from '@/src/server/appointments'
+import { getOrCreateFormTokenFn } from '@/src/server/client-forms'
+
+interface RequiredFormInfo {
+  id: string
+  title: string
+  token: string | null
+  submitted: boolean
+}
 
 export const Route = createFileRoute('/_authed/dashboard/visits/$visitId')({
   loader: async ({ params, context }) => {
     const { isOwner } = context as { isOwner?: boolean }
     const result = await getAppointmentFn({ data: { id: params.visitId } })
     if (result.error || !result.appointment) throw notFound()
-    return { appointment: result.appointment, isOwner: isOwner ?? false }
+    return {
+      appointment: result.appointment,
+      isOwner: isOwner ?? false,
+      requiredForms: ((result as { requiredForms?: RequiredFormInfo[] }).requiredForms ??
+        []) as RequiredFormInfo[],
+    }
   },
   component: VisitDetailPage,
 })
@@ -44,7 +59,9 @@ export const Route = createFileRoute('/_authed/dashboard/visits/$visitId')({
 const statusKeys = Object.keys(APPOINTMENT_STATUS_CONFIG) as AppointmentStatus[]
 
 function VisitDetailPage() {
-  const { appointment: initial, isOwner } = Route.useLoaderData()
+  useInvalidateOnFocus()
+  const { appointment: initial, isOwner, requiredForms } = Route.useLoaderData()
+  const { lock } = useLock()
   const navigate = useNavigate()
   const apt = initial as any
   const [status, setStatus] = useState<AppointmentStatus>(apt.status)
@@ -61,6 +78,36 @@ function VisitDetailPage() {
     setSaving(false)
     if (result?.error) toast.error(result.error)
     else toast.success('Wizyta zaktualizowana')
+  }
+
+  async function resolveFormToken(form: RequiredFormInfo): Promise<string | null> {
+    if (form.token) return form.token
+    const result = await getOrCreateFormTokenFn({
+      data: { clientId: apt.client_id, formId: form.id },
+    })
+    if ('error' in result && result.error) {
+      toast.error(result.error)
+      return null
+    }
+    return (result as { token?: string }).token ?? null
+  }
+
+  async function handleCopyFormLink(form: RequiredFormInfo) {
+    const token = await resolveFormToken(form)
+    if (!token) return
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/f/${token}`)
+      toast.success('Link skopiowany')
+    } catch {
+      toast.error('Nie udało się skopiować linku')
+    }
+  }
+
+  async function handleFillFormInSalon(form: RequiredFormInfo) {
+    const token = await resolveFormToken(form)
+    if (!token) return
+    lock()
+    window.open(`/f/${token}?source=salon`, '_blank')
   }
 
   async function handleDelete() {
@@ -178,6 +225,58 @@ function VisitDetailPage() {
           </Button>
         )}
       </div>
+
+      {requiredForms && requiredForms.length > 0 && (
+        <div className="bg-card rounded-lg border border-border p-5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-medium text-foreground">Wymagane formularze</h2>
+            {requiredForms.some((form) => !form.submitted) && (
+              <span className="text-xs font-medium text-warning">Status: czeka na formularz</span>
+            )}
+          </div>
+          <ul className="divide-y divide-border">
+            {requiredForms.map((form) => (
+              <li
+                key={form.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                      form.submitted ? 'bg-success' : 'bg-warning'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate text-sm text-foreground">{form.title}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-medium ${
+                      form.submitted ? 'text-success' : 'text-warning'
+                    }`}
+                  >
+                    {form.submitted ? 'Wypełniony' : 'Oczekuje'}
+                  </span>
+                  {!form.submitted && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleCopyFormLink(form)}
+                      >
+                        Kopiuj link
+                      </Button>
+                      <Button size="sm" onClick={() => void handleFillFormInSalon(form)}>
+                        Wypełnij w salonie
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <VisitPhotos appointment={apt} />
     </div>

@@ -327,6 +327,24 @@ export const updateAppointmentFn = createServerFn({ method: 'POST' })
       return { error: 'Nieprawidłowy status wizyty' }
     }
 
+    // Nie pozwalamy oznaczyć wizyty jako „zaplanowana”, gdy brakuje wymaganych formularzy.
+    if (allowed.status === 'scheduled') {
+      const { data: formState } = await supabase
+        .from('appointments')
+        .select('treatments (treatment_forms (form_id)), submissions (form_id)')
+        .eq('id', id)
+        .maybeSingle()
+      const requiredIds = (((formState as any)?.treatments?.treatment_forms ?? []) as any[])
+        .map((tf) => tf.form_id)
+        .filter((formId): formId is string => Boolean(formId))
+      const submittedIds = new Set(
+        (((formState as any)?.submissions ?? []) as any[]).map((submission) => submission.form_id),
+      )
+      if (requiredIds.some((formId) => !submittedIds.has(formId))) {
+        allowed.status = 'pending_forms'
+      }
+    }
+
     const nextStart =
       allowed.start_time != null
         ? new Date(String(allowed.start_time))
@@ -419,6 +437,88 @@ export const updateAppointmentFn = createServerFn({ method: 'POST' })
     return { appointment }
   })
 
+const PHOTO_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
+export const createVisitPhotoUploadFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { id: string; kind: 'before' | 'after'; contentType: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+    const extension = PHOTO_EXTENSIONS[data.contentType]
+    if (!extension) return { error: 'Dozwolone formaty zdjęć: JPG, PNG lub WEBP' }
+
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!appointment) return { error: 'Wizyta nie istnieje' }
+
+    const path = `${caller.salonId}/${data.id}/${data.kind}-${Date.now()}.${extension}`
+    const admin = await createAdminClient()
+    const { data: signed, error } = await admin.storage
+      .from('visit-photos')
+      .createSignedUploadUrl(path)
+    if (error || !signed) return { error: 'Nie udało się przygotować wysyłki zdjęcia' }
+    return { path: signed.path, token: signed.token }
+  })
+
+export const setVisitPhotoFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { id: string; kind: 'before' | 'after'; path: string | null }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+    if (data.path && data.path.split('/')[0] !== caller.salonId) {
+      return { error: 'Nieprawidłowa ścieżka zdjęcia' }
+    }
+
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('before_photo_path, after_photo_path')
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!existing) return { error: 'Wizyta nie istnieje' }
+
+    const column = data.kind === 'before' ? 'before_photo_path' : 'after_photo_path'
+    const { error } = await supabase
+      .from('appointments')
+      .update({ [column]: data.path })
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+    if (error) return { error: 'Nie udało się zapisać zdjęcia' }
+
+    const previous = data.kind === 'before' ? existing.before_photo_path : existing.after_photo_path
+    if (previous && previous !== data.path) {
+      const admin = await createAdminClient()
+      await admin.storage.from('visit-photos').remove([previous])
+    }
+    return { success: true }
+  })
+
+export const getVisitPhotoUrlFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { path: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+    if (data.path.split('/')[0] !== caller.salonId) return { error: 'Brak dostępu do zdjęcia' }
+
+    const admin = await createAdminClient()
+    const { data: signed, error } = await admin.storage
+      .from('visit-photos')
+      .createSignedUrl(data.path, 3600)
+    if (error || !signed) return { error: 'Nie udało się pobrać zdjęcia' }
+    return { url: signed.signedUrl }
+  })
+
 export const deleteAppointmentFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data }) => {
@@ -468,7 +568,64 @@ export const getAppointmentFn = createServerFn({ method: 'GET' })
       .eq('salon_id', caller.salonId)
       .maybeSingle()
     if (error || !appointment) return { error: 'Wizyta nie istnieje' }
-    return { appointment }
+
+    // Wymagane formularze zabiegu + status wypełnienia przez klienta.
+    const treatmentForms = ((appointment.treatments as any)?.treatment_forms ?? []) as any[]
+    const requiredFormIds = treatmentForms
+      .map((tf) => tf.form_id ?? tf.forms?.id)
+      .filter((formId): formId is string => Boolean(formId))
+    const submittedFormIds = new Set(
+      ((appointment.submissions as any[]) ?? []).map((submission) => submission.form_id),
+    )
+
+    let requiredForms: Array<{
+      id: string
+      title: string
+      token: string | null
+      submitted: boolean
+    }> = []
+
+    if (requiredFormIds.length > 0) {
+      const { data: clientForms } = await supabase
+        .from('client_forms')
+        .select('form_id, token')
+        .eq('client_id', appointment.client_id)
+        .in('form_id', requiredFormIds)
+      const tokenByForm = new Map(
+        ((clientForms as any[]) ?? []).map((clientForm) => [clientForm.form_id, clientForm.token]),
+      )
+      requiredForms = treatmentForms
+        .map((tf) => {
+          const formId = tf.form_id ?? tf.forms?.id
+          if (!formId) return null
+          return {
+            id: formId as string,
+            title: (tf.forms?.title as string | undefined) ?? 'Formularz',
+            token: (tokenByForm.get(formId) as string | undefined) ?? null,
+            submitted: submittedFormIds.has(formId),
+          }
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    }
+
+    // Status wizyty pilnuje wymaganych formularzy: brak = „czeka na formularz”.
+    const hasPendingForms = requiredForms.some((form) => !form.submitted)
+    if (hasPendingForms && appointment.status === 'scheduled') {
+      await supabase
+        .from('appointments')
+        .update({ status: 'pending_forms' })
+        .eq('id', appointment.id)
+      appointment.status = 'pending_forms'
+    } else if (
+      !hasPendingForms &&
+      requiredForms.length > 0 &&
+      appointment.status === 'pending_forms'
+    ) {
+      await supabase.from('appointments').update({ status: 'scheduled' }).eq('id', appointment.id)
+      appointment.status = 'scheduled'
+    }
+
+    return { appointment, requiredForms }
   })
 
 // Legacy function aliases for component compatibility

@@ -7,7 +7,13 @@ const bottomNavItems = [
     label: 'Przegląd',
     href: '/dashboard',
     icon: (
-      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-5 h-5"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -21,7 +27,13 @@ const bottomNavItems = [
     label: 'Klienci',
     href: '/dashboard/clients',
     icon: (
-      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-5 h-5"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -35,7 +47,13 @@ const bottomNavItems = [
     label: 'Kalendarz',
     href: '/dashboard/calendar',
     icon: (
-      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-5 h-5"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <rect
           x="3"
           y="4"
@@ -59,7 +77,13 @@ const bottomNavItems = [
     label: 'Formularze',
     href: '/dashboard/forms',
     icon: (
-      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-5 h-5"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -73,7 +97,13 @@ const bottomNavItems = [
     label: 'Odpowiedzi',
     href: '/dashboard/submissions',
     icon: (
-      <svg className="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-5 h-5"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -104,12 +134,20 @@ export function MobileBottomNav() {
               key={item.label}
               to={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors ${
+              className={`relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
+              {isActive && (
+                <span
+                  className="absolute top-0 h-0.5 w-7 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              )}
               {item.icon}
-              <span className="text-[11px] font-medium">{item.label}</span>
+              <span className={`text-[11px] ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                {item.label}
+              </span>
             </Link>
           )
         })}

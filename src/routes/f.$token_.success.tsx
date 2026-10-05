@@ -11,6 +11,8 @@ export const Route = createFileRoute('/f/$token_/success')({
 interface LastSubmissionInfo {
   formTitle?: string
   clientName?: string | null
+  filledBy?: 'client' | 'staff'
+  source?: 'client' | 'salon'
 }
 
 function FormSuccessPage() {
@@ -27,6 +29,7 @@ function FormSuccessPage() {
 
   const formTitle = info?.formTitle
   const clientName = info?.clientName
+  const filledInSalon = info?.filledBy === 'staff' || info?.source === 'salon'
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-5 py-12 pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))]">
@@ -59,13 +62,21 @@ function FormSuccessPage() {
 
             <div className="mx-auto mt-8 max-w-md rounded-xl bg-primary/5 p-5 text-left">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                Co dalej?
+                {filledInSalon ? 'Formularz zapisany' : 'Co dalej?'}
               </p>
-              <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-muted-foreground">
-                <li>Salon otrzymał Twoje odpowiedzi oraz podpis przed wizytą.</li>
-                <li>Skontaktuje się z Tobą, aby potwierdzić szczegóły wizyty.</li>
-                <li>W razie pytań zadzwoń lub napisz do salonu przed wizytą.</li>
-              </ul>
+              {filledInSalon ? (
+                <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-muted-foreground">
+                  <li>Twoje odpowiedzi i podpis zostały zapisane w systemie salonu.</li>
+                  <li>Obsługa salonu widzi już ten formularz — możesz oddać urządzenie.</li>
+                  <li>W razie pytań zwróć się do personelu salonu.</li>
+                </ul>
+              ) : (
+                <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-muted-foreground">
+                  <li>Salon otrzymał Twoje odpowiedzi oraz podpis przed wizytą.</li>
+                  <li>Skontaktuje się z Tobą, aby potwierdzić szczegóły wizyty.</li>
+                  <li>W razie pytań zadzwoń lub napisz do salonu przed wizytą.</li>
+                </ul>
+              )}
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">

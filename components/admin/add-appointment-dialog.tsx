@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ClientCombobox } from '@/components/admin/client-combobox'
 import { Button } from '@/components/ui/button'
+import { Combobox } from '@/components/ui/combobox'
 import { DatePicker } from '@/components/ui/date-picker'
 import {
   Dialog,
@@ -41,6 +42,8 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [resolvedSalonId, setResolvedSalonId] = useState<string | undefined>(salonId)
   const [treatmentId, setTreatmentId] = useState('')
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>([])
+  const [staffId, setStaffId] = useState('')
   const [hour, setHour] = useState('07')
   const [minute, setMinute] = useState('00')
 
@@ -50,6 +53,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
   const handleOpenChange = (next: boolean) => {
     if (next) {
       setTreatmentId('')
+      setStaffId('')
       setHour('07')
       setMinute('00')
     }
@@ -85,12 +89,17 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
 
         if (!activeSalonId) return
 
-        const { data } = await supabase
-          .from('treatments')
-          .select('*')
-          .eq('salon_id', activeSalonId)
-          .order('name')
-        if (data) setTreatments(data)
+        const [{ data: treatmentsData }, { data: staffData }] = await Promise.all([
+          supabase.from('treatments').select('*').eq('salon_id', activeSalonId).order('name'),
+          supabase
+            .from('staff_members')
+            .select('id, name')
+            .eq('salon_id', activeSalonId)
+            .eq('is_active', true)
+            .order('name'),
+        ])
+        if (treatmentsData) setTreatments(treatmentsData)
+        if (staffData) setStaff(staffData)
       }
       fetchTreatments()
     }
@@ -159,6 +168,7 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
         salon_id: resolvedSalonId,
         client_id: selectedClientId,
         treatment_id: treatmentId,
+        staff_id: staffId || null,
         start_time: startTime.toISOString(),
         status: status,
         notes: notes || null,
@@ -216,14 +226,38 @@ export function AddAppointmentDialog({ clientId, salonId, trigger }: AddAppointm
             <Label htmlFor="treatment_id" className="text-sm font-medium">
               Zabieg
             </Label>
-            <Select value={treatmentId} onValueChange={setTreatmentId}>
-              <SelectTrigger id="treatment_id" className="w-full">
-                <SelectValue placeholder="-- Wybierz zabieg --" />
+            <Combobox
+              id="treatment_id"
+              options={treatments.map((t) => ({
+                value: t.id,
+                label: t.name,
+                hint: `${t.duration_minutes} min · ${t.price} PLN`,
+              }))}
+              value={treatmentId}
+              onChange={setTreatmentId}
+              placeholder="Wybierz zabieg…"
+              searchPlaceholder="Szukaj zabiegu…"
+              emptyText="Brak zabiegów."
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="staff_id" className="text-sm font-medium">
+              Wykonawca zabiegu
+            </Label>
+            <Select
+              value={staffId || 'none'}
+              onValueChange={(value) => setStaffId(value === 'none' ? '' : value)}
+            >
+              <SelectTrigger id="staff_id" className="w-full">
+                <SelectValue placeholder="-- Wybierz osobę --" />
               </SelectTrigger>
               <SelectContent>
-                {treatments.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name} ({t.duration_minutes} min) - {t.price} PLN
+                <SelectItem value="none">-- Nieprzypisany --</SelectItem>
+                {staff.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.name}
                   </SelectItem>
                 ))}
               </SelectContent>

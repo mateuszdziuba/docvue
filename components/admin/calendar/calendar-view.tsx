@@ -619,7 +619,45 @@ export function CalendarView({
     [appointments, snapMinutes],
   )
 
-  // ── Slot select → context menu ────────────────────────────────────────────────
+  // ── Time block helpers ────────────────────────────────────────────────────────
+
+  const refreshTimeBlocks = useCallback(async () => {
+    const [from, to] = rangeForView(view, anchor)
+    const fresh = await getTimeBlocks(salonId, from, to)
+    setTimeBlocks(fresh)
+  }, [view, anchor, salonId])
+
+  const blockTimeInstant = useCallback(
+    async (params: {
+      date: Date
+      hour: number
+      minute: number
+      durationMinutes: number
+      staffId?: string | null
+    }) => {
+      const dateStr = format(params.date, 'yyyy-MM-dd')
+      const start = new Date(
+        `${dateStr}T${String(params.hour).padStart(2, '0')}:${String(params.minute).padStart(2, '0')}:00`,
+      )
+      const end = addMinutes(start, params.durationMinutes)
+      const { error } = await createTimeBlock({
+        salonId,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        staffId: params.staffId ?? null,
+      })
+      if (error) {
+        console.error('[time_blocks] createTimeBlock error:', error)
+        toast.error(`Nie udało się zarezerwować czasu: ${error}`)
+        return
+      }
+      await refreshTimeBlocks()
+      toast.success('Czas zablokowany')
+    },
+    [salonId, refreshTimeBlocks],
+  )
+
+  // ── Slot select → blokada czasu (tryb blokady) lub menu kontekstowe ──────────
 
   const handleSlotSelect = useCallback(
     (
@@ -631,18 +669,20 @@ export function CalendarView({
       cursorY: number,
       staffId?: string | null,
     ) => {
+      if (isBlockMode) {
+        void blockTimeInstant({
+          date,
+          hour,
+          minute,
+          durationMinutes: durationMinutes ?? snapMinutes,
+          staffId,
+        })
+        return
+      }
       setContextMenu({ x: cursorX, y: cursorY, date, hour, minute, durationMinutes, staffId })
     },
-    [],
+    [isBlockMode, blockTimeInstant, snapMinutes],
   )
-
-  // ── Time block helpers ────────────────────────────────────────────────────────
-
-  const refreshTimeBlocks = useCallback(async () => {
-    const [from, to] = rangeForView(view, anchor)
-    const fresh = await getTimeBlocks(salonId, from, to)
-    setTimeBlocks(fresh)
-  }, [view, anchor, salonId])
 
   const handleDeleteTimeBlock = useCallback(
     async (id: string) => {
@@ -689,25 +729,8 @@ export function CalendarView({
     if (!contextMenu) return
     const { date, hour, minute, durationMinutes = snapMinutes, staffId } = contextMenu
     setContextMenu(null)
-    const dateStr = format(date, 'yyyy-MM-dd')
-    const start = new Date(
-      `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
-    )
-    const end = addMinutes(start, durationMinutes)
-    const { error } = await createTimeBlock({
-      salonId,
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
-      staffId: staffId ?? null,
-    })
-    if (error) {
-      console.error('[time_blocks] createTimeBlock error:', error)
-      toast.error(`Nie udało się zarezerwować czasu: ${error}`)
-    } else {
-      await refreshTimeBlocks()
-      toast.success('Czas zablokowany')
-    }
-  }, [contextMenu, snapMinutes, salonId, refreshTimeBlocks])
+    await blockTimeInstant({ date, hour, minute, durationMinutes, staffId })
+  }, [contextMenu, snapMinutes, blockTimeInstant])
 
   const handleDrawGuide = useCallback((minutes: number | null) => {
     setDragGuideMinutes(minutes)

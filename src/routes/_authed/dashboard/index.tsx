@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { type AppointmentStatus, StatusBadge } from '@/components/admin/status-badge'
 import { WeeklyChart } from '@/components/admin/weekly-chart'
+import { useInvalidateOnFocus } from '@/lib/use-invalidate-on-focus'
 import { getDashboardStatsFn } from '@/src/server/dashboard'
 
 export const Route = createFileRoute('/_authed/dashboard/')({
@@ -19,6 +20,7 @@ function normalizeStatus(status: string): AppointmentStatus {
 }
 
 function DashboardPage() {
+  useInvalidateOnFocus()
   const { stats } = Route.useLoaderData()
 
   if (!stats) return null
@@ -91,7 +93,7 @@ function DashboardPage() {
           <Link
             key={card.label}
             to={card.href}
-            className="bg-card rounded-xl p-5 border border-border hover:border-primary/40 hover:shadow-[0_2px_12px_rgb(111_89_87/0.08)] transition-all duration-150 group"
+            className="min-w-0 bg-card rounded-xl p-5 border border-border hover:border-primary/40 hover:shadow-[0_2px_12px_rgb(111_89_87/0.08)] transition-all duration-150 group"
           >
             <div className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center mb-4">
               <svg
@@ -116,13 +118,13 @@ function DashboardPage() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Weekly chart */}
-        <div className="bg-card rounded-xl border border-border p-5">
+        <div className="min-w-0 overflow-hidden bg-card rounded-xl border border-border p-5">
           <h2 className="text-sm font-semibold text-foreground mb-4">Aktywność (7 dni)</h2>
           <WeeklyChart data={stats.chartData} />
         </div>
 
         {/* Upcoming appointments */}
-        <div className="bg-card rounded-xl border border-border p-5">
+        <div className="min-w-0 overflow-hidden bg-card rounded-xl border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-foreground">Nadchodzące wizyty</h2>
             <Link to="/dashboard/calendar" className="text-xs text-primary hover:underline">
@@ -132,9 +134,14 @@ function DashboardPage() {
           {stats.upcomingAppointments.length === 0 ? (
             <p className="text-sm text-muted-foreground">Brak zaplanowanych wizyt</p>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-border">
               {stats.upcomingAppointments.map((apt: any) => (
-                <div key={apt.id} className="flex items-start justify-between gap-2">
+                <Link
+                  key={apt.id}
+                  to="/dashboard/visits/$visitId"
+                  params={{ visitId: apt.id }}
+                  className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
                       {(apt.clients as { name: string } | null)?.name ?? 'Klient'}
@@ -149,7 +156,7 @@ function DashboardPage() {
                     withIcon={false}
                     className="text-xs shrink-0"
                   />
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -169,7 +176,12 @@ function DashboardPage() {
         ) : (
           <div className="divide-y divide-border">
             {stats.recentSubmissions.map((sub: any) => (
-              <div key={sub.id} className="flex items-center justify-between gap-3 py-3">
+              <Link
+                key={sub.id}
+                to="/dashboard/submissions/$submissionId"
+                params={{ submissionId: sub.id }}
+                className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
                     {sub.client_name ?? 'Anonim'}
@@ -181,7 +193,7 @@ function DashboardPage() {
                 <p className="text-xs text-muted-foreground tabular-nums shrink-0">
                   {format(parseISO(sub.created_at), 'd MMM HH:mm', { locale: pl })}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         )}

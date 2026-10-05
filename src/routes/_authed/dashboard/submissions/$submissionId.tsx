@@ -18,6 +18,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { normalizeFieldType } from '@/lib/form-validation'
 import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placeholders'
+import { formatFieldValue, isImageSignature, resolveSalonCity } from '@/lib/submission-format'
+import { useInvalidateOnFocus } from '@/lib/use-invalidate-on-focus'
 import { getSalonFn } from '@/src/server/settings'
 import { deleteSubmissionFn, getSubmissionFn } from '@/src/server/submissions'
 import type { FormField } from '@/types/database'
@@ -35,50 +37,57 @@ export const Route = createFileRoute('/_authed/dashboard/submissions/$submission
   component: SubmissionDetailPage,
 })
 
-function formatFieldValue(field: FormField, value: unknown): string | null {
-  const type = normalizeFieldType(field.type)
-  if (type === 'separator' || type === 'info' || type === 'signature') return null
-  if (value === undefined || value === null || value === '') return null
-  if (type === 'checkbox') return value === true ? 'Tak' : 'Nie'
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => field.options?.find((option) => option.value === item)?.label ?? String(item))
-      .join(', ')
-  }
-  if (type === 'select' || type === 'radio') {
-    return field.options?.find((option) => option.value === value)?.label ?? String(value)
-  }
-  return String(value)
-}
-
-function isImageSignature(signature: string): boolean {
-  // Renderujemy wyłącznie osadzone obrazy (data URL). Zewnętrzne adresy
-  // mogłyby służyć jako tracking pixel w panelu administratora.
-  return /^data:image\/(png|jpe?g|webp);base64,/i.test(signature)
-}
-
-function resolveSalonCity(salon: SalonContact | null): string {
-  if (!salon) return ''
-  const explicit = salon.city?.trim()
-  if (explicit) return explicit
-  const address = salon.address?.trim()
-  if (!address) return ''
-  const lastPart = address.split(',').pop()?.trim() ?? ''
-  const withPostal = /^\d{2}-?\d{3}\s+(.+)$/.exec(lastPart)
-  if (withPostal) return withPostal[1].trim()
-  if (/\d/.test(lastPart)) return ''
-  return lastPart
-}
-
 function SubmissionDetailPage() {
+  useInvalidateOnFocus()
   const { submission, isOwner, salon } = Route.useLoaderData()
   const navigate = useNavigate()
   const [deleting, setDeleting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
   const sub = submission as any
   const fields: FormField[] = (sub.forms?.schema as { fields?: FormField[] })?.fields ?? []
   const salonContact = salon as SalonContact | null
   const salonCity = resolveSalonCity(salonContact)
+
+  async function handleDownloadPdf() {
+    setPdfLoading(true)
+    try {
+      const [{ pdf }, { SubmissionPdf }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('@/components/admin/submission-pdf'),
+      ])
+      const blob = await pdf(
+        <SubmissionPdf
+          formTitle={applySalonPlaceholders(sub.forms?.title ?? 'Formularz', salonContact)}
+          clientName={sub.client_name ?? null}
+          createdAtLabel={format(parseISO(sub.created_at), 'd MMMM yyyy, HH:mm', { locale: pl })}
+          salon={salonContact}
+          salonCity={salonCity}
+          fields={fields}
+          data={sub.data}
+          signature={sub.signature ?? null}
+        />,
+      ).toBlob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const slug = (value: string) =>
+        value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 40)
+      link.href = url
+      link.download = `docvue-${slug(sub.forms?.title ?? 'formularz')}-${slug(sub.client_name ?? 'klient')}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Nie udało się wygenerować PDF')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true)
@@ -92,12 +101,30 @@ function SubmissionDetailPage() {
     navigate({ to: '/dashboard/submissions' })
   }
 
+  const questionNumbers = new Map<string, number>()
+  {
+    let index = 0
+    for (const field of fields) {
+      const type = normalizeFieldType(field.type)
+      if (type === 'separator' || type === 'info' || type === 'signature') continue
+      index += 1
+      questionNumbers.set(field.name, index)
+    }
+  }
+
   const answeredFields = fields
-    .map((field) => ({
-      field,
-      label: applySalonPlaceholders(field.label, salonContact),
-      value: formatFieldValue(field, sub.data?.[field.name]),
-    }))
+    .map((field) => {
+      const baseLabel = applySalonPlaceholders(field.label, salonContact).replace(
+        /^\s*\d{1,2}\s*[.)]\s+/,
+        '',
+      )
+      const number = questionNumbers.get(field.name)
+      return {
+        field,
+        label: number ? `${number}. ${baseLabel}` : baseLabel,
+        value: formatFieldValue(field, sub.data?.[field.name]),
+      }
+    })
     .filter((entry) => entry.value !== null)
 
   return (
@@ -114,9 +141,9 @@ function SubmissionDetailPage() {
             <Printer className="mr-1.5 h-4 w-4" aria-hidden="true" />
             Drukuj
           </Button>
-          <Button size="sm" onClick={() => window.print()}>
+          <Button size="sm" onClick={() => void handleDownloadPdf()} disabled={pdfLoading}>
             <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            Pobierz PDF
+            {pdfLoading ? 'Generowanie…' : 'Pobierz PDF'}
           </Button>
           {isOwner && (
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -171,19 +198,31 @@ function SubmissionDetailPage() {
         </header>
 
         <dl className="divide-y divide-border/70">
-          {answeredFields.map(({ field, label, value }) => (
-            <div
-              key={field.name}
-              className="grid break-inside-avoid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(0,11rem)_1fr] sm:gap-4"
-            >
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {label}
-              </dt>
-              <dd className="text-sm leading-relaxed text-foreground whitespace-pre-line">
-                {value}
-              </dd>
-            </div>
-          ))}
+          {answeredFields.map(({ field, label, value }) => {
+            // Krótkie odpowiedzi (Tak/Nie, liczby) nie zabierają miejsca pytaniu.
+            const shortAnswer = value !== null && value.length <= 24
+            return (
+              <div
+                key={field.name}
+                className={`grid break-inside-avoid grid-cols-1 gap-1 py-3 sm:gap-4 ${
+                  shortAnswer
+                    ? 'sm:grid-cols-[minmax(0,1fr)_auto]'
+                    : 'sm:grid-cols-[minmax(0,18rem)_1fr]'
+                }`}
+              >
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {label}
+                </dt>
+                <dd
+                  className={`whitespace-pre-line text-sm leading-relaxed text-foreground ${
+                    shortAnswer ? 'sm:min-w-[4rem] sm:pl-6' : ''
+                  }`}
+                >
+                  {value}
+                </dd>
+              </div>
+            )
+          })}
           {answeredFields.length === 0 && (
             <p className="py-3 text-sm text-muted-foreground">Brak odpowiedzi w formularzu.</p>
           )}

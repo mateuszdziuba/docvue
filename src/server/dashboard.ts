@@ -23,8 +23,14 @@ export const getDashboardStatsFn = createServerFn({ method: 'GET' }).handler(asy
   ] = await Promise.all([
     supabase.from('forms').select('*', { count: 'exact', head: true }).eq('salon_id', salonId),
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('salon_id', salonId),
-    supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('salon_id', salonId),
-    supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('salon_id', salonId),
+    supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('salon_id', salonId),
+    supabase
+      .from('submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('salon_id', salonId),
     supabase
       .from('submissions')
       .select('id, client_name, created_at, forms (id, title)')
@@ -38,7 +44,7 @@ export const getDashboardStatsFn = createServerFn({ method: 'GET' }).handler(asy
       .gte('start_time', new Date().toISOString())
       .in('status', ['scheduled', 'pending_forms'])
       .order('start_time', { ascending: true })
-      .limit(5),
+      .limit(3),
     supabase
       .from('submissions')
       .select('created_at')
@@ -50,9 +56,7 @@ export const getDashboardStatsFn = createServerFn({ method: 'GET' }).handler(asy
     const date = new Date()
     date.setDate(date.getDate() - (6 - i))
     const dateStr = date.toISOString().split('T')[0]
-    const count = (weeklySubmissions || []).filter(
-      (s) => s.created_at.startsWith(dateStr)
-    ).length
+    const count = (weeklySubmissions || []).filter((s) => s.created_at.startsWith(dateStr)).length
     return { day: dateStr.slice(5), wizyty: 0, odpowiedzi: count }
   })
 

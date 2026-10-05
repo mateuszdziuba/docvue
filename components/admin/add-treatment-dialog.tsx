@@ -24,11 +24,19 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([])
+  const [formSearch, setFormSearch] = useState('')
   const supabase = createClient()
+
+  const filteredForms = forms.filter((form) =>
+    form.title.toLowerCase().includes(formSearch.trim().toLowerCase()),
+  )
   const router = useRouterCompat()
 
   const handleOpenChange = (next: boolean) => {
-    if (next) setSelectedFormIds([])
+    if (next) {
+      setSelectedFormIds([])
+      setFormSearch('')
+    }
     setOpen(next)
   }
 
@@ -162,12 +170,21 @@ export function AddTreatmentDialog({ forms }: { forms: Pick<Form, 'id' | 'title'
 
           <div className="space-y-3">
             <Label className="text-sm font-medium text-foreground">Wymagane formularze</Label>
+            <Input
+              type="search"
+              value={formSearch}
+              onChange={(event) => setFormSearch(event.target.value)}
+              placeholder="Szukaj formularza…"
+              aria-label="Szukaj formularza"
+            />
             <ScrollArea className="h-40 rounded-lg border border-border">
               <div className="space-y-3 p-3">
                 {forms.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Brak dostępnych formularzy.</p>
+                ) : filteredForms.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Brak pasujących formularzy.</p>
                 ) : (
-                  forms.map((form) => (
+                  filteredForms.map((form) => (
                     <div key={form.id} className="flex min-h-11 items-center gap-2 md:min-h-0">
                       <Checkbox
                         id={`form-${form.id}`}
