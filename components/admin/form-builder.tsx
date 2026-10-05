@@ -46,6 +46,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { normalizeFieldType, uniqueOptionValue } from '@/lib/form-validation'
+import type { SalonContact } from '@/lib/salon-placeholders'
 import { cn } from '@/lib/utils'
 import { createFormFn, deleteFormFn, updateFormFn } from '@/src/server/forms'
 import type { Form, FormField } from '@/types/database'
@@ -164,6 +165,7 @@ interface FormBuilderProps {
   initialSchema?: FormField[]
   isLocked?: boolean
   usageCount?: number
+  salon?: SalonContact | null
 }
 
 export function FormBuilder({
@@ -174,6 +176,7 @@ export function FormBuilder({
   initialSchema = [],
   isLocked = false,
   usageCount = 0,
+  salon = null,
 }: FormBuilderProps) {
   const navigate = useNavigate()
   const uid = React.useId()
@@ -560,7 +563,7 @@ export function FormBuilder({
               Dodaj pola, aby zobaczyć podgląd formularza.
             </p>
           ) : (
-            <FormRenderer form={previewForm} onSubmit={() => undefined} readOnly />
+            <FormRenderer form={previewForm} onSubmit={() => undefined} readOnly salon={salon} />
           )}
         </DialogContent>
       </Dialog>

@@ -477,8 +477,8 @@ export function CalendarDayColumn({
       {/* Day header */}
       <div
         className={`
-          h-[52px] flex flex-col items-center justify-center shrink-0
-          border-b border-border/60
+          sticky top-0 z-10 h-[52px] flex flex-col items-center justify-center shrink-0
+          border-b border-border/60 bg-card
           ${today && !headerLabel ? 'bg-primary/[0.04]' : ''}
         `}
       >

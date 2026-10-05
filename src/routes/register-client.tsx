@@ -75,7 +75,7 @@ function RegisterClientPage() {
   return (
     <div className="min-h-screen flex bg-background">
       <div className="hidden lg:flex lg:w-[42%] bg-panel-surface flex-col justify-between p-14">
-        <DocvueLogo className="text-2xl text-panel-on-surface" />
+        <DocvueLogo onPanel className="text-2xl" />
 
         <blockquote>
           <p className="text-panel-emphasis text-lg font-serif leading-relaxed font-normal">

@@ -10,7 +10,7 @@ export interface SalonContact {
   city?: string | null
 }
 
-const FALLBACK = '………………………………'
+const FALLBACK = '—'
 
 export const SALON_TOKENS: { token: string; label: string }[] = [
   { token: '[PEŁNA NAZWA GABINETU]', label: 'Nazwa gabinetu' },

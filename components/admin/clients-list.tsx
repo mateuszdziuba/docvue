@@ -1,6 +1,7 @@
 'use client'
 
 import { useNavigate } from '@tanstack/react-router'
+import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -129,72 +130,93 @@ export function ClientsList({
 
         {/* Clients List */}
         {clients.length > 0 ? (
-          <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-secondary/50">
-                  <tr>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Klient
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Lokalizacja
-                    </th>
-                    <th className="hidden px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider sm:table-cell">
-                      Ostatnia wizyta
-                    </th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Akcje
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {clients.map((client) => (
-                    <tr key={client.id} className="hover:bg-secondary/30 transition-colors">
-                      <td className="px-4 py-2.5">
-                        <Link href={`/dashboard/clients/${client.id}`} className="block min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground hover:text-primary transition-colors">
-                            {client.name}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {[client.email, client.phone].filter(Boolean).join(' · ') || '—'}
-                          </p>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className="block max-w-[14rem] truncate text-sm text-muted-foreground">
-                          {client.location || '—'}
-                        </span>
-                      </td>
-                      <td className="hidden px-4 py-2.5 sm:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {client.last_visit_at
-                            ? new Date(client.last_visit_at).toLocaleDateString('pl-PL')
-                            : '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/dashboard/clients/${client.id}`}
-                            className="px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-md transition-colors"
-                          >
-                            Zarządzaj
-                          </Link>
-                          {isOwner && (
-                            <DeleteIconButton
-                              label={`Usuń klienta ${client.name}`}
-                              onClick={(e) => handleDeleteClick(e, client.id)}
-                            />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <>
+            {/* Telefon: tylko imię i nazwisko */}
+            <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card sm:hidden">
+              {clients.map((client) => (
+                <Link
+                  key={client.id}
+                  href={`/dashboard/clients/${client.id}`}
+                  className="flex min-h-12 items-center justify-between gap-3 px-4 py-3"
+                >
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {client.name}
+                  </span>
+                  <ChevronRight
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                </Link>
+              ))}
             </div>
-          </div>
+
+            <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card sm:block">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-secondary/50">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Klient
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Lokalizacja
+                      </th>
+                      <th className="hidden px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider sm:table-cell">
+                        Ostatnia wizyta
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Akcje
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {clients.map((client) => (
+                      <tr key={client.id} className="hover:bg-secondary/30 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <Link href={`/dashboard/clients/${client.id}`} className="block min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground hover:text-primary transition-colors">
+                              {client.name}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {[client.email, client.phone].filter(Boolean).join(' · ') || '—'}
+                            </p>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="block max-w-[14rem] truncate text-sm text-muted-foreground">
+                            {client.location || '—'}
+                          </span>
+                        </td>
+                        <td className="hidden px-4 py-2.5 sm:table-cell">
+                          <span className="text-sm text-muted-foreground">
+                            {client.last_visit_at
+                              ? new Date(client.last_visit_at).toLocaleDateString('pl-PL')
+                              : '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/dashboard/clients/${client.id}`}
+                              className="px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-md transition-colors"
+                            >
+                              Zarządzaj
+                            </Link>
+                            {isOwner && (
+                              <DeleteIconButton
+                                label={`Usuń klienta ${client.name}`}
+                                onClick={(e) => handleDeleteClick(e, client.id)}
+                              />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="text-center py-16 bg-card rounded-xl border border-border/60">
             {query ? (

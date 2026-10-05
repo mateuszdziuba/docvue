@@ -6,9 +6,8 @@ import {
   type DragMoveEvent,
   DragOverlay,
   type DragStartEvent,
-  MouseSensor,
+  PointerSensor,
   pointerWithin,
-  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -59,6 +58,7 @@ import { AppointmentDragOverlay } from './calendar-appointment'
 import { CalendarGrid, type PendingSelection } from './calendar-grid'
 import { CalendarHeader, StaffLegend, type ViewType } from './calendar-header'
 import { CalendarMonthView } from './calendar-month-view'
+import { CalendarSkeleton } from './calendar-skeleton'
 import { CalendarStaffGrid } from './calendar-staff-grid'
 import { END_HOUR, PIXELS_PER_MINUTE, START_HOUR } from './constants'
 import { CreateAppointmentSheet } from './create-appointment-sheet'
@@ -165,10 +165,9 @@ export function CalendarView({
   const monthStart = startOfMonth(anchor)
   const showStaffColumns = view === 'day' && staff.length > 1
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 450, tolerance: 8 } }),
-  )
+  // PointerSensor obsługuje i mysz, i dotyk (distance: 8) — przy touch-none
+  // na bloku wizyty przeciąganie działa palcem, a nie przewija siatki.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   // ── Data loading ─────────────────────────────────────────────────────────────
 
@@ -811,12 +810,11 @@ export function CalendarView({
 
       <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden" aria-busy={isLoading}>
         {isLoading && appointments.length === 0 && (
-          <div className="absolute inset-0 z-30 bg-background/60 p-4 pointer-events-none">
-            <div className="space-y-3 animate-pulse" aria-hidden="true">
-              {[70, 62, 54, 46, 38, 30].map((width) => (
-                <div key={width} className="h-6 rounded bg-muted" style={{ width: `${width}%` }} />
-              ))}
-            </div>
+          <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden bg-background">
+            <CalendarSkeleton
+              variant={view === 'month' ? 'month' : 'grid'}
+              columnCount={showStaffColumns ? staff.length + 1 : view === 'week' ? 7 : 1}
+            />
           </div>
         )}
 

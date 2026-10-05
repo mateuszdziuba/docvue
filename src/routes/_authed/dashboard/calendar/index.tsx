@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import {
   endOfDay,
   endOfMonth,
@@ -10,6 +10,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { z } from 'zod'
+import { CalendarSkeleton } from '@/components/admin/calendar/calendar-skeleton'
 import { CalendarView } from '@/components/admin/calendar/calendar-view'
 import { getCalendarAppointmentsFn } from '@/src/server/appointments'
 import { getSalonFn } from '@/src/server/settings'
@@ -37,8 +38,23 @@ function rangeForView(view: 'day' | 'week' | 'month', anchor: Date): [Date, Date
   return [startOfWeek(anchor, { weekStartsOn: 1 }), endOfWeek(anchor, { weekStartsOn: 1 })]
 }
 
+function CalendarPending() {
+  const view = useRouterState({
+    select: (state) => (state.location.search as { view?: string } | undefined)?.view ?? 'week',
+  })
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-background">
+      <CalendarSkeleton
+        variant={view === 'month' ? 'month' : 'grid'}
+        columnCount={view === 'week' ? 7 : 5}
+      />
+    </div>
+  )
+}
+
 export const Route = createFileRoute('/_authed/dashboard/calendar/')({
   validateSearch: (search: Record<string, unknown>) => searchSchema.parse(search) as CalendarSearch,
+  pendingComponent: CalendarPending,
   loaderDeps: ({ search }): CalendarSearch => ({
     date: search.date,
     view: search.view,

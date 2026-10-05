@@ -87,7 +87,7 @@ export function CalendarMonthView({
 
       {/* Month grid */}
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-7 [grid-auto-rows:minmax(176px,1fr)] md:[grid-auto-rows:minmax(110px,1fr)]">
+        <div className="grid grid-cols-7 [grid-auto-rows:minmax(76px,1fr)] md:[grid-auto-rows:minmax(110px,1fr)]">
           {monthGrid.map((day) => {
             const key = format(day, 'yyyy-MM-dd')
             const dayApts = aptsByDay.get(key) ?? []
@@ -102,7 +102,7 @@ export function CalendarMonthView({
                 role="button"
                 tabIndex={0}
                 aria-label={`Otwórz widok dnia: ${dayLabel}`}
-                className={`border-r border-b border-border/40 p-1.5 flex flex-col cursor-pointer hover:bg-secondary/30 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`border-r border-b border-border/40 p-1 md:p-1.5 flex flex-col cursor-pointer hover:bg-secondary/30 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   !inMonth ? 'opacity-40' : ''
                 }`}
                 onKeyDown={(e) => {
@@ -124,7 +124,7 @@ export function CalendarMonthView({
                     type="button"
                     data-day-number
                     aria-label={`Otwórz widok dnia ${dayLabel}`}
-                    className={`w-11 h-11 md:w-7 md:h-7 flex items-center justify-center rounded-md text-xs font-semibold transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-semibold transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       today
                         ? 'bg-primary text-primary-foreground'
                         : 'text-foreground hover:bg-primary hover:text-primary-foreground'
@@ -141,7 +141,7 @@ export function CalendarMonthView({
 
                 {/* Appointment chips */}
                 <div className="flex flex-col gap-0.5 flex-1 min-h-0">
-                  {dayApts.slice(0, 3).map((apt) => {
+                  {dayApts.slice(0, 3).map((apt, chipIndex) => {
                     const chipConfig = APPOINTMENT_STATUS_CONFIG[apt.status]
                     const ChipIcon = chipConfig.icon
                     return (
@@ -160,9 +160,9 @@ export function CalendarMonthView({
                           aria-label={`${format(parseISO(apt.start_time), 'HH:mm')} ${apt.client.name}, ${chipConfig.label}${
                             apt.staff_member ? `, ${apt.staff_member.name}` : ''
                           }`}
-                          className={`w-full text-left rounded border px-1.5 py-1 md:py-0.5 text-[11px] font-medium truncate transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex items-center gap-1 min-h-11 md:min-h-0 ${
-                            STATUS_CHIP[apt.status]
-                          }`}
+                          className={`w-full items-center gap-1 truncate rounded border px-1.5 py-0.5 text-left text-[10px] font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex md:text-[11px] ${
+                            chipIndex === 2 ? 'hidden' : 'flex'
+                          } ${STATUS_CHIP[apt.status]}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             setPopoverApt(popoverApt === apt.id ? null : apt.id)
@@ -178,12 +178,26 @@ export function CalendarMonthView({
                       </AppointmentPopover>
                     )
                   })}
+                  {dayApts.length > 2 && (
+                    <button
+                      type="button"
+                      data-apt-chip
+                      aria-label={`Pokaż wszystkie wizyty: ${dayLabel} (${dayApts.length})`}
+                      className="flex min-h-6 items-center rounded px-1.5 text-left text-[10px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDayClick(day)
+                      }}
+                    >
+                      +{dayApts.length - 2} więcej
+                    </button>
+                  )}
                   {dayApts.length > 3 && (
                     <button
                       type="button"
                       data-apt-chip
                       aria-label={`Pokaż wszystkie wizyty: ${dayLabel} (${dayApts.length})`}
-                      className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 text-left transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex items-center min-h-11 md:min-h-0"
+                      className="hidden min-h-0 items-center px-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex"
                       onClick={(e) => {
                         e.stopPropagation()
                         onDayClick(day)

@@ -287,7 +287,7 @@ export function CalendarAppointmentBlock({
           {/* TOP resize handle — 24px hit area (tylko dla bloków ≥48px, żeby nie przykrywać krótkich wizyt) */}
           {heightPx >= 48 && (
             <div
-              className="absolute -top-3 left-0 right-0 h-6 cursor-n-resize z-10"
+              className="absolute -top-3 left-0 right-0 z-10 h-6 cursor-n-resize touch-none"
               onPointerDown={(e) => {
                 e.stopPropagation()
                 onResizeTopStart(appointment.id, e)
@@ -304,11 +304,12 @@ export function CalendarAppointmentBlock({
             style={{ backgroundColor: isCancelled ? undefined : tint.solid }}
           />
 
-          {/* Main drag area */}
+          {/* Main drag area — touch-none, aby długie przytrzymanie uruchamiało
+              przeciąganie zamiast przewijania siatki */}
           <div
             {...listeners}
             {...attributes}
-            className="h-full cursor-grab active:cursor-grabbing select-none pl-3.5 pr-2 pt-1 pb-[6px] touch-manipulation"
+            className="h-full cursor-grab touch-none select-none pl-3.5 pr-2 pt-1 pb-[6px] active:cursor-grabbing"
           >
             {isTiny ? (
               <div className="flex items-center gap-1.5 min-w-0">
@@ -407,7 +408,7 @@ export function CalendarAppointmentBlock({
           {/* BOTTOM resize handle — 24px hit area (tylko dla bloków ≥48px) */}
           {heightPx >= 48 && (
             <div
-              className="absolute -bottom-3 left-0 right-0 h-6 cursor-s-resize z-10 flex items-center justify-center"
+              className="absolute -bottom-3 left-0 right-0 z-10 flex h-6 cursor-s-resize touch-none items-center justify-center"
               onPointerDown={(e) => {
                 e.stopPropagation()
                 onResizeBottomStart(appointment.id, e)

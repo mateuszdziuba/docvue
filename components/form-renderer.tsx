@@ -123,6 +123,7 @@ export function FormRenderer({
   }
 
   const [submitAttempted, setSubmitAttempted] = useState(false)
+  const [submitErrors, setSubmitErrors] = useState<Record<string, string[]>>({})
   const [announcement, setAnnouncement] = useState('')
 
   const tsForm = useForm({
@@ -146,8 +147,55 @@ export function FormRenderer({
   })
 
   const focusField = (name: string) => {
-    const element = document.getElementById(fieldDomId(name))
-    element?.focus()
+    const wrapper = document.querySelector<HTMLElement>(`[data-field-name="${CSS.escape(name)}"]`)
+    const byId = document.getElementById(fieldDomId(name))
+    const scopes = [wrapper, byId].filter((element): element is HTMLElement => Boolean(element))
+
+    for (const scope of scopes) {
+      const candidates: HTMLElement[] = []
+      if (scope.matches('input, select, textarea, button, canvas, [tabindex]')) {
+        candidates.push(scope)
+      }
+      const inner = scope.querySelector<HTMLElement>(
+        'input:not([type="hidden"]), select, textarea, button, canvas, [tabindex]',
+      )
+      if (inner) candidates.push(inner)
+
+      const target =
+        candidates.find((element) => element.tabIndex >= 0) ??
+        candidates.find((element) => element.tabIndex === -1) ??
+        candidates[0]
+
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        window.setTimeout(() => {
+          try {
+            target.focus({ preventScroll: true })
+          } catch {
+            target.focus()
+          }
+        }, 90)
+        return
+      }
+
+      scope.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+  }
+
+  const resolveErrors = (name: string, metaErrors: unknown[]) =>
+    submitErrors[name]?.length ? submitErrors[name] : errorMessages(metaErrors)
+
+  const clearSubmitError = (target: EventTarget | null) => {
+    const wrapper = (target as HTMLElement | null)?.closest?.('[data-field-name]')
+    const name = wrapper?.getAttribute('data-field-name')
+    if (!name) return
+    setSubmitErrors((previous) => {
+      if (!previous[name]) return previous
+      const next = { ...previous }
+      delete next[name]
+      return next
+    })
   }
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -167,6 +215,9 @@ export function FormRenderer({
     }
 
     if (invalid.length > 0) {
+      setSubmitErrors(
+        Object.fromEntries(invalid.map((entry) => [entry.field.name, entry.messages])),
+      )
       setAnnouncement(
         `Formularz zawiera ${invalid.length} ${errorNoun(invalid.length)}. Przejdź do pierwszego błędu.`,
       )
@@ -174,6 +225,7 @@ export function FormRenderer({
       return
     }
 
+    setSubmitErrors({})
     setAnnouncement('')
     try {
       await tsForm.handleSubmit()
@@ -197,7 +249,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -235,7 +287,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -265,7 +317,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -305,7 +357,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -371,7 +423,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -413,7 +465,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -472,7 +524,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -500,7 +552,7 @@ export function FormRenderer({
         return (
           <tsForm.Field name={field.name} validators={validators}>
             {(f) => {
-              const errors = errorMessages(f.state.meta.errors as unknown[])
+              const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
               const hasError = errors.length > 0
               const describedBy =
                 [hasError ? errorId : null, descriptionId].filter(Boolean).join(' ') || undefined
@@ -552,10 +604,7 @@ export function FormRenderer({
             {field.description && (
               <div className="space-y-1.5 text-sm leading-relaxed text-foreground/90">
                 {splitDescriptionLines(field.description).map((line) => (
-                  <p
-                    key={line.key}
-                    className={line.isBullet ? 'pl-4 -indent-4' : undefined}
-                  >
+                  <p key={line.key} className={line.isBullet ? 'pl-4 -indent-4' : undefined}>
                     {line.text}
                   </p>
                 ))}
@@ -574,62 +623,45 @@ export function FormRenderer({
     : [{ name: 'signature', label: 'Podpis klienta', type: 'signature', required: true }]
 
   return (
-    <form noValidate onSubmit={handleFormSubmit} className="space-y-6">
+    <form
+      noValidate
+      onSubmit={handleFormSubmit}
+      onChangeCapture={(event) => clearSubmitError(event.target)}
+      onInputCapture={(event) => clearSubmitError(event.target)}
+      className="space-y-6"
+    >
       <p role="status" aria-live="polite" className="sr-only">
         {announcement}
       </p>
 
-      {submitAttempted && (
-        <tsForm.Subscribe
-          selector={(state) =>
-            allFields
-              .flatMap((field) => errorMessages(state.fieldMeta[field.name]?.errors ?? []))
-              .join('\u0000')
-          }
+      {submitAttempted && Object.keys(submitErrors).length > 0 && (
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
         >
-          {() => {
-            const meta = tsForm.state.fieldMeta
-            const entries = allFields
-              .map((field) => {
-                const fieldMeta = meta[field.name]
-                return {
-                  field,
-                  messages: fieldMeta ? errorMessages(fieldMeta.errors as unknown[]) : [],
-                }
-              })
-              .filter((entry) => entry.messages.length > 0)
-
-            if (entries.length === 0) return null
-
-            return (
-              <div
-                role="alert"
-                className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
-              >
-                <p className="font-semibold text-destructive">
-                  Formularz zawiera {entries.length} {errorNoun(entries.length)}. Popraw pola
-                  poniżej:
-                </p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-destructive">
-                  {entries.map(({ field, messages }) => (
-                    <li key={field.name}>
-                      <a
-                        href={`#${fieldDomId(field.name)}`}
-                        className="underline underline-offset-2"
-                        onClick={(event) => {
-                          event.preventDefault()
-                          focusField(field.name)
-                        }}
-                      >
-                        {field.label || field.name}: {messages[0]}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          }}
-        </tsForm.Subscribe>
+          <p className="font-semibold text-destructive">
+            Formularz zawiera {Object.keys(submitErrors).length}{' '}
+            {errorNoun(Object.keys(submitErrors).length)}. Popraw pola poniżej:
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-destructive">
+            {allFields
+              .filter((field) => submitErrors[field.name]?.length)
+              .map((field) => (
+                <li key={field.name}>
+                  <a
+                    href={`#${fieldDomId(field.name)}`}
+                    className="underline underline-offset-2"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      focusField(field.name)
+                    }}
+                  >
+                    {field.label || field.name}: {submitErrors[field.name][0]}
+                  </a>
+                </li>
+              ))}
+          </ul>
+        </div>
       )}
 
       {countableFields.length > 0 && (
@@ -641,7 +673,7 @@ export function FormRenderer({
             const progress = (filledCount / countableFields.length) * 100
             return (
               <div
-                className="space-y-2"
+                className="sticky top-0 z-20 -mx-6 -mt-6 mb-5 space-y-2 border-b border-border/60 bg-background/95 px-6 pb-3 pt-6 backdrop-blur sm:-mx-8 sm:-mt-8 sm:px-8 sm:pt-8"
                 role="progressbar"
                 aria-label="Postęp formularza"
                 aria-valuemin={0}
@@ -680,7 +712,7 @@ export function FormRenderer({
           type === 'checkbox_group' ||
           type === 'signature'
         return (
-          <div key={field.name} className="space-y-1.5">
+          <div key={field.name} data-field-name={field.name} className="scroll-mt-28 space-y-1.5">
             {!selfLabeled && (
               <label htmlFor={fieldId} className={LABEL_CLASSES}>
                 {field.label}
@@ -708,10 +740,14 @@ export function FormRenderer({
         const fieldId = fieldDomId(field.name)
         const errorId = `${fieldId}-error`
         return (
-          <div key={field.name} className="mt-8 border-t border-border pt-6">
+          <div
+            key={field.name}
+            data-field-name={field.name}
+            className="mt-8 scroll-mt-28 border-t border-border pt-6"
+          >
             <tsForm.Field name={field.name} validators={validatorsFor(field)}>
               {(f) => {
-                const errors = errorMessages(f.state.meta.errors as unknown[])
+                const errors = resolveErrors(field.name, f.state.meta.errors as unknown[])
                 const hasError = errors.length > 0
                 return (
                   <>

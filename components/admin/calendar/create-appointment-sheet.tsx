@@ -90,7 +90,6 @@ export function CreateAppointmentSheet({
   const [hour, setHour] = useState(defaultHour)
   const [minute, setMinute] = useState(defaultMinute)
   const [duration, setDuration] = useState(defaultDurationMinutes ?? 60)
-  const [durationManuallySet, setDurationManuallySet] = useState(false)
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -100,7 +99,6 @@ export function CreateAppointmentSheet({
       setHour(defaultHour)
       setMinute(defaultMinute)
       setDuration(defaultDurationMinutes ?? 60)
-      setDurationManuallySet(false)
       setSelectedClientId(undefined)
       setTreatmentId('')
       setStaffId(defaultStaffId ?? '')
@@ -113,13 +111,6 @@ export function CreateAppointmentSheet({
   const handleTreatmentChange = (id: string) => {
     setTreatmentId(id)
     setErrors((prev) => ({ ...prev, treatment: undefined }))
-    if (!durationManuallySet) {
-      const treatment = treatments.find((item) => item.id === id)
-      if (treatment) {
-        setDuration(treatment.duration_minutes)
-        setErrors((prev) => ({ ...prev, duration: undefined }))
-      }
-    }
   }
 
   const hasOverlap = overlapsTimeBlock(defaultDate, hour, minute, duration, timeBlocks)
@@ -294,11 +285,7 @@ export function CreateAppointmentSheet({
                       -- Nieprzypisany --
                     </SelectItem>
                     {staffMembers.map((member) => (
-                      <SelectItem
-                        key={member.id}
-                        value={member.id}
-                        className="min-h-11 md:min-h-8"
-                      >
+                      <SelectItem key={member.id} value={member.id} className="min-h-11 md:min-h-8">
                         {member.name}
                       </SelectItem>
                     ))}
@@ -379,7 +366,6 @@ export function CreateAppointmentSheet({
                   value={duration}
                   onChange={(e) => {
                     setDuration(Number(e.target.value))
-                    setDurationManuallySet(true)
                     setErrors((prev) => ({ ...prev, duration: undefined }))
                   }}
                   aria-invalid={Boolean(errors.duration)}
@@ -396,6 +382,27 @@ export function CreateAppointmentSheet({
               </div>
             </div>
 
+            {treatmentId &&
+              (() => {
+                const treatment = treatments.find((item) => item.id === treatmentId)
+                if (!treatment || treatment.duration_minutes === duration) return null
+                return (
+                  <p className="text-xs text-muted-foreground">
+                    Domyślny czas zabiegu: {treatment.duration_minutes} min{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setDuration(treatment.duration_minutes)
+                        setErrors((prev) => ({ ...prev, duration: undefined }))
+                      }}
+                    >
+                      Ustaw
+                    </button>
+                  </p>
+                )
+              })()}
+
             <fieldset className="flex flex-wrap gap-1.5">
               <legend className="sr-only">Szybki wybór czasu</legend>
               {DURATION_PRESETS.map((preset) => (
@@ -406,7 +413,6 @@ export function CreateAppointmentSheet({
                   aria-pressed={duration === preset}
                   onClick={() => {
                     setDuration(preset)
-                    setDurationManuallySet(true)
                     setErrors((prev) => ({ ...prev, duration: undefined }))
                   }}
                   className={`px-2.5 rounded-lg text-sm font-medium min-h-9 ${

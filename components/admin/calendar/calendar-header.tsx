@@ -192,6 +192,12 @@ export function CalendarHeader({
     view === 'day' ? 'Następny dzień' : view === 'month' ? 'Następny miesiąc' : 'Następny tydzień'
 
   const label = formatLabel()
+  const mobileLabel =
+    view === 'day'
+      ? format(selectedDay, 'EEE, d MMM', { locale: pl })
+      : view === 'month'
+        ? format(monthStart, 'LLLL yyyy', { locale: pl })
+        : `${format(weekStart, 'd MMM', { locale: pl })} – ${format(weekEnd, 'd MMM', { locale: pl })}`
 
   return (
     <div className="flex flex-col px-4 py-2.5 border-b border-border/60 bg-card shrink-0">
@@ -296,8 +302,8 @@ export function CalendarHeader({
       </div>
 
       {/* Mobile layout — max two rows */}
-      <div className="flex md:hidden flex-col gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2.5 md:hidden">
+        <div className="flex items-center gap-2.5">
           <Button
             type="button"
             variant="outline"
@@ -337,13 +343,13 @@ export function CalendarHeader({
                 aria-hidden="true"
               />
             )}
-            <span className="text-sm font-semibold text-foreground capitalize truncate">
-              {label}
+            <span className="min-w-0 truncate text-right text-[13px] font-semibold capitalize text-foreground">
+              {mobileLabel}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <ViewSwitcher view={view} compact onViewChange={onViewChange} />
 
           <div className="flex items-center gap-2 ml-auto shrink-0">

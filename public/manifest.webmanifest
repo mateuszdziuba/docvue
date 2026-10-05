@@ -4,7 +4,7 @@
   "description": "Formularze zgód i ankiety dla salonów beauty — zarządzaj klientami, wizytami i odpowiedziami.",
   "lang": "pl",
   "dir": "ltr",
-  "start_url": "/",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],

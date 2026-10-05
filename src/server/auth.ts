@@ -31,12 +31,25 @@ export const loginFn = createServerFn({ method: 'POST' })
     if (!limit.ok) return { error: rateLimitError(limit).error }
 
     const supabase = getSupabaseServerClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: signIn, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     })
     if (error) return { error: error.message }
-    return { success: true }
+
+    // Jedno dodatkowe zapytanie zamiast osobnego round-tripu z klienta:
+    // od razu wiemy, czy kierować do portalu klienta.
+    let isClient = false
+    if (signIn.user) {
+      const { data: clientRow } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', signIn.user.id)
+        .limit(1)
+        .maybeSingle()
+      isClient = Boolean(clientRow)
+    }
+    return { success: true, isClient }
   })
 
 export const signupFn = createServerFn({ method: 'POST' })

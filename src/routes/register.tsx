@@ -43,7 +43,7 @@ function RegisterPage() {
     <div className="min-h-screen flex bg-background">
       {/* Left brand panel */}
       <div className="hidden lg:flex lg:w-[42%] bg-panel-surface flex-col justify-between p-14">
-        <DocvueLogo className="text-2xl text-panel-on-surface" />
+        <DocvueLogo onPanel className="text-2xl" />
 
         <div className="space-y-8">
           <div className="space-y-4">
@@ -129,11 +129,7 @@ function RegisterPage() {
                     }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p
-                      id={`${field.name}-error`}
-                      role="alert"
-                      className="text-sm text-destructive"
-                    >
+                    <p id={`${field.name}-error`} role="alert" className="text-sm text-destructive">
                       {String(field.state.meta.errors[0])}
                     </p>
                   )}
@@ -162,11 +158,7 @@ function RegisterPage() {
                     }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p
-                      id={`${field.name}-error`}
-                      role="alert"
-                      className="text-sm text-destructive"
-                    >
+                    <p id={`${field.name}-error`} role="alert" className="text-sm text-destructive">
                       {String(field.state.meta.errors[0])}
                     </p>
                   )}
@@ -221,11 +213,7 @@ function RegisterPage() {
                     }
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p
-                      id={`${field.name}-error`}
-                      role="alert"
-                      className="text-sm text-destructive"
-                    >
+                    <p id={`${field.name}-error`} role="alert" className="text-sm text-destructive">
                       {String(field.state.meta.errors[0])}
                     </p>
                   )}

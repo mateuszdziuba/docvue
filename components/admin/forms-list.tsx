@@ -111,10 +111,10 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
         <SearchInput placeholder="Szukaj formularzy..." />
         {isOwner && (
-          <Button asChild className="gap-2">
+          <Button asChild className="w-full gap-2 sm:w-auto">
             <Link href="/dashboard/forms/new">
               <Plus className="h-4 w-4" aria-hidden="true" />
               Nowy formularz
@@ -127,12 +127,14 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
         {forms.map((form) => (
           <div
             key={form.id}
-            className="rounded-xl border border-border/60 bg-card p-5 transition-shadow hover:shadow-md"
+            className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card p-5 transition-shadow hover:shadow-md"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               <div className="min-w-0 flex-1">
-                <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <h3 className="truncate text-lg font-semibold text-foreground">{form.title}</h3>
+                <div className="mb-2 flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <h3 className="w-full min-w-0 truncate text-base font-semibold text-foreground sm:text-lg">
+                    {form.title}
+                  </h3>
                   <Badge
                     variant="secondary"
                     className={
@@ -154,12 +156,12 @@ export function FormsList({ forms, query, isOwner = false }: FormsListProps) {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="-mr-2 flex items-center gap-1 self-end sm:mr-0 sm:self-auto sm:gap-2">
                 {isOwner && (
                   <>
                     <label
                       htmlFor={`form-active-${form.id}`}
-                      className="flex h-11 w-11 items-center justify-center cursor-pointer"
+                      className="-ml-2 flex h-11 w-11 cursor-pointer items-center justify-center sm:ml-0"
                     >
                       <Switch
                         id={`form-active-${form.id}`}

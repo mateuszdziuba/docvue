@@ -30,10 +30,9 @@ function LoginPage() {
       if (result && 'error' in result && result.error) {
         setServerError(result.error)
       } else {
+        const isClient = 'isClient' in result && result.isClient
+        router.navigate({ to: isClient ? '/client/calendar' : '/dashboard' })
         await router.invalidate()
-        // Navigate to client portal if user is a client
-        const { client } = await getClientUserFn()
-        router.navigate({ to: client ? '/client/calendar' : '/dashboard' })
       }
     },
   })
@@ -42,7 +41,7 @@ function LoginPage() {
     <div className="min-h-screen flex bg-background">
       {/* Left brand panel */}
       <div className="hidden lg:flex lg:w-[42%] bg-panel-surface flex-col justify-between p-14">
-        <DocvueLogo className="text-2xl text-panel-on-surface" />
+        <DocvueLogo onPanel className="text-2xl" />
 
         <div className="space-y-10">
           <blockquote>
@@ -194,15 +193,6 @@ function LoginPage() {
               className="text-foreground font-medium hover:text-primary transition-colors duration-150"
             >
               Zarejestruj gabinet
-            </Link>
-          </p>
-          <p className="text-center text-xs text-muted-foreground mt-3">
-            Jesteś klientem?{' '}
-            <Link
-              to="/register-client"
-              className="text-foreground font-medium hover:text-primary transition-colors duration-150"
-            >
-              Załóż konto klienta
             </Link>
           </p>
         </div>
