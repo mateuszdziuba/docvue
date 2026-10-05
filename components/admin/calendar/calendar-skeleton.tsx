@@ -4,6 +4,8 @@ import { END_HOUR, HOUR_HEIGHT, START_HOUR, TIME_LABEL_WIDTH, TOTAL_GRID_HEIGHT 
 
 const BLOCK_HEIGHTS = [60, 40, 80, 40, 60, 30]
 const BLOCK_TOPS = [110, 300, 500]
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+const MONTH_CELL_KEYS = Array.from({ length: 35 }, (_, i) => `cell-${i}`)
 
 function GridSkeleton({ columnCount }: { columnCount: number }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR)
@@ -67,7 +69,7 @@ function GridSkeleton({ columnCount }: { columnCount: number }) {
                   const top = BLOCK_TOPS[(columnIndex + blockIndex) % BLOCK_TOPS.length]
                   return (
                     <div
-                      key={blockIndex}
+                      key={`${top}-${height}`}
                       className="absolute left-1.5 right-1.5 animate-pulse overflow-hidden rounded-md border border-border/60 bg-muted/60"
                       style={{ top: 52 + top, height }}
                     >
@@ -92,15 +94,15 @@ function MonthSkeleton() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="grid shrink-0 grid-cols-7 border-b border-border/60 bg-card">
-        {Array.from({ length: 7 }, (_, index) => (
-          <div key={index} className="flex justify-center py-2.5">
+        {WEEKDAY_KEYS.map((day) => (
+          <div key={day} className="flex justify-center py-2.5">
             <div className="h-2.5 w-8 rounded-sm bg-muted" />
           </div>
         ))}
       </div>
       <div className="grid flex-1 grid-cols-7" style={{ gridAutoRows: 'minmax(110px, 1fr)' }}>
-        {Array.from({ length: 35 }, (_, index) => (
-          <div key={index} className="border-b border-r border-border/40 p-1.5 last:border-r-0">
+        {MONTH_CELL_KEYS.map((cellKey, index) => (
+          <div key={cellKey} className="border-b border-r border-border/40 p-1.5 last:border-r-0">
             <div className="mb-1.5 h-5 w-5 rounded-md bg-muted" />
             {index % 4 !== 3 && (
               <div className="mb-1 h-3 w-full animate-pulse rounded-sm bg-muted/70" />

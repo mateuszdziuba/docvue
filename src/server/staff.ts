@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 import { resolveSiteUrl } from './_site-url'
 
 // Admin client — uses SERVICE_ROLE key (server-only, never exposed to browser)
@@ -13,22 +14,17 @@ function getSupabaseAdminClient() {
 
 /** Get current user's salon ownership + staff status */
 async function resolveCallerSalon(supabase: ReturnType<typeof getSupabaseServerClient>) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return null
 
-  // Try owner
-  const { data: salon } = await supabase.from('salons').select('id').eq('user_id', user.id).single()
-  if (salon) return { salonId: salon.id, userId: user.id, isOwner: true }
+  const [salonRes, staffRes] = await Promise.all([
+    supabase.from('salons').select('id').eq('user_id', user.id).maybeSingle(),
+    supabase.from('staff_members').select('salon_id, role').eq('user_id', user.id).maybeSingle(),
+  ])
 
-  // Try staff
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('salon_id, role')
-    .eq('user_id', user.id)
-    .single()
-  if (staff) return { salonId: staff.salon_id, userId: user.id, isOwner: false, role: staff.role }
+  if (salonRes.data) return { salonId: salonRes.data.id, userId: user.id, isOwner: true }
+  if (staffRes.data)
+    return { salonId: staffRes.data.salon_id, userId: user.id, isOwner: false, role: staffRes.data.role }
 
   return null
 }

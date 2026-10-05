@@ -29,7 +29,7 @@ type Section = 'gabinet' | 'bezpieczenstwo' | 'wyglad' | 'konto'
 
 interface SettingsPageProps {
   salon: Salon | null
-  user: { id: string; email: string } | null
+  user: { id: string; email: string | null } | null
 }
 
 // ── Icons ────────────────────────────────────────────────────────────────────
@@ -429,7 +429,7 @@ function WygladSection() {
 
 // ── Section: Konto ────────────────────────────────────────────────────────────
 
-function KontoSection({ user }: { user: { id: string; email: string } | null }) {
+function KontoSection({ user }: { user: { id: string; email: string | null } | null }) {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)

@@ -43,6 +43,12 @@ export const Route = createRootRoute({
     }
   },
   component: RootComponent,
+  pendingComponent: () => (
+    <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-live="polite">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <span className="sr-only">Ładowanie…</span>
+    </div>
+  ),
   notFoundComponent: () => (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">

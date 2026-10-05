@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { consumeRateLimit, rateLimitError } from '@/lib/rate-limit'
 import { createAdminClient } from '../../lib/supabase/admin'
+import { getVerifiedUser } from './_auth'
 import { diffProducts, type IncomingBeautyPlanProduct } from '../lib/beauty-plan-diff'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getCallerSalonId } from './_salon-resolver'
@@ -223,9 +224,7 @@ export const deleteBeautyPlanFn = createServerFn({ method: 'POST' })
 
 export const getMyBeautyPlanFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return { plan: null, products: [], error: 'not_authenticated' }
 
   const { data: client } = await supabase
@@ -509,9 +508,7 @@ export const scrapeProductFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { url: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
     if (!user) return { error: 'Nie jesteś zalogowany' }
 
     const limit = consumeRateLimit(`scrape:${user.id}`, 20, 60_000)

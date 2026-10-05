@@ -2,6 +2,7 @@ import { redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { consumeRateLimit, rateLimitError, requestIp } from '@/lib/rate-limit'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 import { resolveSiteUrl } from './_site-url'
 
 const MIN_PASSWORD_LENGTH = 8
@@ -16,9 +17,7 @@ function passwordError(password: string): string | null {
 export const fetchUserFn = createServerFn({ method: 'GET' }).handler(async () => {
   try {
     const supabase = getSupabaseServerClient()
-    const { data } = await supabase.auth.getUser()
-    if (!data.user?.email) return null
-    return { id: data.user.id, email: data.user.email }
+    return await getVerifiedUser(supabase)
   } catch {
     return null
   }
@@ -90,21 +89,21 @@ export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
 // so the route file doesn't need to directly import server-only supabase util
 export const getUserRoleFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return null
 
-  const { data: salon } = await supabase.from('salons').select('id').eq('user_id', user.id).single()
+  const [salonRes, staffRes] = await Promise.all([
+    supabase.from('salons').select('id').eq('user_id', user.id).maybeSingle(),
+    supabase
+      .from('staff_members')
+      .select('role, is_active')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ])
 
-  if (salon) return { isOwner: true, staffRole: null as null }
+  if (salonRes.data) return { isOwner: true, staffRole: null as null }
 
-  const { data: staffRecord } = await supabase
-    .from('staff_members')
-    .select('role, is_active')
-    .eq('user_id', user.id)
-    .single()
-
+  const staffRecord = staffRes.data
   if (!staffRecord?.is_active) return null
   return { isOwner: false, staffRole: staffRecord.role as 'staff' | 'manager' }
 })
@@ -148,9 +147,7 @@ export const changePasswordFn = createServerFn({ method: 'POST' })
     if (pwdError) return { error: pwdError }
 
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
     if (!user) return { error: 'Nie jesteś zalogowany' }
     const { error } = await supabase.auth.updateUser({ password: data.password })
     if (error) return { error: error.message }
@@ -160,15 +157,13 @@ export const changePasswordFn = createServerFn({ method: 'POST' })
 // Returns client + user data for the client portal layout
 export const getClientUserFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return { client: null, user: null }
   const { data: client } = await supabase
     .from('clients')
     .select('id, name')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
   return { client, user: { id: user.id, email: user.email } }
 })
 

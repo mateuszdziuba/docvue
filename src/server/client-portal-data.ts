@@ -1,9 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '@/src/utils/supabase'
+import { getVerifiedUser } from './_auth'
 
 export const getClientProfileFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return { client: null, history: [], error: 'not_authenticated' }
 
   const { data: client } = await supabase
@@ -26,7 +27,7 @@ export const getClientProfileFn = createServerFn({ method: 'GET' }).handler(asyn
 
 export const getClientAppointmentsFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return { appointments: null, error: 'not_authenticated' }
 
   const { data: client } = await supabase

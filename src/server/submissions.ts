@@ -6,11 +6,6 @@ export const getSubmissionsFn = createServerFn({ method: 'GET' })
   .inputValidator((d: { query?: string; clientId?: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { submissions: [] }
-
     const caller = await getCallerSalonId(supabase)
     if (!caller) return { submissions: [] }
 

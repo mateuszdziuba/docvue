@@ -11,6 +11,7 @@ import {
   staffConflict,
 } from '../lib/appointment-overlap'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 import { getCallerSalonId } from './_salon-resolver'
 
 interface StaffNameRow {
@@ -525,9 +526,7 @@ export const bookAsClientFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { treatmentId: string; startTime: string; salonId?: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
     if (!user) return { error: 'Musisz być zalogowany' }
 
     const { data: client } = await supabase

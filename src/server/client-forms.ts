@@ -9,6 +9,7 @@ import { consumeRateLimit, rateLimitError, requestIp } from '@/lib/rate-limit'
 import { generateSecureToken, isValidFormToken } from '@/lib/secure-token'
 import type { FormField, FormSchema } from '@/types/database'
 import { createAdminClient } from '../../lib/supabase/admin'
+import { getVerifiedUser } from './_auth'
 import { getSupabaseServerClient } from '../utils/supabase'
 
 const SALON_PUBLIC_COLUMNS = 'name, address, phone, email, website, social_media'
@@ -23,11 +24,13 @@ type PublicSalon = {
 }
 
 async function getSalonId(supabase: ReturnType<typeof getSupabaseServerClient>) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return null
-  const { data: salon } = await supabase.from('salons').select('id').eq('user_id', user.id).single()
+  const { data: salon } = await supabase
+    .from('salons')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()
   return salon?.id ?? null
 }
 

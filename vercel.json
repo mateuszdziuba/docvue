@@ -1,5 +1,6 @@
 {
   "framework": "tanstack-start",
+  "regions": ["fra1"],
   "headers": [
     {
       "source": "/sw.js",

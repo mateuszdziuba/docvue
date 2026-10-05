@@ -1,4 +1,5 @@
 import type { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 
 export type CallerInfo = {
   salonId: string
@@ -15,23 +16,22 @@ export type CallerInfo = {
 export async function getCallerSalonId(
   supabase: ReturnType<typeof getSupabaseServerClient>,
 ): Promise<CallerInfo | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return null
 
-  // Owner path
-  const { data: salon } = await supabase.from('salons').select('id').eq('user_id', user.id).single()
-  if (salon) return { salonId: salon.id, userId: user.id, isOwner: true }
+  // Równoległe zapytania — owner i staff sprawdzani w jednym round-tripie.
+  const [salonRes, staffRes] = await Promise.all([
+    supabase.from('salons').select('id').eq('user_id', user.id).maybeSingle(),
+    supabase
+      .from('staff_members')
+      .select('salon_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle(),
+  ])
 
-  // Staff path
-  const { data: staffRecord } = await supabase
-    .from('staff_members')
-    .select('salon_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
-  if (staffRecord) return { salonId: staffRecord.salon_id, userId: user.id, isOwner: false }
+  if (salonRes.data) return { salonId: salonRes.data.id, userId: user.id, isOwner: true }
+  if (staffRes.data) return { salonId: staffRes.data.salon_id, userId: user.id, isOwner: false }
 
   return null
 }

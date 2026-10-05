@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 
 export const updateSalonSettingsFn = createServerFn({ method: 'POST' })
   .inputValidator(
@@ -16,9 +17,7 @@ export const updateSalonSettingsFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
     if (!user) return { error: 'Nie jesteś zalogowany' }
 
     const payload = {
@@ -58,29 +57,31 @@ export const updateSalonSettingsFn = createServerFn({ method: 'POST' })
 
 export const getSalonFn = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return null
 
-  // Owner path
-  const { data: salon } = await supabase.from('salons').select('*').eq('user_id', user.id).single()
+  // Owner path — jedno zapytanie
+  const { data: salon } = await supabase
+    .from('salons')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
   if (salon) return salon
 
-  // Staff path — find salon via staff_members table
+  // Staff path — salon przez staff_members
   const { data: staffRecord } = await supabase
     .from('staff_members')
     .select('salon_id')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .single()
+    .maybeSingle()
   if (!staffRecord) return null
 
   const { data: staffSalon } = await supabase
     .from('salons')
     .select('*')
     .eq('id', staffRecord.salon_id)
-    .single()
+    .maybeSingle()
   return staffSalon ?? null
 })
 

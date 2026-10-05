@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { consumeRateLimit, rateLimitError } from '@/lib/rate-limit'
 import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 import { findAvailableSlots } from './availability'
 import { callLLM, type LLMMessage } from './llm'
 
@@ -15,13 +16,13 @@ export interface ToolCall {
 }
 
 async function getClientId(supabase: ReturnType<typeof getSupabaseServerClient>) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
   if (!user) return null
   const { data: client } = await supabase
     .from('clients')
     .select('id, salon_id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
   return client ? { clientId: client.id, salonId: client.salon_id } : null
 }
 

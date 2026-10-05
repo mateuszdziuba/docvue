@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 
 export interface TimeBlock {
   id: string
@@ -56,9 +57,7 @@ export const createTimeBlockFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
     if (!user) return { error: 'Brak autoryzacji' }
 
     const { error } = await supabase.from('time_blocks').insert({

@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { intervalsOverlap } from '../lib/appointment-overlap'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 
 export interface AvailableSlot {
   start: string
@@ -79,9 +80,7 @@ export const findAvailableSlotsFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
 
     let salonId = data.salonId
     if (!salonId && user) {
