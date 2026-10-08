@@ -57,9 +57,9 @@ function ProductCard({ product }: { product: BeautyPlanProduct }) {
   const price = formatPrice(product.price)
 
   return (
-    <li className="flex items-start gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm break-inside-avoid">
+    <li className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm break-inside-avoid sm:gap-4 sm:p-4">
       {product.image_url ? (
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card p-1">
+        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card p-1 sm:h-16 sm:w-16">
           <img
             src={product.image_url}
             alt={product.name}
@@ -67,27 +67,31 @@ function ProductCard({ product }: { product: BeautyPlanProduct }) {
           />
         </div>
       ) : (
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-success-container text-on-success-container">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-success-container text-on-success-container sm:h-16 sm:w-16">
           <Package className="h-7 w-7" />
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           {product.url ? (
             <a
               href={product.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 font-medium text-foreground transition-colors hover:text-success"
+              className="flex items-start gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-success sm:items-center sm:text-base"
             >
-              <span>{product.name}</span>
+              <span className="break-words">{product.name}</span>
               <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             </a>
           ) : (
-            <span className="font-medium text-foreground">{product.name}</span>
+            <span className="break-words text-sm font-medium text-foreground sm:text-base">
+              {product.name}
+            </span>
           )}
           {price && (
-            <span className="shrink-0 font-semibold text-on-success-container">{price}</span>
+            <span className="shrink-0 text-sm font-semibold text-on-success-container sm:text-base">
+              {price}
+            </span>
           )}
         </div>
         {product.usage_description && (
@@ -114,7 +118,7 @@ function PlanTimeSection({
   const isMorning = tone === 'morning'
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-background p-6">
+    <section className="rounded-2xl border border-border/60 bg-background p-4 sm:p-6">
       <div className="mb-4 flex items-center gap-2">
         <div
           className={
@@ -161,12 +165,12 @@ function SharedBeautyPlanPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
-        <header className="rounded-3xl border border-border/60 bg-card p-6 text-center shadow-sm">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:py-10">
+        <header className="rounded-3xl border border-border/60 bg-card p-5 text-center shadow-sm sm:p-6">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Heart className="h-6 w-6" />
           </div>
-          <h1 className="mt-4 font-serif text-2xl font-normal tracking-tight text-foreground">
+          <h1 className="mt-4 font-serif text-xl font-normal tracking-tight text-foreground sm:text-2xl">
             Plan pielęgnacyjny
           </h1>
           {clientFirstName && (

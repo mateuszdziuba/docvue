@@ -367,6 +367,10 @@ export function EditBeautyPlanDialog({
                         )}
                       </Button>
                     </div>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Automatyczne pobieranie danych działa tylko dla linków z{' '}
+                      <strong>Rossmann</strong>. W innych sklepach wpisz dane ręcznie.
+                    </p>
                     {scrapeError && (
                       <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
                         {scrapeError}

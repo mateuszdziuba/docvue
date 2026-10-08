@@ -8,21 +8,17 @@ import { Button } from '@/components/ui/button'
 export function ShareBeautyPlanButton({ planId }: { planId: string }) {
   const [copied, setCopied] = useState(false)
 
-  const buildShareUrl = () => `${window.location.origin}/share/beauty-plan/${planId}`
+  const sharePath = `/share/beauty-plan/${planId}`
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildShareUrl())
+      await navigator.clipboard.writeText(`${window.location.origin}${sharePath}`)
       setCopied(true)
       toast.success('Link do planu skopiowany do schowka')
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
       toast.error('Nie udało się skopiować linku')
     }
-  }
-
-  const handleOpen = () => {
-    window.open(buildShareUrl(), '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -41,14 +37,17 @@ export function ShareBeautyPlanButton({ planId }: { planId: string }) {
         )}
         {copied ? 'Skopiowano' : 'Kopiuj link'}
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleOpen}
-        aria-label="Podgląd planu pielęgnacyjnego w nowej karcie"
-      >
-        <ExternalLink className="mr-1.5 h-4 w-4" />
-        Podgląd
+      {/* Zwykły link — działa też w PWA, gdzie window.open bywa blokowane */}
+      <Button variant="ghost" size="sm" asChild>
+        <a
+          href={sharePath}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Podgląd planu pielęgnacyjnego w nowej karcie"
+        >
+          <ExternalLink className="mr-1.5 h-4 w-4" />
+          Podgląd
+        </a>
       </Button>
     </div>
   )

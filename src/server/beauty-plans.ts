@@ -1,9 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import { consumeRateLimit, rateLimitError } from '@/lib/rate-limit'
 import { createAdminClient } from '../../lib/supabase/admin'
-import { getVerifiedUser } from './_auth'
 import { diffProducts, type IncomingBeautyPlanProduct } from '../lib/beauty-plan-diff'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { getVerifiedUser } from './_auth'
 import { getCallerSalonId } from './_salon-resolver'
 
 export type BeautyPlanProduct = {
@@ -536,7 +536,12 @@ export const scrapeProductFn = createServerFn({ method: 'POST' })
     }
 
     const html = await fetchHtml(url)
-    if (!html) return { error: 'Nie udało się pobrać strony produktu. Spróbuj ponownie.' }
+    if (!html) {
+      return {
+        error:
+          'Nie udało się pobrać strony produktu. Automatyczne pobieranie działa dla linków z Rossmann — wpisz dane ręcznie.',
+      }
+    }
 
     const jsonLd = extractJsonLd(html)
     const name = extractMeta(html, ['og:title', 'twitter:title']) ?? jsonLd?.name ?? null
@@ -548,7 +553,10 @@ export const scrapeProductFn = createServerFn({ method: 'POST' })
     const price = extractMetaPrice(html) ?? extractItempropPrice(html) ?? jsonLd?.price ?? null
 
     if (!name && !imageUrl && price === null) {
-      return { error: 'Nie znaleziono danych produktu na stronie. Wpisz je ręcznie.' }
+      return {
+        error:
+          'Nie znaleziono danych produktu. Automatyczne pobieranie działa dla linków z Rossmann — wpisz dane ręcznie.',
+      }
     }
 
     await admin.from('scraped_products_cache').upsert(
