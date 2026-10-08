@@ -21,7 +21,11 @@ import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placehold
 import { formatFieldValue, isImageSignature, resolveSalonCity } from '@/lib/submission-format'
 import { useInvalidateOnFocus } from '@/lib/use-invalidate-on-focus'
 import { getSalonFn } from '@/src/server/settings'
-import { deleteSubmissionFn, getSubmissionFn } from '@/src/server/submissions'
+import {
+  deleteSubmissionFn,
+  getSubmissionDocumentUrlFn,
+  getSubmissionFn,
+} from '@/src/server/submissions'
 import type { FormField } from '@/types/database'
 
 export const Route = createFileRoute('/_authed/dashboard/submissions/$submissionId')({
@@ -49,13 +53,43 @@ function SubmissionDetailPage() {
   const salonContact = salon as SalonContact | null
   const salonCity = resolveSalonCity(salonContact)
 
+  const pdfFileName = (() => {
+    const slug = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40)
+    return `docvue-${slug(sub.forms?.title ?? 'formularz')}-${slug(sub.client_name ?? 'klient')}.pdf`
+  })()
+
+  function triggerDownload(href: string) {
+    const link = document.createElement('a')
+    link.href = href
+    link.download = pdfFileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
   async function handleDownloadPdf() {
     setPdfLoading(true)
     try {
-      const [{ pdf }, { SubmissionPdf }] = await Promise.all([
+      // Najpierw migawka PDF zapisana w chwili podpisania (jeśli jest).
+      if (sub.pdf_path) {
+        const stored = await getSubmissionDocumentUrlFn({ data: { id: sub.id } })
+        if ('url' in stored && stored.url) {
+          triggerDownload(stored.url)
+          return
+        }
+      }
+
+      // Fallback dla starszych odpowiedzi — generowanie w przeglądarce.
+      const [{ pdf }, { SubmissionPdf, registerPdfFonts }] = await Promise.all([
         import('@react-pdf/renderer'),
         import('@/components/admin/submission-pdf'),
       ])
+      registerPdfFonts(window.location.origin)
       const blob = await pdf(
         <SubmissionPdf
           formTitle={applySalonPlaceholders(sub.forms?.title ?? 'Formularz', salonContact)}
@@ -69,18 +103,7 @@ function SubmissionDetailPage() {
         />,
       ).toBlob()
       const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      const slug = (value: string) =>
-        value
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-          .slice(0, 40)
-      link.href = url
-      link.download = `docvue-${slug(sub.forms?.title ?? 'formularz')}-${slug(sub.client_name ?? 'klient')}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+      triggerDownload(url)
       URL.revokeObjectURL(url)
     } catch {
       toast.error('Nie udało się wygenerować PDF')
@@ -196,6 +219,44 @@ function SubmissionDetailPage() {
             {format(parseISO(sub.created_at), 'd MMMM yyyy, HH:mm', { locale: pl })}
           </p>
         </header>
+
+        {(sub.signed_at || sub.content_sha256) && (
+          <section className="print-hidden space-y-1.5 rounded-lg border border-border/70 bg-muted/30 p-4 text-xs text-muted-foreground">
+            <p className="font-semibold uppercase tracking-[0.08em] text-foreground">
+              Ślad podpisania
+            </p>
+            <p>
+              Podpisano:{' '}
+              {sub.signed_at
+                ? format(parseISO(sub.signed_at), 'd MMMM yyyy, HH:mm', { locale: pl })
+                : '—'}
+              {sub.filled_by === 'staff' ? ' · tryb salonu' : ' · tryb klienta'}
+            </p>
+            {sub.ip_address && <p>Adres IP: {sub.ip_address}</p>}
+            {sub.user_agent && <p className="break-all">Urządzenie: {sub.user_agent}</p>}
+            {sub.content_sha256 && (
+              <p className="flex flex-wrap items-center gap-2">
+                Skrót treści:{' '}
+                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+                  {sub.content_sha256.slice(0, 16)}…
+                </code>
+                <button
+                  type="button"
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(sub.content_sha256 as string)
+                      .then(() => toast.success('Skrót skopiowany'))
+                      .catch(() => toast.error('Nie udało się skopiować'))
+                  }}
+                >
+                  Kopiuj pełny skrót
+                </button>
+              </p>
+            )}
+            {sub.pdf_path && <p>Dokument PDF został zapisany w chwili podpisania zgody.</p>}
+          </section>
+        )}
 
         <dl className="divide-y divide-border/70">
           {answeredFields.map(({ field, label, value }) => {

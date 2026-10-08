@@ -1,20 +1,26 @@
-'use client'
-
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import { normalizeFieldType } from '@/lib/form-validation'
 import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placeholders'
 import { formatFieldValue, isImageSignature } from '@/lib/submission-format'
 import type { FormField } from '@/types/database'
 
-const origin = typeof window !== 'undefined' ? window.location.origin : ''
+let fontsRegisteredFor: string | null = null
 
-Font.register({
-  family: 'Manrope',
-  fonts: [
-    { src: `${origin}/fonts/Manrope-Regular.woff` },
-    { src: `${origin}/fonts/Manrope-Bold.woff`, fontWeight: 700 },
-  ],
-})
+/**
+ * Rejestruje fonty PDF (Manrope z polskimi znakami). Wywoływane raz na
+ * środowisko: klient → window.location.origin, serwer → resolveSiteUrl().
+ */
+export function registerPdfFonts(baseUrl: string) {
+  if (fontsRegisteredFor === baseUrl) return
+  Font.register({
+    family: 'Manrope',
+    fonts: [
+      { src: `${baseUrl}/fonts/Manrope-Regular.woff` },
+      { src: `${baseUrl}/fonts/Manrope-Bold.woff`, fontWeight: 700 },
+    ],
+  })
+  fontsRegisteredFor = baseUrl
+}
 
 type PdfEntry =
   | { kind: 'separator'; key: string; label: string; description?: string }

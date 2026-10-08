@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getCallerSalonId } from './_salon-resolver'
 
@@ -37,12 +38,48 @@ export const getSubmissionFn = createServerFn({ method: 'GET' })
     return { submission }
   })
 
+export const getSubmissionDocumentUrlFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+    const { data: row } = await supabase
+      .from('submissions')
+      .select('pdf_path')
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!row?.pdf_path) return { error: 'Brak zapisanego dokumentu' }
+    if (row.pdf_path.split('/')[0] !== caller.salonId) return { error: 'Brak dostępu do dokumentu' }
+
+    const admin = await createAdminClient()
+    const { data: signed, error } = await admin.storage
+      .from('submission-documents')
+      .createSignedUrl(row.pdf_path, 3600)
+    if (error || !signed) return { error: 'Nie udało się pobrać dokumentu' }
+    return { url: signed.signedUrl }
+  })
+
 export const deleteSubmissionFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
+
+    // Usuń także migawkę PDF ze storage (jeśli istnieje).
+    const { data: row } = await supabase
+      .from('submissions')
+      .select('pdf_path')
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (row?.pdf_path) {
+      const admin = await createAdminClient()
+      await admin.storage.from('submission-documents').remove([row.pdf_path])
+    }
+
     const { error } = await supabase
       .from('submissions')
       .delete()

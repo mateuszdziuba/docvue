@@ -80,6 +80,16 @@ export interface Submission {
   client_email: string | null
   signature: string | null
   created_at: string
+  // Ślad audytowy (migracja 20261011)
+  signed_at?: string | null
+  ip_address?: string | null
+  user_agent?: string | null
+  filled_by?: 'client' | 'staff' | null
+  form_title?: string | null
+  form_schema?: unknown
+  content_sha256?: string | null
+  pdf_path?: string | null
+  pdf_sha256?: string | null
 }
 
 export interface ChatMessage {

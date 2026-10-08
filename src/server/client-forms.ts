@@ -1,4 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
+import { format, parseISO } from 'date-fns'
+import { pl } from 'date-fns/locale'
 import {
   formatValidationErrors,
   MAX_SIGNATURE_LENGTH,
@@ -6,11 +9,15 @@ import {
   validateFormSubmission,
 } from '@/lib/form-validation'
 import { consumeRateLimit, rateLimitError, requestIp } from '@/lib/rate-limit'
+import type { SalonContact } from '@/lib/salon-placeholders'
 import { generateSecureToken, isValidFormToken } from '@/lib/secure-token'
+import { resolveSalonCity } from '@/lib/submission-format'
 import type { FormField, FormSchema } from '@/types/database'
 import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getVerifiedUser } from './_auth'
+import { sha256Hex, submissionContentHash } from './audit'
+import { renderSubmissionPdf } from './render-submission-pdf'
 
 const SALON_PUBLIC_COLUMNS = 'name, address, phone, email, website, social_media'
 
@@ -267,7 +274,7 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
     const admin = await createAdminClient()
     const { data: clientForm, error: cfError } = await admin
       .from('client_forms')
-      .select('*, forms (id, salon_id, schema, is_active), clients (id, name, email)')
+      .select('*, forms (id, salon_id, title, schema, is_active), clients (id, name, email)')
       .eq('token', data.token)
       .maybeSingle()
 
@@ -275,7 +282,11 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
     if (clientForm.status !== 'pending') {
       return { error: 'Ten formularz został już wypełniony' }
     }
-    const formRow = clientForm.forms as { schema?: FormSchema; is_active?: boolean | null } | null
+    const formRow = clientForm.forms as {
+      title?: string | null
+      schema?: FormSchema
+      is_active?: boolean | null
+    } | null
     if (!formRow) return { error: 'Formularz nie jest dostępny' }
     if (formRow.is_active === false) return { error: 'Ten formularz jest nieaktywny' }
 
@@ -316,20 +327,49 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
 
     if (claimError || !claimed) return { error: 'Ten formularz został już wypełniony' }
 
-    const { data: submission, error: subError } = await admin
-      .from('submissions')
-      .insert({
-        client_form_id: clientForm.id,
-        form_id: clientForm.form_id,
-        client_id: clientForm.client_id,
-        salon_id: clientForm.salon_id,
-        data: validation.data ?? data.formData,
-        client_name: (clientForm.clients as { name: string } | null)?.name || null,
-        client_email: (clientForm.clients as { email: string | null } | null)?.email || null,
-        signature: data.signature || null,
-      })
-      .select()
-      .single()
+    const signedAt = new Date().toISOString()
+    const answers = (validation.data ?? data.formData) as Record<string, unknown>
+    const signature = data.signature || null
+    const clientRecord = clientForm.clients as { name: string | null; email: string | null } | null
+
+    const contentSha256 = submissionContentHash({
+      formTitle: formRow.title ?? null,
+      schema: formSchema ?? null,
+      answers,
+      signature,
+      signedAt,
+      filledBy: data.filledBy,
+    })
+
+    const baseRow = {
+      client_form_id: clientForm.id,
+      form_id: clientForm.form_id,
+      client_id: clientForm.client_id,
+      salon_id: clientForm.salon_id,
+      data: answers,
+      client_name: clientRecord?.name || null,
+      client_email: clientRecord?.email || null,
+      signature,
+    }
+
+    const auditRow = {
+      ...baseRow,
+      signed_at: signedAt,
+      ip_address: requestIp(),
+      user_agent: (getRequestHeader('user-agent') ?? '').slice(0, 512) || null,
+      filled_by: data.filledBy,
+      form_title: formRow.title ?? null,
+      form_schema: formSchema ?? null,
+      content_sha256: contentSha256,
+    }
+
+    let inserted = await admin.from('submissions').insert(auditRow).select().single()
+    // Migracja 20261011 może nie być jeszcze zastosowana — zapis bez audytu.
+    if (inserted.error && /column|schema cache/i.test(inserted.error.message)) {
+      inserted = await admin.from('submissions').insert(baseRow).select().single()
+    }
+    const submission = inserted.data
+    const subError = inserted.error
 
     if (subError) {
       console.error('Submission insert error:', subError.message)
@@ -338,6 +378,46 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
         .update({ status: 'pending', filled_at: null, filled_by: null })
         .eq('id', clientForm.id)
       return { error: 'Nie udało się zapisać odpowiedzi. Spróbuj ponownie za chwilę.' }
+    }
+
+    // Migawka PDF zapisywana w chwili podpisania (best-effort — nie blokuje zgody).
+    if (submission) {
+      try {
+        const { data: salon } = await admin
+          .from('salons')
+          .select('name, address, phone, email, city')
+          .eq('id', clientForm.salon_id)
+          .maybeSingle()
+        const pdfBuffer = await renderSubmissionPdf({
+          formTitle: formRow.title ?? 'Formularz',
+          clientName: clientRecord?.name ?? null,
+          createdAtLabel: format(parseISO(signedAt), 'd MMMM yyyy, HH:mm', { locale: pl }),
+          salon: (salon as SalonContact | null) ?? null,
+          salonCity: resolveSalonCity(salon as SalonContact | null),
+          fields: fields as unknown[],
+          data: answers,
+          signature,
+        })
+        if (pdfBuffer) {
+          const pdfPath = `${clientForm.salon_id}/${submission.id}.pdf`
+          const { error: uploadError } = await admin.storage
+            .from('submission-documents')
+            .upload(pdfPath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
+          if (uploadError) {
+            console.error('[submission-pdf] upload error:', uploadError.message)
+          } else {
+            const pdfSha256 = sha256Hex(pdfBuffer)
+            await admin
+              .from('submissions')
+              .update({ pdf_path: pdfPath, pdf_sha256: pdfSha256 })
+              .eq('id', submission.id)
+            submission.pdf_path = pdfPath
+            submission.pdf_sha256 = pdfSha256
+          }
+        }
+      } catch (snapshotError) {
+        console.error('[submission-pdf] snapshot error:', snapshotError)
+      }
     }
 
     await syncClientAppointmentsStatus(clientForm.client_id)
