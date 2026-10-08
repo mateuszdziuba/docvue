@@ -827,12 +827,12 @@ export function FormRenderer({
       })}
 
       {!readOnly && yesNoFields.length >= 5 && (
-        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-4 z-40 print-hidden">
+        <div className="pointer-events-none sticky bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 flex justify-end print-hidden">
           <Button
             type="button"
             size="lg"
             onClick={markAllYesNoAsNo}
-            className="min-h-12 gap-2 rounded-full px-5 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_8px_24px_rgb(111_89_87/0.35)]"
+            className="pointer-events-auto min-h-12 gap-2 rounded-full px-5 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_8px_24px_rgb(111_89_87/0.35)]"
             aria-label={`Zaznacz wszystkie ${yesNoFields.length} pytań tak/nie na „Nie”`}
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />

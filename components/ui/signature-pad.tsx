@@ -23,8 +23,8 @@ type SignaturePadProps = {
   holdToSignDuration?: number
 }
 
-const CANVAS_WIDTH = 400
-const CANVAS_HEIGHT = 200
+const CANVAS_WIDTH = 800
+const CANVAS_HEIGHT = 400
 const DEFAULT_HOLD_DURATION = 1500
 
 const disableTouchScroll = (canvas: HTMLCanvasElement) => {
@@ -329,7 +329,11 @@ export default function SignaturePad({
       {value ? (
         <div className="relative overflow-hidden rounded-md border border-input bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="Podpis klienta" className="h-[100px] w-[200px] object-contain" />
+          <img
+            src={value}
+            alt="Podpis klienta"
+            className="h-[140px] w-[280px] object-contain sm:h-[160px] sm:w-[320px]"
+          />
           <div className="absolute bottom-1 right-1 flex gap-1">
             <Button
               type="button"
@@ -379,7 +383,7 @@ export default function SignaturePad({
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg md:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Pen className="h-4 w-4" aria-hidden="true" />
@@ -435,7 +439,7 @@ export default function SignaturePad({
                   height={CANVAS_HEIGHT}
                   role="img"
                   aria-label="Obszar rysowania podpisu"
-                  className="aspect-[2/1] h-auto w-full cursor-crosshair touch-none"
+                  className="aspect-[2/1] h-auto min-h-[240px] w-full cursor-crosshair touch-none sm:min-h-[300px]"
                   onMouseDown={startDrawing}
                   onMouseUp={stopDrawing}
                   onMouseLeave={stopDrawing}
