@@ -452,7 +452,7 @@ export function FormRenderer({
                                   : [...current, option.value],
                               )
                             }}
-                            className="h-6 w-6 rounded border-border text-primary focus:ring-primary/30 transition-all"
+                            className="h-6 w-6 rounded border-border accent-primary text-primary focus:ring-primary/30 transition-all"
                           />
                           <span className="text-foreground transition-colors">{option.label}</span>
                         </label>
@@ -490,7 +490,7 @@ export function FormRenderer({
                       aria-invalid={hasError || undefined}
                       aria-required={field.required || undefined}
                       aria-describedby={describedBy}
-                      className="h-6 w-6 rounded border-border text-primary focus:ring-primary/30 transition-all"
+                      className="h-6 w-6 rounded border-border accent-primary text-primary focus:ring-primary/30 transition-all"
                     />
                     <span className="text-foreground transition-colors">
                       {fieldLabel(field)}
@@ -553,7 +553,7 @@ export function FormRenderer({
                             disabled={isDisabled}
                             onChange={() => f.handleChange(option.value)}
                             onBlur={f.handleBlur}
-                            className="h-6 w-6 border-border text-primary focus:ring-primary/30 transition-all"
+                            className="h-6 w-6 border-border accent-primary text-primary focus:ring-primary/30 transition-all"
                           />
                           <span className="text-foreground transition-colors">{option.label}</span>
                         </label>
