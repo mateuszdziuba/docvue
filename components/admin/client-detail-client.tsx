@@ -35,14 +35,19 @@ interface Props {
   appointments?: ClientAppointment[]
 }
 
-
-
 export function ClientDetailClient({
   client,
   clientForms,
   availableForms,
   submissions = [],
 }: Props) {
+  const pendingForms = clientForms.filter((cf) => cf.status !== 'completed')
+  // Wypełnione przypisania bez rekordu odpowiedzi (np. dane importowane) —
+  // pokazujemy je w historii, żeby nic nie zniknęło z widoku.
+  const completedWithoutSubmission = clientForms.filter(
+    (cf) => cf.status === 'completed' && !submissions.some((sub) => sub.form_id === cf.form_id),
+  )
+  const historyCount = submissions.length + completedWithoutSubmission.length
   const { lock } = useLock()
   const router = useRouterCompat()
   const [isAssigning, setIsAssigning] = useState(false)
@@ -250,13 +255,13 @@ export function ClientDetailClient({
         <h2 className="text-lg font-semibold text-foreground mb-4">
           Przypisane formularze
           <span className="ml-2 text-sm font-normal text-muted-foreground">
-            ({clientForms.length})
+            ({pendingForms.length})
           </span>
         </h2>
 
-        {clientForms.length > 0 ? (
+        {pendingForms.length > 0 ? (
           <div className="space-y-3">
-            {clientForms.map((cf) => (
+            {pendingForms.map((cf) => (
               <div
                 key={cf.id}
                 className="flex flex-col gap-3 p-4 bg-secondary/30 rounded-lg sm:flex-row sm:items-center sm:justify-between"
@@ -317,7 +322,7 @@ export function ClientDetailClient({
           </div>
         ) : (
           <p className="text-muted-foreground text-center py-8">
-            Brak przypisanych formularzy. Wybierz formularz powyżej i kliknij &#34;Przypisz&#34;.
+            Brak formularzy do wypełnienia. Wypełnione znajdziesz w historii poniżej.
           </p>
         )}
       </div>
@@ -326,13 +331,27 @@ export function ClientDetailClient({
       <div className="bg-card rounded-xl p-6 border border-border/60">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           Historia wypełnień
-          <span className="ml-2 text-sm font-normal text-muted-foreground">
-            ({submissions.length})
-          </span>
+          <span className="ml-2 text-sm font-normal text-muted-foreground">({historyCount})</span>
         </h2>
 
-        {submissions.length > 0 ? (
+        {historyCount > 0 ? (
           <div className="space-y-2">
+            {completedWithoutSubmission.map((cf) => (
+              <div
+                key={cf.id}
+                className="flex items-center justify-between rounded-lg bg-secondary/30 p-3 opacity-80"
+              >
+                <div>
+                  <span className="font-medium text-foreground">{cf.forms?.title}</span>
+                  <span className="ml-3 text-sm text-muted-foreground">
+                    {cf.filled_at
+                      ? new Date(cf.filled_at).toLocaleDateString('pl-PL')
+                      : new Date(cf.created_at).toLocaleDateString('pl-PL')}
+                    {cf.filled_by === 'staff' && ' (salon)'} · brak odpowiedzi w systemie
+                  </span>
+                </div>
+              </div>
+            ))}
             {submissions.map((sub) => (
               <Link
                 key={sub.id}

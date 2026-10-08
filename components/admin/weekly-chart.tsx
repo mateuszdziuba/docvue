@@ -59,7 +59,12 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
             strokeWidth={2}
             fill="url(#fillVisits)"
             dot={false}
-            activeDot={{ r: 4, strokeWidth: 2, fill: 'var(--color-card)' }}
+            activeDot={{
+              r: 4,
+              strokeWidth: 2,
+              fill: 'var(--color-primary)',
+              stroke: 'var(--color-card)',
+            }}
           />
           <Area
             type="monotone"
@@ -68,7 +73,12 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
             strokeWidth={2}
             fill="url(#fillSubmissions)"
             dot={false}
-            activeDot={{ r: 4, strokeWidth: 2, fill: 'var(--color-card)' }}
+            activeDot={{
+              r: 4,
+              strokeWidth: 2,
+              fill: 'var(--color-info)',
+              stroke: 'var(--color-card)',
+            }}
           />
         </AreaChart>
       </ResponsiveContainer>
