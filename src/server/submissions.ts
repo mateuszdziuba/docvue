@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getCallerSalonId } from './_salon-resolver'
+import { sha256Hex } from './audit'
 
 export const getSubmissionsFn = createServerFn({ method: 'GET' })
   .inputValidator((d: { query?: string; clientId?: string }) => d)
@@ -36,6 +37,71 @@ export const getSubmissionFn = createServerFn({ method: 'GET' })
       .maybeSingle()
     if (error || !submission) return { error: 'Odpowiedź nie istnieje' }
     return { submission }
+  })
+
+export const createSubmissionDocumentUploadFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+    const { data: row } = await supabase
+      .from('submissions')
+      .select('id')
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!row) return { error: 'Odpowiedź nie istnieje' }
+
+    const path = `${caller.salonId}/${data.id}.pdf`
+    const admin = await createAdminClient()
+    const { data: signed, error } = await admin.storage
+      .from('submission-documents')
+      .createSignedUploadUrl(path)
+    if (error || !signed) return { error: 'Nie udało się przygotować wysyłki dokumentu' }
+    return { path: signed.path, token: signed.token }
+  })
+
+export const saveSubmissionDocumentFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { id: string; path: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+    if (data.path.split('/')[0] !== caller.salonId) return { error: 'Nieprawidłowa ścieżka' }
+
+    const { data: row } = await supabase
+      .from('submissions')
+      .select('id')
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!row) return { error: 'Odpowiedź nie istnieje' }
+
+    const admin = await createAdminClient()
+    const { data: blob, error: downloadError } = await admin.storage
+      .from('submission-documents')
+      .download(data.path)
+    if (downloadError || !blob) return { error: 'Nie udało się zweryfikować dokumentu' }
+
+    const buffer = Buffer.from(await blob.arrayBuffer())
+    if (buffer.subarray(0, 5).toString() !== '%PDF-') {
+      await admin.storage.from('submission-documents').remove([data.path])
+      return { error: 'Przesłany plik nie jest dokumentem PDF' }
+    }
+
+    const pdfSha256 = sha256Hex(buffer)
+    const { error: updateError } = await admin
+      .from('submissions')
+      .update({ pdf_path: data.path, pdf_sha256: pdfSha256 })
+      .eq('id', data.id)
+    if (updateError) return { error: 'Nie udało się zapisać dokumentu' }
+
+    const { data: signed, error: signError } = await admin.storage
+      .from('submission-documents')
+      .createSignedUrl(data.path, 3600)
+    if (signError || !signed) return { error: 'Nie udało się pobrać dokumentu' }
+    return { url: signed.signedUrl }
   })
 
 export const getSubmissionDocumentUrlFn = createServerFn({ method: 'POST' })

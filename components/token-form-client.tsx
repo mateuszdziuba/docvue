@@ -1,10 +1,13 @@
 'use client'
 
+import { format } from 'date-fns'
+import { pl } from 'date-fns/locale'
 import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 import { FormRenderer } from '@/components/form-renderer'
 import { useRouterCompat } from '@/lib/router-compat'
 import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placeholders'
+import { resolveSalonCity } from '@/lib/submission-format'
 import { submitClientForm } from '@/src/server/client-forms'
 import type { Form, FormField } from '@/types/database'
 
@@ -54,11 +57,44 @@ export function TokenFormClient({
       delete cleanFormData.signature
     }
 
+    // Migawka PDF generowana w przeglądarce (serwerowy render nie działa
+    // w bundlu produkcyjnym) i zapisywana przez serwer przy podpisaniu.
+    let pdfBase64: string | undefined
+    try {
+      const [{ pdf }, { SubmissionPdf, registerPdfFonts }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('@/components/admin/submission-pdf'),
+      ])
+      registerPdfFonts(window.location.origin)
+      const blob = await pdf(
+        <SubmissionPdf
+          formTitle={form.title}
+          clientName={resolvedClientName ?? null}
+          createdAtLabel={format(new Date(), 'd MMMM yyyy, HH:mm', { locale: pl })}
+          salon={salon}
+          salonCity={resolveSalonCity(salon)}
+          fields={fields}
+          data={cleanFormData}
+          signature={(signatureValue as string) || null}
+        />,
+      ).toBlob()
+      pdfBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
+        reader.onerror = () => reject(new Error('Nie udało się odczytać PDF'))
+        reader.readAsDataURL(blob)
+      })
+    } catch {
+      // Bez migawki — zgoda i ślad audytowy i tak zostaną zapisane.
+      pdfBase64 = undefined
+    }
+
     const result = await submitClientForm({
       token,
       formData: cleanFormData,
       filledBy,
       signature: (signatureValue as string) || undefined,
+      pdfBase64,
     })
 
     if ('error' in result && result.error) {

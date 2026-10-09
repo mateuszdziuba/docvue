@@ -20,12 +20,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { normalizeFieldType } from '@/lib/form-validation'
 import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placeholders'
 import { formatFieldValue, isImageSignature, resolveSalonCity } from '@/lib/submission-format'
+import { createClient } from '@/lib/supabase/client'
 import { useInvalidateOnFocus } from '@/lib/use-invalidate-on-focus'
 import { getSalonFn } from '@/src/server/settings'
 import {
+  createSubmissionDocumentUploadFn,
   deleteSubmissionFn,
   getSubmissionDocumentUrlFn,
   getSubmissionFn,
+  saveSubmissionDocumentFn,
 } from '@/src/server/submissions'
 import type { FormField } from '@/types/database'
 
@@ -75,15 +78,62 @@ function SubmissionDetailPage() {
     link.remove()
   }
 
+  async function generateSnapshotBlob(): Promise<Blob> {
+    const [{ pdf }, { SubmissionPdf, registerPdfFonts }] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('@/components/admin/submission-pdf'),
+    ])
+    registerPdfFonts(window.location.origin)
+    // Preferuj zamrożoną migawkę treści (form_schema z chwili podpisania).
+    const snapshotFields =
+      ((sub.form_schema as { fields?: FormField[] } | null)?.fields as FormField[] | undefined) ??
+      fields
+    const snapshotTitle = sub.form_title ?? sub.forms?.title ?? 'Formularz'
+    const signedAt = sub.signed_at ?? sub.created_at
+    return pdf(
+      <SubmissionPdf
+        formTitle={applySalonPlaceholders(snapshotTitle, salonContact)}
+        clientName={sub.client_name ?? null}
+        createdAtLabel={format(parseISO(signedAt), 'd MMMM yyyy, HH:mm', { locale: pl })}
+        salon={salonContact}
+        salonCity={salonCity}
+        fields={snapshotFields}
+        data={sub.data}
+        signature={sub.signature ?? null}
+      />,
+    ).toBlob()
+  }
+
+  /** Zapisuje wygenerowaną migawkę w storage (uzupełnia brakujący dokument). */
+  async function backfillSnapshot(blob: Blob) {
+    try {
+      const prepared = await createSubmissionDocumentUploadFn({ data: { id: sub.id } })
+      if (!('path' in prepared) || !prepared.path || !prepared.token) return
+      const supabase = createClient()
+      const { error: uploadError } = await supabase.storage
+        .from('submission-documents')
+        .uploadToSignedUrl(prepared.path, prepared.token, blob, { contentType: 'application/pdf' })
+      if (uploadError) return
+      await saveSubmissionDocumentFn({ data: { id: sub.id, path: prepared.path } })
+    } catch {
+      // Backfill jest best-effort — pobranie i tak się udało.
+    }
+  }
+
   async function handlePreviewSnapshot() {
     setPreviewLoading(true)
     try {
-      const stored = await getSubmissionDocumentUrlFn({ data: { id: sub.id } })
-      if ('url' in stored && stored.url) {
-        setPreviewUrl(stored.url)
-      } else {
-        toast.error('Brak zapisanej migawki PDF dla tej odpowiedzi')
+      if (sub.pdf_path) {
+        const stored = await getSubmissionDocumentUrlFn({ data: { id: sub.id } })
+        if ('url' in stored && stored.url) {
+          setPreviewUrl(stored.url)
+          return
+        }
       }
+      // Brak zapisanej migawki — wygeneruj w przeglądarce i zapisz w tle.
+      const blob = await generateSnapshotBlob()
+      setPreviewUrl(URL.createObjectURL(blob))
+      void backfillSnapshot(blob)
     } catch {
       toast.error('Nie udało się otworzyć dokumentu')
     } finally {
@@ -103,27 +153,12 @@ function SubmissionDetailPage() {
         }
       }
 
-      // Fallback dla starszych odpowiedzi — generowanie w przeglądarce.
-      const [{ pdf }, { SubmissionPdf, registerPdfFonts }] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('@/components/admin/submission-pdf'),
-      ])
-      registerPdfFonts(window.location.origin)
-      const blob = await pdf(
-        <SubmissionPdf
-          formTitle={applySalonPlaceholders(sub.forms?.title ?? 'Formularz', salonContact)}
-          clientName={sub.client_name ?? null}
-          createdAtLabel={format(parseISO(sub.created_at), 'd MMMM yyyy, HH:mm', { locale: pl })}
-          salon={salonContact}
-          salonCity={salonCity}
-          fields={fields}
-          data={sub.data}
-          signature={sub.signature ?? null}
-        />,
-      ).toBlob()
+      // Brak dokumentu (starsze odpowiedzi) — generuj i zapisz w tle.
+      const blob = await generateSnapshotBlob()
       const url = URL.createObjectURL(blob)
       triggerDownload(url)
       URL.revokeObjectURL(url)
+      void backfillSnapshot(blob)
     } catch {
       toast.error('Nie udało się wygenerować PDF')
     } finally {
@@ -183,7 +218,7 @@ function SubmissionDetailPage() {
             <Printer className="mr-1.5 h-4 w-4" aria-hidden="true" />
             Drukuj
           </Button>
-          {sub.pdf_path && (
+          {(sub.pdf_path || sub.form_schema || fields.length > 0) && (
             <Button
               variant="outline"
               size="sm"
@@ -284,7 +319,13 @@ function SubmissionDetailPage() {
                 </button>
               </p>
             )}
-            {sub.pdf_path && <p>Dokument PDF został zapisany w chwili podpisania zgody.</p>}
+            {sub.pdf_path ? (
+              <p>Dokument PDF został zapisany w chwili podpisania zgody.</p>
+            ) : (
+              <p>
+                Dokument PDF zostanie zapisany automatycznie przy pierwszym podglądzie lub pobraniu.
+              </p>
+            )}
           </section>
         )}
 

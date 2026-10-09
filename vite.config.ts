@@ -11,10 +11,7 @@ export default defineConfig(({ mode }) => {
   const supabaseUrl =
     env.VITE_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL || ''
   const supabaseAnonKey =
-    env.VITE_SUPABASE_ANON_KEY ||
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    env.SUPABASE_ANON_KEY ||
-    ''
+    env.VITE_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || ''
 
   // Udostępnij sekrety serwerowe w process.env dla SSR (createServerFn).
   // Nie są eksponowane do klienta — trafiają wyłącznie do kodu serwerowego.

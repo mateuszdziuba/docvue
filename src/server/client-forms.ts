@@ -1,7 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
-import { format, parseISO } from 'date-fns'
-import { pl } from 'date-fns/locale'
 import {
   formatValidationErrors,
   MAX_SIGNATURE_LENGTH,
@@ -9,15 +7,12 @@ import {
   validateFormSubmission,
 } from '@/lib/form-validation'
 import { consumeRateLimit, rateLimitError, requestIp } from '@/lib/rate-limit'
-import type { SalonContact } from '@/lib/salon-placeholders'
 import { generateSecureToken, isValidFormToken } from '@/lib/secure-token'
-import { resolveSalonCity } from '@/lib/submission-format'
 import type { FormField, FormSchema } from '@/types/database'
 import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getVerifiedUser } from './_auth'
 import { sha256Hex, submissionContentHash } from './audit'
-import { renderSubmissionPdf } from './render-submission-pdf'
 
 const SALON_PUBLIC_COLUMNS = 'name, address, phone, email, website, social_media'
 
@@ -255,6 +250,7 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
       formData: Record<string, unknown>
       filledBy: 'client' | 'staff'
       signature?: string
+      pdfBase64?: string
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -380,33 +376,20 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
       return { error: 'Nie udało się zapisać odpowiedzi. Spróbuj ponownie za chwilę.' }
     }
 
-    // Migawka PDF zapisywana w chwili podpisania (best-effort — nie blokuje zgody).
-    if (submission) {
+    // Migawka PDF przesłana przez przeglądarkę (best-effort — nie blokuje zgody).
+    if (submission && data.pdfBase64) {
       try {
-        const { data: salon } = await admin
-          .from('salons')
-          .select('name, address, phone, email, city')
-          .eq('id', clientForm.salon_id)
-          .maybeSingle()
-        const pdfBuffer = await renderSubmissionPdf({
-          formTitle: formRow.title ?? 'Formularz',
-          clientName: clientRecord?.name ?? null,
-          createdAtLabel: format(parseISO(signedAt), 'd MMMM yyyy, HH:mm', { locale: pl }),
-          salon: (salon as SalonContact | null) ?? null,
-          salonCity: resolveSalonCity(salon as SalonContact | null),
-          fields: fields as unknown[],
-          data: answers,
-          signature,
-        })
-        if (pdfBuffer) {
+        const buffer = Buffer.from(data.pdfBase64, 'base64')
+        const isPdf = buffer.subarray(0, 5).toString() === '%PDF-'
+        if (isPdf && buffer.length <= 15 * 1024 * 1024) {
           const pdfPath = `${clientForm.salon_id}/${submission.id}.pdf`
           const { error: uploadError } = await admin.storage
             .from('submission-documents')
-            .upload(pdfPath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
+            .upload(pdfPath, buffer, { contentType: 'application/pdf', upsert: true })
           if (uploadError) {
             console.error('[submission-pdf] upload error:', uploadError.message)
           } else {
-            const pdfSha256 = sha256Hex(pdfBuffer)
+            const pdfSha256 = sha256Hex(buffer)
             await admin
               .from('submissions')
               .update({ pdf_path: pdfPath, pdf_sha256: pdfSha256 })
@@ -416,7 +399,7 @@ export const submitClientFormFn = createServerFn({ method: 'POST' })
           }
         }
       } catch (snapshotError) {
-        console.error('[submission-pdf] snapshot error:', snapshotError)
+        console.error('[submission-pdf] store error:', snapshotError)
       }
     }
 
@@ -459,5 +442,6 @@ export const submitClientForm = (data: {
   formData: Record<string, unknown>
   filledBy: 'client' | 'staff'
   signature?: string
+  pdfBase64?: string
 }) => submitClientFormFn({ data })
 export const getClientFormByToken = (token: string) => getClientFormByTokenFn({ data: { token } })
