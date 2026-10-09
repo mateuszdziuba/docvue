@@ -166,7 +166,7 @@ export function FormRenderer({
 
   const inputClasses = (hasError: boolean) =>
     cn(
-      'w-full min-h-11 rounded-xl border bg-background px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground outline-none transition-all focus:ring-2 focus:outline-none',
+      'w-full min-h-11 rounded-xl border bg-background px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground outline-none transition-all focus:ring-2 focus:outline-none md:max-w-[65ch]',
       hasError
         ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20'
         : 'border-border focus:border-primary focus:ring-primary/30',
@@ -636,7 +636,7 @@ export function FormRenderer({
       case 'separator':
         return (
           <div className="rounded-xl border-l-4 border-primary bg-primary/5 p-5">
-            <p className="m-0 whitespace-pre-wrap text-base font-medium leading-relaxed text-foreground">
+            <p className="m-0 max-w-[65ch] whitespace-pre-wrap text-base font-medium leading-relaxed text-foreground">
               {field.label}
             </p>
           </div>
@@ -649,7 +649,7 @@ export function FormRenderer({
               <h3 className="mb-2 font-serif text-base text-foreground">{field.label}</h3>
             )}
             {field.description && (
-              <div className="space-y-1.5 text-sm leading-relaxed text-foreground/90">
+              <div className="max-w-[65ch] space-y-1.5 text-sm leading-relaxed text-foreground/90">
                 {splitDescriptionLines(field.description).map((line) => (
                   <p key={line.key} className={line.isBullet ? 'pl-4 -indent-4' : undefined}>
                     {line.text}
@@ -774,7 +774,7 @@ export function FormRenderer({
             {field.description && type !== 'separator' && type !== 'info' && (
               <p
                 id={`${fieldId}-description`}
-                className="text-sm leading-relaxed text-muted-foreground"
+                className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground"
               >
                 {field.description}
               </p>

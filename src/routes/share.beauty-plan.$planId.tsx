@@ -57,7 +57,7 @@ function ProductCard({ product }: { product: BeautyPlanProduct }) {
   const price = formatPrice(product.price)
 
   return (
-    <li className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm break-inside-avoid sm:gap-4 sm:p-4">
+    <li className="flex items-start gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-3 shadow-sm break-inside-avoid sm:gap-4 sm:p-4">
       {product.image_url ? (
         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card p-1 sm:h-16 sm:w-16">
           <img
@@ -72,30 +72,31 @@ function ProductCard({ product }: { product: BeautyPlanProduct }) {
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-          {product.url ? (
-            <a
-              href={product.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-success sm:items-center sm:text-base"
-            >
-              <span className="break-words">{product.name}</span>
-              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            </a>
-          ) : (
-            <span className="break-words text-sm font-medium text-foreground sm:text-base">
-              {product.name}
-            </span>
-          )}
-          {price && (
-            <span className="shrink-0 text-sm font-semibold text-on-success-container sm:text-base">
-              {price}
-            </span>
-          )}
-        </div>
+        {product.url ? (
+          <a
+            href={product.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex max-w-full items-start gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-success sm:text-base"
+          >
+            <span className="min-w-0 break-words">{product.name}</span>
+            <ExternalLink
+              className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </a>
+        ) : (
+          <span className="break-words text-sm font-medium text-foreground sm:text-base">
+            {product.name}
+          </span>
+        )}
+        {price && (
+          <p className="mt-0.5 text-sm font-semibold text-on-success-container sm:text-base">
+            {price}
+          </p>
+        )}
         {product.usage_description && (
-          <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-1.5 whitespace-pre-line break-words text-sm leading-relaxed text-muted-foreground">
             {product.usage_description}
           </p>
         )}
@@ -165,7 +166,7 @@ function SharedBeautyPlanPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:py-10">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:py-10 lg:max-w-5xl">
         <header className="rounded-3xl border border-border/60 bg-card p-5 text-center shadow-sm sm:p-6">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Heart className="h-6 w-6" />
@@ -183,7 +184,7 @@ function SharedBeautyPlanPage() {
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           <PlanTimeSection
             title="Rano"
             description={plan.morning_description}
