@@ -1,22 +1,31 @@
 'use client'
 
 import {
+  closestCenter,
   DndContext,
   type DragEndEvent,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Copy, GripVertical, Link as LinkIcon, Loader2, Moon, Plus, Sun } from 'lucide-react'
+import {
+  ChevronDown,
+  Copy,
+  GripVertical,
+  Link as LinkIcon,
+  Loader2,
+  Moon,
+  Plus,
+  Sun,
+} from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -95,8 +104,10 @@ interface SortableProductCardProps {
   time: TimeOfDay
   index: number
   product: BeautyPlanProductDraft
+  expanded: boolean
   isScraping: boolean
   scrapeError?: string
+  onToggle: () => void
   onRemove: () => void
   onCopy: () => void
   onFetch: () => void
@@ -106,12 +117,16 @@ interface SortableProductCardProps {
   ) => void
 }
 
+const PRICE_FORMATTER = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' })
+
 function SortableProductCard({
   time,
   index,
   product,
+  expanded,
   isScraping,
   scrapeError,
+  onToggle,
   onRemove,
   onCopy,
   onFetch,
@@ -128,183 +143,216 @@ function SortableProductCard({
   }
 
   const fieldId = (field: string) => `${time}-product-${product.draftId}-${field}`
+  const bodyId = `${time}-product-${product.draftId}-body`
   const otherLabel = time === 'morning' ? 'wieczora' : 'rana'
+  const priceLabel = product.price !== null ? PRICE_FORMATTER.format(product.price) : null
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4 ${
+      className={`overflow-hidden rounded-xl border border-border/60 bg-muted/30 ${
         isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <button
-            type="button"
-            className="-ml-1 grid h-11 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:text-foreground active:cursor-grabbing md:h-8"
-            aria-label={`Przenieś produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <span className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Produkt {index + 1}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-11 gap-1.5 px-2 text-xs text-muted-foreground md:h-8"
-            onClick={onCopy}
-            title={`Kopiuj do ${otherLabel}`}
-          >
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-            Kopiuj do {otherLabel}
-          </Button>
-          <DeleteIconButton
-            label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
-            className="h-11 w-11 md:h-8 md:w-8"
-            onClick={onRemove}
-          />
-        </div>
-      </div>
-
-      <div className="flex gap-4">
-        {product.imageUrl ? (
-          <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
-            <img
-              src={product.imageUrl}
-              alt={product.name || 'Zdjęcie produktu'}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
-            <LinkIcon className="h-5 w-5 opacity-50" />
-          </div>
-        )}
-
-        <div className="flex-1">
-          <Label
-            htmlFor={fieldId('url')}
-            className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
-          >
-            <LinkIcon className="h-3 w-3" aria-hidden="true" />
-            Link do sklepu
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              id={fieldId('url')}
-              type="url"
-              value={product.url}
-              onChange={(event) => onChange('url', event.target.value)}
-              placeholder="https://..."
-              aria-invalid={scrapeError ? true : undefined}
-              aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
-              className="min-h-11 rounded-lg md:min-h-0"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="min-h-11 shrink-0 md:min-h-0"
-              disabled={!product.url || isScraping}
-              onClick={onFetch}
-            >
-              {isScraping ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                'Pobierz dane'
-              )}
-            </Button>
-          </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Automatyczne pobieranie danych działa dla większości sklepów. Jeśli się nie uda —
-            wpisz dane ręcznie.
-          </p>
-          {scrapeError && (
-            <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
-              {scrapeError}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <div className="md:col-span-3">
-          <Label
-            htmlFor={fieldId('name')}
-            className="mb-1.5 text-xs font-medium text-muted-foreground"
-          >
-            Nazwa produktu
-          </Label>
-          <Input
-            id={fieldId('name')}
-            type="text"
-            value={product.name}
-            onChange={(event) => onChange('name', event.target.value)}
-            placeholder="Np. CeraVe Oczyszczający żel"
-            maxLength={200}
-            className="min-h-11 rounded-lg md:min-h-0"
-          />
-        </div>
-        <div className="md:col-span-1">
-          <Label
-            htmlFor={fieldId('price')}
-            className="mb-1.5 text-xs font-medium text-muted-foreground"
-          >
-            Cena (PLN)
-          </Label>
-          <Input
-            id={fieldId('price')}
-            type="number"
-            min="0"
-            step="0.01"
-            value={product.price ?? ''}
-            onChange={(event) => {
-              const parsed = Number.parseFloat(event.target.value)
-              onChange('price', Number.isFinite(parsed) ? parsed : null)
-            }}
-            placeholder="0.00"
-            className="min-h-11 rounded-lg md:min-h-0"
-          />
-        </div>
-      </div>
-
-      <label
-        htmlFor={fieldId('salon')}
-        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2"
-      >
-        <Checkbox
-          id={fieldId('salon')}
-          checked={product.availableInSalon}
-          onCheckedChange={(checked) => onChange('availableInSalon', checked === true)}
-        />
-        <span className="text-sm text-foreground">
-          Dostępne w gabinecie — klient może kupić na miejscu
-        </span>
-      </label>
-
-      <div>
-        <Label
-          htmlFor={fieldId('usage')}
-          className="mb-1.5 text-xs font-medium text-muted-foreground"
+      {/* Nagłówek akordeonu — kompaktowy, łatwy do przeciągania */}
+      <div className="flex items-center gap-1 p-2 sm:gap-2 sm:p-3">
+        <button
+          type="button"
+          className="grid h-11 w-9 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:text-foreground active:cursor-grabbing"
+          aria-label={`Przenieś produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+          {...attributes}
+          {...listeners}
         >
-          Instrukcja użycia dla klienta (opcjonalnie)
-        </Label>
-        <Textarea
-          id={fieldId('usage')}
-          value={product.usageDescription}
-          onChange={(event) => onChange('usageDescription', event.target.value)}
-          rows={2}
-          placeholder="Np. Wklep delikatnie w okolicę oka..."
-          className="resize-none rounded-lg"
+          <GripVertical className="h-4 w-4" aria-hidden="true" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left"
+        >
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {index + 1}.
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+            {product.name.trim() || 'Nowy kosmetyk'}
+          </span>
+          {product.availableInSalon && (
+            <span className="hidden shrink-0 rounded-full bg-success-container px-2 py-0.5 text-[11px] font-medium text-on-success-container sm:inline-flex">
+              W gabinecie
+            </span>
+          )}
+          {priceLabel && (
+            <span className="shrink-0 text-sm font-semibold text-on-success-container">
+              {priceLabel}
+            </span>
+          )}
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+              expanded ? 'rotate-180' : ''
+            }`}
+            aria-hidden="true"
+          />
+        </button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-11 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground"
+          onClick={onCopy}
+          title={`Kopiuj do ${otherLabel}`}
+        >
+          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">Kopiuj do {otherLabel}</span>
+        </Button>
+        <DeleteIconButton
+          label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+          className="h-11 w-11 shrink-0"
+          onClick={onRemove}
         />
       </div>
+
+      {/* Rozwinięte pola produktu */}
+      {expanded && (
+        <div id={bodyId} className="space-y-3 border-t border-border/50 p-4 pt-3">
+          <div className="flex gap-4">
+            {product.imageUrl ? (
+              <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
+                <img
+                  src={product.imageUrl}
+                  alt={product.name || 'Zdjęcie produktu'}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
+                <LinkIcon className="h-5 w-5 opacity-50" />
+              </div>
+            )}
+
+            <div className="flex-1">
+              <Label
+                htmlFor={fieldId('url')}
+                className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
+              >
+                <LinkIcon className="h-3 w-3" aria-hidden="true" />
+                Link do sklepu
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id={fieldId('url')}
+                  type="url"
+                  value={product.url}
+                  onChange={(event) => onChange('url', event.target.value)}
+                  placeholder="https://..."
+                  aria-invalid={scrapeError ? true : undefined}
+                  aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
+                  className="min-h-11 rounded-lg md:min-h-0"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="min-h-11 shrink-0 md:min-h-0"
+                  disabled={!product.url || isScraping}
+                  onClick={onFetch}
+                >
+                  {isScraping ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    'Pobierz dane'
+                  )}
+                </Button>
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Automatyczne pobieranie danych działa dla większości sklepów. Jeśli się nie uda —
+                wpisz dane ręcznie.
+              </p>
+              {scrapeError && (
+                <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
+                  {scrapeError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="md:col-span-3">
+              <Label
+                htmlFor={fieldId('name')}
+                className="mb-1.5 text-xs font-medium text-muted-foreground"
+              >
+                Nazwa produktu
+              </Label>
+              <Input
+                id={fieldId('name')}
+                type="text"
+                value={product.name}
+                onChange={(event) => onChange('name', event.target.value)}
+                placeholder="Np. CeraVe Oczyszczający żel"
+                maxLength={200}
+                className="min-h-11 rounded-lg md:min-h-0"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <Label
+                htmlFor={fieldId('price')}
+                className="mb-1.5 text-xs font-medium text-muted-foreground"
+              >
+                Cena (PLN)
+              </Label>
+              <Input
+                id={fieldId('price')}
+                type="number"
+                min="0"
+                step="0.01"
+                value={product.price ?? ''}
+                onChange={(event) => {
+                  const parsed = Number.parseFloat(event.target.value)
+                  onChange('price', Number.isFinite(parsed) ? parsed : null)
+                }}
+                placeholder="0.00"
+                className="min-h-11 rounded-lg md:min-h-0"
+              />
+            </div>
+          </div>
+
+          <label
+            htmlFor={fieldId('salon')}
+            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2"
+          >
+            <Checkbox
+              id={fieldId('salon')}
+              checked={product.availableInSalon}
+              onCheckedChange={(checked) => onChange('availableInSalon', checked === true)}
+            />
+            <span className="text-sm text-foreground">
+              Dostępne w gabinecie — klient może kupić na miejscu
+            </span>
+          </label>
+
+          <div>
+            <Label
+              htmlFor={fieldId('usage')}
+              className="mb-1.5 text-xs font-medium text-muted-foreground"
+            >
+              Instrukcja użycia dla klienta (opcjonalnie)
+            </Label>
+            <Textarea
+              id={fieldId('usage')}
+              value={product.usageDescription}
+              onChange={(event) => onChange('usageDescription', event.target.value)}
+              rows={2}
+              placeholder="Np. Wklep delikatnie w okolice oka..."
+              className="resize-none rounded-lg"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -334,6 +382,16 @@ export function EditBeautyPlanDialog({
 
   const [scrapingKey, setScrapingKey] = useState<string | null>(null)
   const [scrapeErrors, setScrapeErrors] = useState<Record<string, string>>({})
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (draftId: string) => {
+    setExpandedIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(draftId)) next.delete(draftId)
+      else next.add(draftId)
+      return next
+    })
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -368,6 +426,7 @@ export function EditBeautyPlanDialog({
     setEveningProducts(toDrafts(initialEveningProducts))
     setScrapeErrors({})
     setScrapingKey(null)
+    setExpandedIds(new Set())
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -390,7 +449,10 @@ export function EditBeautyPlanDialog({
   }
 
   const handleAddProduct = (time: TimeOfDay) => {
-    mutateProducts(time, (products) => [...products, newDraft()])
+    const draft = newDraft()
+    mutateProducts(time, (products) => [...products, draft])
+    // Nowy produkt od razu rozwinięty do uzupełnienia
+    setExpandedIds((previous) => new Set(previous).add(draft.draftId))
   }
 
   const handleRemoveProduct = (time: TimeOfDay, index: number) => {
@@ -401,10 +463,9 @@ export function EditBeautyPlanDialog({
     const source = getProducts(time)[index]
     if (!source) return
     const target: TimeOfDay = time === 'morning' ? 'evening' : 'morning'
-    mutateProducts(target, (products) => [
-      ...products,
-      { ...source, id: undefined, draftId: crypto.randomUUID() },
-    ])
+    const copy = { ...source, id: undefined, draftId: crypto.randomUUID() }
+    mutateProducts(target, (products) => [...products, copy])
+    setExpandedIds((previous) => new Set(previous).add(copy.draftId))
     toast.success(target === 'morning' ? 'Skopiowano do rana' : 'Skopiowano do wieczora')
   }
 
@@ -577,8 +638,10 @@ export function EditBeautyPlanDialog({
                     time={time}
                     index={index}
                     product={product}
+                    expanded={expandedIds.has(product.draftId)}
                     isScraping={scrapingKey === key}
                     scrapeError={scrapeErrors[key]}
+                    onToggle={() => toggleExpanded(product.draftId)}
                     onRemove={() => handleRemoveProduct(time, index)}
                     onCopy={() => handleCopyProduct(time, index)}
                     onFetch={() => void handleFetchData(time, index)}
