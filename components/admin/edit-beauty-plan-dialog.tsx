@@ -1,6 +1,22 @@
 'use client'
 
-import { Link as LinkIcon, Loader2, Moon, Plus, Sun } from 'lucide-react'
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Copy, GripVertical, Link as LinkIcon, Loader2, Moon, Plus, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -14,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -29,13 +46,19 @@ import type { TimeOfDay } from '@/src/lib/beauty-plan-diff'
 import { saveBeautyPlanFn, scrapeProductFn } from '@/src/server/beauty-plans'
 import { DeleteIconButton } from './delete-icon-button'
 
-export type BeautyPlanProductDraft = {
+export type BeautyPlanProductInitial = {
   id?: string
   name: string
   url: string
   imageUrl?: string | null
   price: number | null
   usageDescription: string
+  availableInSalon?: boolean
+}
+
+type BeautyPlanProductDraft = BeautyPlanProductInitial & {
+  draftId: string
+  availableInSalon: boolean
 }
 
 interface EditBeautyPlanDialogProps {
@@ -43,14 +66,247 @@ interface EditBeautyPlanDialogProps {
   planId?: string
   initialMorningDesc?: string
   initialEveningDesc?: string
-  initialMorningProducts?: BeautyPlanProductDraft[]
-  initialEveningProducts?: BeautyPlanProductDraft[]
+  initialMorningProducts?: BeautyPlanProductInitial[]
+  initialEveningProducts?: BeautyPlanProductInitial[]
   trigger?: React.ReactNode
   onSaved?: () => void | Promise<void>
 }
 
-function cloneProducts(products: BeautyPlanProductDraft[]): BeautyPlanProductDraft[] {
-  return products.map((product) => ({ ...product }))
+function toDrafts(products: BeautyPlanProductInitial[]): BeautyPlanProductDraft[] {
+  return products.map((product) => ({
+    ...product,
+    availableInSalon: Boolean(product.availableInSalon),
+    draftId: crypto.randomUUID(),
+  }))
+}
+
+function newDraft(): BeautyPlanProductDraft {
+  return {
+    draftId: crypto.randomUUID(),
+    name: '',
+    url: '',
+    price: null,
+    usageDescription: '',
+    availableInSalon: false,
+  }
+}
+
+interface SortableProductCardProps {
+  time: TimeOfDay
+  index: number
+  product: BeautyPlanProductDraft
+  isScraping: boolean
+  scrapeError?: string
+  onRemove: () => void
+  onCopy: () => void
+  onFetch: () => void
+  onChange: (
+    field: keyof BeautyPlanProductInitial | 'availableInSalon',
+    value: string | number | boolean | null,
+  ) => void
+}
+
+function SortableProductCard({
+  time,
+  index,
+  product,
+  isScraping,
+  scrapeError,
+  onRemove,
+  onCopy,
+  onFetch,
+  onChange,
+}: SortableProductCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: product.draftId,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : undefined,
+  }
+
+  const fieldId = (field: string) => `${time}-product-${product.draftId}-${field}`
+  const otherLabel = time === 'morning' ? 'wieczora' : 'rana'
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4 ${
+        isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            type="button"
+            className="-ml-1 grid h-11 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:text-foreground active:cursor-grabbing md:h-8"
+            aria-label={`Przenieś produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <span className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Produkt {index + 1}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-11 gap-1.5 px-2 text-xs text-muted-foreground md:h-8"
+            onClick={onCopy}
+            title={`Kopiuj do ${otherLabel}`}
+          >
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            Kopiuj do {otherLabel}
+          </Button>
+          <DeleteIconButton
+            label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+            className="h-11 w-11 md:h-8 md:w-8"
+            onClick={onRemove}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-4">
+        {product.imageUrl ? (
+          <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
+            <img
+              src={product.imageUrl}
+              alt={product.name || 'Zdjęcie produktu'}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
+            <LinkIcon className="h-5 w-5 opacity-50" />
+          </div>
+        )}
+
+        <div className="flex-1">
+          <Label
+            htmlFor={fieldId('url')}
+            className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
+          >
+            <LinkIcon className="h-3 w-3" aria-hidden="true" />
+            Link do sklepu
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id={fieldId('url')}
+              type="url"
+              value={product.url}
+              onChange={(event) => onChange('url', event.target.value)}
+              placeholder="https://..."
+              aria-invalid={scrapeError ? true : undefined}
+              aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
+              className="min-h-11 rounded-lg md:min-h-0"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="min-h-11 shrink-0 md:min-h-0"
+              disabled={!product.url || isScraping}
+              onClick={onFetch}
+            >
+              {isScraping ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                'Pobierz dane'
+              )}
+            </Button>
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Automatyczne pobieranie danych działa dla większości sklepów. Jeśli się nie uda —
+            wpisz dane ręcznie.
+          </p>
+          {scrapeError && (
+            <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
+              {scrapeError}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="md:col-span-3">
+          <Label
+            htmlFor={fieldId('name')}
+            className="mb-1.5 text-xs font-medium text-muted-foreground"
+          >
+            Nazwa produktu
+          </Label>
+          <Input
+            id={fieldId('name')}
+            type="text"
+            value={product.name}
+            onChange={(event) => onChange('name', event.target.value)}
+            placeholder="Np. CeraVe Oczyszczający żel"
+            maxLength={200}
+            className="min-h-11 rounded-lg md:min-h-0"
+          />
+        </div>
+        <div className="md:col-span-1">
+          <Label
+            htmlFor={fieldId('price')}
+            className="mb-1.5 text-xs font-medium text-muted-foreground"
+          >
+            Cena (PLN)
+          </Label>
+          <Input
+            id={fieldId('price')}
+            type="number"
+            min="0"
+            step="0.01"
+            value={product.price ?? ''}
+            onChange={(event) => {
+              const parsed = Number.parseFloat(event.target.value)
+              onChange('price', Number.isFinite(parsed) ? parsed : null)
+            }}
+            placeholder="0.00"
+            className="min-h-11 rounded-lg md:min-h-0"
+          />
+        </div>
+      </div>
+
+      <label
+        htmlFor={fieldId('salon')}
+        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2"
+      >
+        <Checkbox
+          id={fieldId('salon')}
+          checked={product.availableInSalon}
+          onCheckedChange={(checked) => onChange('availableInSalon', checked === true)}
+        />
+        <span className="text-sm text-foreground">
+          Dostępne w gabinecie — klient może kupić na miejscu
+        </span>
+      </label>
+
+      <div>
+        <Label
+          htmlFor={fieldId('usage')}
+          className="mb-1.5 text-xs font-medium text-muted-foreground"
+        >
+          Instrukcja użycia dla klienta (opcjonalnie)
+        </Label>
+        <Textarea
+          id={fieldId('usage')}
+          value={product.usageDescription}
+          onChange={(event) => onChange('usageDescription', event.target.value)}
+          rows={2}
+          placeholder="Np. Wklep delikatnie w okolicę oka..."
+          className="resize-none rounded-lg"
+        />
+      </div>
+    </div>
+  )
 }
 
 export function EditBeautyPlanDialog({
@@ -70,14 +326,16 @@ export function EditBeautyPlanDialog({
   const [morningDesc, setMorningDesc] = useState(initialMorningDesc)
   const [eveningDesc, setEveningDesc] = useState(initialEveningDesc)
   const [morningProducts, setMorningProducts] = useState<BeautyPlanProductDraft[]>(() =>
-    cloneProducts(initialMorningProducts),
+    toDrafts(initialMorningProducts),
   )
   const [eveningProducts, setEveningProducts] = useState<BeautyPlanProductDraft[]>(() =>
-    cloneProducts(initialEveningProducts),
+    toDrafts(initialEveningProducts),
   )
 
   const [scrapingKey, setScrapingKey] = useState<string | null>(null)
   const [scrapeErrors, setScrapeErrors] = useState<Record<string, string>>({})
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const initialSnapshot = JSON.stringify({
     morningDesc: initialMorningDesc,
@@ -88,8 +346,8 @@ export function EditBeautyPlanDialog({
   const currentSnapshot = JSON.stringify({
     morningDesc,
     eveningDesc,
-    morningProducts,
-    eveningProducts,
+    morningProducts: morningProducts.map(({ draftId: _draftId, ...rest }) => rest),
+    eveningProducts: eveningProducts.map(({ draftId: _draftId, ...rest }) => rest),
   })
   const isDirty = currentSnapshot !== initialSnapshot
 
@@ -106,8 +364,8 @@ export function EditBeautyPlanDialog({
   const resetDraft = () => {
     setMorningDesc(initialMorningDesc)
     setEveningDesc(initialEveningDesc)
-    setMorningProducts(cloneProducts(initialMorningProducts))
-    setEveningProducts(cloneProducts(initialEveningProducts))
+    setMorningProducts(toDrafts(initialMorningProducts))
+    setEveningProducts(toDrafts(initialEveningProducts))
     setScrapeErrors({})
     setScrapingKey(null)
   }
@@ -132,27 +390,46 @@ export function EditBeautyPlanDialog({
   }
 
   const handleAddProduct = (time: TimeOfDay) => {
-    mutateProducts(time, (products) => [
-      ...products,
-      { name: '', url: '', price: null, usageDescription: '' },
-    ])
+    mutateProducts(time, (products) => [...products, newDraft()])
   }
 
   const handleRemoveProduct = (time: TimeOfDay, index: number) => {
     mutateProducts(time, (products) => products.filter((_, productIndex) => productIndex !== index))
   }
 
+  const handleCopyProduct = (time: TimeOfDay, index: number) => {
+    const source = getProducts(time)[index]
+    if (!source) return
+    const target: TimeOfDay = time === 'morning' ? 'evening' : 'morning'
+    mutateProducts(target, (products) => [
+      ...products,
+      { ...source, id: undefined, draftId: crypto.randomUUID() },
+    ])
+    toast.success(target === 'morning' ? 'Skopiowano do rana' : 'Skopiowano do wieczora')
+  }
+
   const handleProductChange = (
     time: TimeOfDay,
     index: number,
-    field: keyof BeautyPlanProductDraft,
-    value: string | number | null,
+    field: keyof BeautyPlanProductInitial | 'availableInSalon',
+    value: string | number | boolean | null,
   ) => {
     mutateProducts(time, (products) =>
       products.map((product, productIndex) =>
         productIndex === index ? { ...product, [field]: value } : product,
       ),
     )
+  }
+
+  const handleDragEnd = (time: TimeOfDay) => (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    mutateProducts(time, (products) => {
+      const oldIndex = products.findIndex((product) => product.draftId === active.id)
+      const newIndex = products.findIndex((product) => product.draftId === over.id)
+      if (oldIndex < 0 || newIndex < 0) return products
+      return arrayMove(products, oldIndex, newIndex)
+    })
   }
 
   const handleFetchData = async (time: TimeOfDay, index: number) => {
@@ -211,7 +488,7 @@ export function EditBeautyPlanDialog({
     event.preventDefault()
 
     const products = [
-      ...morningProducts.map((product) => ({
+      ...morningProducts.map((product, index) => ({
         id: product.id,
         timeOfDay: 'morning' as const,
         name: product.name,
@@ -219,8 +496,10 @@ export function EditBeautyPlanDialog({
         imageUrl: product.imageUrl || null,
         price: product.price,
         usageDescription: product.usageDescription || null,
+        availableInSalon: product.availableInSalon,
+        position: index,
       })),
-      ...eveningProducts.map((product) => ({
+      ...eveningProducts.map((product, index) => ({
         id: product.id,
         timeOfDay: 'evening' as const,
         name: product.name,
@@ -228,6 +507,8 @@ export function EditBeautyPlanDialog({
         imageUrl: product.imageUrl || null,
         price: product.price,
         usageDescription: product.usageDescription || null,
+        availableInSalon: product.availableInSalon,
+        position: index,
       })),
     ]
 
@@ -272,184 +553,53 @@ export function EditBeautyPlanDialog({
 
   const renderProductSection = (time: TimeOfDay, products: BeautyPlanProductDraft[]) => (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Kosmetyki ({time === 'morning' ? 'Rano' : 'Wieczór'})
-        </h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="min-h-11 text-xs md:min-h-0"
-          onClick={() => handleAddProduct(time)}
-        >
-          <Plus className="mr-1 h-3 w-3" aria-hidden="true" />
-          Dodaj kosmetyk
-        </Button>
-      </div>
-
       {products.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
           Brak kosmetyków. Dodaj pierwszy produkt.
         </p>
       ) : (
-        <div className="space-y-4">
-          {products.map((product, index) => {
-            const key = `${time}-${index}`
-            const fieldId = (field: string) => `${time}-product-${index}-${field}`
-            const isScraping = scrapingKey === key
-            const scrapeError = scrapeErrors[key]
-
-            return (
-              <div
-                key={key}
-                className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Produkt {index + 1}
-                  </span>
-                  <DeleteIconButton
-                    label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
-                    className="h-11 w-11 md:h-8 md:w-8"
-                    onClick={() => handleRemoveProduct(time, index)}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={handleDragEnd(time)}
+        >
+          <SortableContext
+            items={products.map((product) => product.draftId)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {products.map((product, index) => {
+                const key = `${time}-${index}`
+                return (
+                  <SortableProductCard
+                    key={product.draftId}
+                    time={time}
+                    index={index}
+                    product={product}
+                    isScraping={scrapingKey === key}
+                    scrapeError={scrapeErrors[key]}
+                    onRemove={() => handleRemoveProduct(time, index)}
+                    onCopy={() => handleCopyProduct(time, index)}
+                    onFetch={() => void handleFetchData(time, index)}
+                    onChange={(field, value) => handleProductChange(time, index, field, value)}
                   />
-                </div>
-
-                <div className="flex gap-4">
-                  {product.imageUrl ? (
-                    <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name || 'Zdjęcie produktu'}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
-                      <LinkIcon className="h-5 w-5 opacity-50" />
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <Label
-                      htmlFor={fieldId('url')}
-                      className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
-                    >
-                      <LinkIcon className="h-3 w-3" aria-hidden="true" />
-                      Link do sklepu
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id={fieldId('url')}
-                        type="url"
-                        value={product.url}
-                        onChange={(event) =>
-                          handleProductChange(time, index, 'url', event.target.value)
-                        }
-                        placeholder="https://..."
-                        aria-invalid={scrapeError ? true : undefined}
-                        aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
-                        className="min-h-11 rounded-lg md:min-h-0"
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="min-h-11 shrink-0 md:min-h-0"
-                        disabled={!product.url || isScraping}
-                        onClick={() => void handleFetchData(time, index)}
-                      >
-                        {isScraping ? (
-                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                        ) : (
-                          'Pobierz dane'
-                        )}
-                      </Button>
-                    </div>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Automatyczne pobieranie danych działa tylko dla linków z{' '}
-                      <strong>Rossmann</strong>. W innych sklepach wpisz dane ręcznie.
-                    </p>
-                    {scrapeError && (
-                      <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
-                        {scrapeError}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                  <div className="md:col-span-3">
-                    <Label
-                      htmlFor={fieldId('name')}
-                      className="mb-1.5 text-xs font-medium text-muted-foreground"
-                    >
-                      Nazwa produktu
-                    </Label>
-                    <Input
-                      id={fieldId('name')}
-                      type="text"
-                      value={product.name}
-                      onChange={(event) =>
-                        handleProductChange(time, index, 'name', event.target.value)
-                      }
-                      placeholder="Np. CeraVe Oczyszczający żel"
-                      maxLength={200}
-                      className="min-h-11 rounded-lg md:min-h-0"
-                    />
-                  </div>
-                  <div className="md:col-span-1">
-                    <Label
-                      htmlFor={fieldId('price')}
-                      className="mb-1.5 text-xs font-medium text-muted-foreground"
-                    >
-                      Cena (PLN)
-                    </Label>
-                    <Input
-                      id={fieldId('price')}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={product.price ?? ''}
-                      onChange={(event) => {
-                        const parsed = Number.parseFloat(event.target.value)
-                        handleProductChange(
-                          time,
-                          index,
-                          'price',
-                          Number.isFinite(parsed) ? parsed : null,
-                        )
-                      }}
-                      placeholder="0.00"
-                      className="min-h-11 rounded-lg md:min-h-0"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor={fieldId('usage')}
-                    className="mb-1.5 text-xs font-medium text-muted-foreground"
-                  >
-                    Instrukcja użycia dla klienta (opcjonalnie)
-                  </Label>
-                  <Textarea
-                    id={fieldId('usage')}
-                    value={product.usageDescription}
-                    onChange={(event) =>
-                      handleProductChange(time, index, 'usageDescription', event.target.value)
-                    }
-                    rows={2}
-                    placeholder="Np. Wklep delikatnie w okolicę oka..."
-                    className="resize-none rounded-lg"
-                  />
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => handleAddProduct(time)}
+        className="min-h-11 w-full border-dashed text-xs md:min-h-10"
+      >
+        <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+        Dodaj kosmetyk
+      </Button>
     </div>
   )
 

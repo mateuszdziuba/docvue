@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
 import { format, parseISO } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import { Download, Eye, Printer } from 'lucide-react'
+import { Download, Eye, Mail, Printer } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -29,6 +29,7 @@ import {
   getSubmissionDocumentUrlFn,
   getSubmissionFn,
   saveSubmissionDocumentFn,
+  sendSubmissionConfirmationFn,
 } from '@/src/server/submissions'
 import type { FormField } from '@/types/database'
 
@@ -54,6 +55,7 @@ function SubmissionDetailPage() {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [emailSending, setEmailSending] = useState(false)
   const sub = submission as any
   const fields: FormField[] = (sub.forms?.schema as { fields?: FormField[] })?.fields ?? []
   const salonContact = salon as SalonContact | null
@@ -166,6 +168,22 @@ function SubmissionDetailPage() {
     }
   }
 
+  async function handleSendConfirmation() {
+    setEmailSending(true)
+    try {
+      const result = await sendSubmissionConfirmationFn({ data: { id: sub.id } })
+      if ('error' in result && result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(`Potwierdzenie wysłane na ${sub.client_email}`)
+    } catch {
+      toast.error('Nie udało się wysłać potwierdzenia')
+    } finally {
+      setEmailSending(false)
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true)
     const result = await deleteSubmissionFn({ data: { id: sub.id } })
@@ -233,6 +251,17 @@ function SubmissionDetailPage() {
             <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {pdfLoading ? 'Generowanie…' : 'Pobierz PDF'}
           </Button>
+          {sub.client_email && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleSendConfirmation()}
+              disabled={emailSending}
+            >
+              <Mail className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {emailSending ? 'Wysyłanie…' : 'Wyślij potwierdzenie'}
+            </Button>
+          )}
           {isOwner && (
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
               <AlertDialogTrigger asChild>

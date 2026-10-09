@@ -1,8 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
+import { format, parseISO } from 'date-fns'
+import { pl } from 'date-fns/locale'
 import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getCallerSalonId } from './_salon-resolver'
 import { sha256Hex } from './audit'
+import { escapeHtml, sendEmail } from './email'
 
 export const getSubmissionsFn = createServerFn({ method: 'GET' })
   .inputValidator((d: { query?: string; clientId?: string }) => d)
@@ -125,6 +128,87 @@ export const getSubmissionDocumentUrlFn = createServerFn({ method: 'POST' })
       .createSignedUrl(row.pdf_path, 3600)
     if (error || !signed) return { error: 'Nie udało się pobrać dokumentu' }
     return { url: signed.signedUrl }
+  })
+
+export const sendSubmissionConfirmationFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+
+    const { data: submission } = await supabase
+      .from('submissions')
+      .select(
+        'id, client_name, client_email, created_at, signed_at, form_title, pdf_path, forms (title)',
+      )
+      .eq('id', data.id)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!submission) return { error: 'Odpowiedź nie istnieje' }
+    if (!submission.client_email) return { error: 'Klient nie ma adresu e-mail' }
+
+    const { data: salon } = await supabase
+      .from('salons')
+      .select('name, phone, email')
+      .eq('id', caller.salonId)
+      .maybeSingle()
+
+    const formTitle =
+      submission.form_title ?? (submission.forms as { title?: string } | null)?.title ?? 'Formularz'
+    const dateLabel = format(
+      parseISO(submission.signed_at ?? submission.created_at),
+      'd MMMM yyyy, HH:mm',
+      {
+        locale: pl,
+      },
+    )
+
+    let attachments: { filename: string; content: string }[] | undefined
+    if (submission.pdf_path && submission.pdf_path.split('/')[0] === caller.salonId) {
+      const admin = await createAdminClient()
+      const { data: blob } = await admin.storage
+        .from('submission-documents')
+        .download(submission.pdf_path)
+      if (blob) {
+        attachments = [
+          {
+            filename: `docvue-${formTitle.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, '-')}.pdf`,
+            content: Buffer.from(await blob.arrayBuffer()).toString('base64'),
+          },
+        ]
+      }
+    }
+
+    const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1b1c1c">
+      <h1 style="font-size:20px;margin:0 0 4px">Potwierdzenie wypełnienia formularza</h1>
+      <p style="color:#6f5957;font-size:13px;margin:0 0 20px">
+        ${submission.client_name ? `${escapeHtml(submission.client_name)} · ` : ''}${escapeHtml(salon?.name ?? 'Gabinet')}
+      </p>
+      <p style="font-size:14px;margin:0 0 8px">
+        Formularz <strong>${escapeHtml(formTitle)}</strong> został wypełniony i podpisany.
+      </p>
+      <p style="font-size:13px;color:#6f5957;margin:0">
+        Data: ${escapeHtml(dateLabel)}
+      </p>
+      ${
+        attachments
+          ? '<p style="font-size:13px;color:#6f5957;margin-top:12px">W załączniku znajdziesz zapisany dokument PDF z chwili podpisania.</p>'
+          : ''
+      }
+      <p style="font-size:13px;color:#6f5957;margin-top:20px">
+        W razie pytań skontaktuj się z gabinetem${salon?.phone ? `: ${escapeHtml(salon.phone)}` : ''}.
+      </p>
+    </div>`
+
+    const result = await sendEmail({
+      to: submission.client_email,
+      subject: `Potwierdzenie wypełnienia formularza — ${formTitle}`,
+      html,
+      attachments,
+    })
+    if (!result.ok) return { error: result.error }
+    return { success: true }
   })
 
 export const deleteSubmissionFn = createServerFn({ method: 'POST' })

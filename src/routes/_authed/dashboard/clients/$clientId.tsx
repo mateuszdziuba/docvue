@@ -62,7 +62,7 @@ function ClientDetailPage() {
         appointments={appointments}
       />
 
-      <BeautyPlanSection clientId={client.id} />
+      <BeautyPlanSection clientId={client.id} clientEmail={client.email} />
     </div>
   )
 }

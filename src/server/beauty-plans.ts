@@ -5,6 +5,8 @@ import { diffProducts, type IncomingBeautyPlanProduct } from '../lib/beauty-plan
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getVerifiedUser } from './_auth'
 import { getCallerSalonId } from './_salon-resolver'
+import { resolveSiteUrl } from './_site-url'
+import { escapeHtml, sendEmail } from './email'
 
 export type BeautyPlanProduct = {
   id: string
@@ -15,6 +17,8 @@ export type BeautyPlanProduct = {
   image_url: string | null
   price: number | null
   usage_description: string | null
+  available_in_salon: boolean
+  position: number | null
   created_at: string
   updated_at: string
 }
@@ -51,12 +55,24 @@ async function fetchPlanWithProducts(supabase: ServerSupabase, clientId: string)
 
   if (error || !plan) return { plan: null, products: [] as BeautyPlanProduct[] }
 
-  const { data: products } = await supabase
+  let { data: products, error: productsError } = await supabase
     .from('beauty_plan_products')
     .select('*')
     .eq('plan_id', plan.id)
     .order('time_of_day', { ascending: true })
+    .order('position', { ascending: true, nullsFirst: true })
     .order('created_at', { ascending: true })
+
+  // Migracja 20261012 może nie być jeszcze zastosowana.
+  if (productsError && /position|column|schema cache/i.test(productsError.message)) {
+    const fallback = await supabase
+      .from('beauty_plan_products')
+      .select('*')
+      .eq('plan_id', plan.id)
+      .order('time_of_day', { ascending: true })
+      .order('created_at', { ascending: true })
+    products = fallback.data
+  }
 
   return { plan: plan as BeautyPlan, products: (products ?? []) as BeautyPlanProduct[] }
 }
@@ -90,8 +106,15 @@ function validateProducts(
       return { error: 'Cena produktu musi być liczbą większą lub równą 0' }
     }
 
+    const position =
+      typeof product.position === 'number' && Number.isFinite(product.position)
+        ? Math.max(0, Math.trunc(product.position))
+        : null
+
     normalized.push({
       id: product.id,
+      availableInSalon: Boolean(product.availableInSalon),
+      position,
       timeOfDay: product.timeOfDay,
       name,
       url,
@@ -112,7 +135,24 @@ function toProductRow(product: IncomingBeautyPlanProduct) {
     image_url: product.imageUrl?.trim() || null,
     price: product.price ?? null,
     usage_description: product.usageDescription?.trim() || null,
+    available_in_salon: product.availableInSalon ?? false,
+    position: product.position ?? null,
   }
+}
+
+function toLegacyProductRow(product: IncomingBeautyPlanProduct) {
+  return {
+    time_of_day: product.timeOfDay,
+    name: product.name.trim(),
+    url: product.url?.trim() || null,
+    image_url: product.imageUrl?.trim() || null,
+    price: product.price ?? null,
+    usage_description: product.usageDescription?.trim() || null,
+  }
+}
+
+function isMissingBeautyPlanColumn(message: string | undefined): boolean {
+  return Boolean(message && /available_in_salon|position|column|schema cache/i.test(message))
 }
 
 export const getBeautyPlanFn = createServerFn({ method: 'GET' })
@@ -180,14 +220,37 @@ export const saveBeautyPlanFn = createServerFn({ method: 'POST' })
         .update(toProductRow(item.product))
         .eq('id', item.id)
         .eq('plan_id', plan.id)
-      if (error) return { error: error.message }
+      if (error) {
+        // Fallback przed migracją 20261012.
+        if (isMissingBeautyPlanColumn(error.message)) {
+          const legacy = await supabase
+            .from('beauty_plan_products')
+            .update(toLegacyProductRow(item.product))
+            .eq('id', item.id)
+            .eq('plan_id', plan.id)
+          if (legacy.error) return { error: legacy.error.message }
+          continue
+        }
+        return { error: error.message }
+      }
     }
 
     if (toInsert.length > 0) {
       const { error } = await supabase
         .from('beauty_plan_products')
         .insert(toInsert.map((product) => ({ plan_id: plan.id, ...toProductRow(product) })))
-      if (error) return { error: error.message }
+      if (error) {
+        if (isMissingBeautyPlanColumn(error.message)) {
+          const legacy = await supabase
+            .from('beauty_plan_products')
+            .insert(
+              toInsert.map((product) => ({ plan_id: plan.id, ...toLegacyProductRow(product) })),
+            )
+          if (legacy.error) return { error: legacy.error.message }
+        } else {
+          return { error: error.message }
+        }
+      }
     }
 
     if (toDeleteIds.length > 0) {
@@ -259,12 +322,23 @@ export const getPublicBeautyPlanFn = createServerFn({ method: 'GET' })
 
     if (!plan) return { plan: null, products: [], salonName: null, clientFirstName: null }
 
-    const { data: products } = await admin
+    let { data: products, error: productsError } = await admin
       .from('beauty_plan_products')
       .select('*')
       .eq('plan_id', plan.id)
       .order('time_of_day', { ascending: true })
+      .order('position', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })
+
+    if (productsError && /position|column|schema cache/i.test(productsError.message)) {
+      const fallback = await admin
+        .from('beauty_plan_products')
+        .select('*')
+        .eq('plan_id', plan.id)
+        .order('time_of_day', { ascending: true })
+        .order('created_at', { ascending: true })
+      products = fallback.data
+    }
 
     let salonName: string | null = null
     let clientFirstName: string | null = null
@@ -539,7 +613,7 @@ export const scrapeProductFn = createServerFn({ method: 'POST' })
     if (!html) {
       return {
         error:
-          'Nie udało się pobrać strony produktu. Automatyczne pobieranie działa dla linków z Rossmann — wpisz dane ręcznie.',
+          'Nie udało się pobrać strony produktu. Automatyczne pobieranie działa dla większości sklepów — w razie problemu wpisz dane ręcznie.',
       }
     }
 
@@ -555,7 +629,7 @@ export const scrapeProductFn = createServerFn({ method: 'POST' })
     if (!name && !imageUrl && price === null) {
       return {
         error:
-          'Nie znaleziono danych produktu. Automatyczne pobieranie działa dla linków z Rossmann — wpisz dane ręcznie.',
+          'Nie znaleziono danych produktu. Automatyczne pobieranie działa dla większości sklepów — w razie problemu wpisz dane ręcznie.',
       }
     }
 
@@ -571,6 +645,103 @@ export const scrapeProductFn = createServerFn({ method: 'POST' })
     )
 
     return { name, imageUrl, price }
+  })
+
+function renderPlanEmailHtml(params: {
+  salonName: string | null
+  clientName: string | null
+  planId: string
+  morningDescription: string | null
+  eveningDescription: string | null
+  products: BeautyPlanProduct[]
+}): string {
+  const link = `${resolveSiteUrl()}/share/beauty-plan/${params.planId}`
+  const priceFormatter = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' })
+
+  const renderProducts = (time: 'morning' | 'evening') => {
+    const items = params.products.filter((product) => product.time_of_day === time)
+    if (items.length === 0) return '<p style="color:#8f7c7a;font-size:13px">Brak produktów.</p>'
+    return `<ul style="padding-left:18px;margin:8px 0 0">${items
+      .map((product) => {
+        const name = escapeHtml(product.name)
+        const title = product.url
+          ? `<a href="${escapeHtml(product.url)}" style="color:#6f5957;font-weight:600">${name}</a>`
+          : `<span style="font-weight:600;color:#1b1c1c">${name}</span>`
+        const price = product.price !== null ? ` — ${priceFormatter.format(product.price)}` : ''
+        const salon = product.available_in_salon
+          ? ' <span style="color:#2f6b3a;font-size:12px">· dostępne w gabinecie</span>'
+          : ''
+        const usage = product.usage_description
+          ? `<div style="color:#6f5957;font-size:13px;margin-top:2px">${escapeHtml(product.usage_description)}</div>`
+          : ''
+        return `<li style="margin-bottom:10px">${title}${price}${salon}${usage}</li>`
+      })
+      .join('')}</ul>`
+  }
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1b1c1c">
+    <h1 style="font-size:20px;margin:0 0 4px">Plan pielęgnacyjny</h1>
+    <p style="color:#6f5957;font-size:13px;margin:0 0 20px">
+      ${params.clientName ? `Dla: ${escapeHtml(params.clientName)} · ` : ''}${escapeHtml(params.salonName ?? 'Twój gabinet')}
+    </p>
+    <h2 style="font-size:15px;color:#8a6d1f;margin:0 0 6px">Rano</h2>
+    ${params.morningDescription ? `<p style="font-size:13px;white-space:pre-line;margin:0">${escapeHtml(params.morningDescription)}</p>` : ''}
+    ${renderProducts('morning')}
+    <h2 style="font-size:15px;color:#2f4d8a;margin:24px 0 6px">Wieczorem</h2>
+    ${params.eveningDescription ? `<p style="font-size:13px;white-space:pre-line;margin:0">${escapeHtml(params.eveningDescription)}</p>` : ''}
+    ${renderProducts('evening')}
+    <p style="margin:28px 0 0">
+      <a href="${link}" style="display:inline-block;background:#6f5957;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:14px">
+        Zobacz plan online
+      </a>
+    </p>
+    <p style="color:#8f7c7a;font-size:12px;margin-top:20px">
+      Link jest prywatny — nie udostępniaj go osobom trzecim.
+    </p>
+  </div>`
+}
+
+export const sendBeautyPlanEmailFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { clientId: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Nie jesteś zalogowany' }
+
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id, name, email')
+      .eq('id', data.clientId)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!client) return { error: 'Nie znaleziono klienta' }
+    if (!client.email) return { error: 'Klient nie ma adresu e-mail' }
+
+    const { plan, products } = await fetchPlanWithProducts(supabase, data.clientId)
+    if (!plan) return { error: 'Brak planu pielęgnacyjnego do wysłania' }
+
+    const { data: salon } = await supabase
+      .from('salons')
+      .select('name')
+      .eq('id', caller.salonId)
+      .maybeSingle()
+
+    const html = renderPlanEmailHtml({
+      salonName: salon?.name ?? null,
+      clientName: client.name ?? null,
+      planId: plan.id,
+      morningDescription: plan.morning_description,
+      eveningDescription: plan.evening_description,
+      products,
+    })
+
+    const result = await sendEmail({
+      to: client.email,
+      subject: `Plan pielęgnacyjny${salon?.name ? ` — ${salon.name}` : ''}`,
+      html,
+    })
+    if (!result.ok) return { error: result.error }
+    return { success: true }
   })
 
 // Legacy aliases

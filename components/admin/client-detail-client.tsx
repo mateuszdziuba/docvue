@@ -18,6 +18,7 @@ import { useRouterCompat } from '@/lib/router-compat'
 import { assignFormToClient, deleteClientForm } from '@/src/server/client-forms'
 import type { Client, ClientForm, Submission } from '@/types/database'
 import { DeleteIconButton } from './delete-icon-button'
+import { EditClientDialog } from './edit-client-dialog'
 
 interface ClientAppointment {
   id: string
@@ -122,7 +123,10 @@ export function ClientDetailClient({
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-xl p-6 border border-border/60">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Informacje o kliencie</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">Informacje o kliencie</h2>
+          <EditClientDialog client={client} />
+        </div>
         {client.important_info && (
           <p className="mb-4 rounded-lg bg-warning-container px-3.5 py-2.5 text-sm font-medium text-on-warning-container">
             {client.important_info}

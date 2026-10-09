@@ -53,7 +53,7 @@ function MissingPlan() {
   )
 }
 
-function ProductCard({ product }: { product: BeautyPlanProduct }) {
+function ProductCard({ product, hidePrice }: { product: BeautyPlanProduct; hidePrice?: boolean }) {
   const price = formatPrice(product.price)
 
   return (
@@ -90,7 +90,12 @@ function ProductCard({ product }: { product: BeautyPlanProduct }) {
             {product.name}
           </span>
         )}
-        {price && (
+        {product.available_in_salon && (
+          <span className="mt-1 inline-flex w-fit items-center rounded-full bg-success-container px-2 py-0.5 text-[11px] font-medium text-on-success-container">
+            Można kupić w gabinecie
+          </span>
+        )}
+        {price && !hidePrice && (
           <p className="mt-0.5 text-sm font-semibold text-on-success-container sm:text-base">
             {price}
           </p>
@@ -110,16 +115,24 @@ function PlanTimeSection({
   description,
   products,
   tone,
+  hidePriceIds,
 }: {
   title: string
   description: string | null
   products: BeautyPlanProduct[]
   tone: 'morning' | 'evening'
+  hidePriceIds: Set<string>
 }) {
   const isMorning = tone === 'morning'
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-background p-4 sm:p-6">
+    <section
+      className={`rounded-2xl border p-4 sm:p-6 ${
+        isMorning
+          ? 'border-warning/25 bg-gradient-to-b from-warning-container/60 to-background'
+          : 'border-info/25 bg-gradient-to-b from-info-container/60 to-background'
+      }`}
+    >
       <div className="mb-4 flex items-center gap-2">
         <div
           className={
@@ -133,18 +146,20 @@ function PlanTimeSection({
         <h2 className="font-serif text-lg font-normal tracking-tight text-foreground">{title}</h2>
       </div>
 
-      {description ? (
+      {description && (
         <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
           {description}
         </p>
-      ) : (
-        <p className="text-sm italic text-muted-foreground">Brak dodatkowych wskazówek.</p>
       )}
 
       {products.length > 0 ? (
         <ul className="mt-4 space-y-3">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              hidePrice={hidePriceIds.has(product.id)}
+            />
           ))}
         </ul>
       ) : (
@@ -163,6 +178,18 @@ function SharedBeautyPlanPage() {
 
   const morningProducts = products.filter((product) => product.time_of_day === 'morning')
   const eveningProducts = products.filter((product) => product.time_of_day === 'evening')
+
+  // Ten sam produkt rano i wieczorem — cenę pokazujemy tylko raz.
+  const seenKeys = new Set<string>()
+  const hidePriceIds = new Set<string>()
+  for (const product of [...morningProducts, ...eveningProducts]) {
+    const key = (product.url?.trim() || product.name.trim()).toLowerCase()
+    if (key && seenKeys.has(key)) {
+      hidePriceIds.add(product.id)
+      continue
+    }
+    if (key) seenKeys.add(key)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,12 +217,14 @@ function SharedBeautyPlanPage() {
             description={plan.morning_description}
             products={morningProducts}
             tone="morning"
+            hidePriceIds={hidePriceIds}
           />
           <PlanTimeSection
             title="Wieczorem"
             description={plan.evening_description}
             products={eveningProducts}
             tone="evening"
+            hidePriceIds={hidePriceIds}
           />
         </div>
 

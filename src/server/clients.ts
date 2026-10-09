@@ -55,6 +55,11 @@ export const updateClientFn = createServerFn({ method: 'POST' })
       phone?: string
       birth_date?: string | null
       notes?: string | null
+      location?: string | null
+      address?: string | null
+      postal_code?: string | null
+      city?: string | null
+      important_info?: string | null
     }) => d,
   )
   .handler(async ({ data: { id, ...updates } }) => {
@@ -149,6 +154,11 @@ export const updateClient = (
     phone?: string
     birth_date?: string | null
     notes?: string | null
+    location?: string | null
+    address?: string | null
+    postal_code?: string | null
+    city?: string | null
+    important_info?: string | null
   },
 ) => updateClientFn({ data: { id, ...updates } })
 export const createClientAction = (data: {
