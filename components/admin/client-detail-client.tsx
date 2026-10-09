@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useLock } from '@/components/providers/lock-provider'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +47,6 @@ export function ClientDetailClient({
     (cf) => cf.status === 'completed' && !submissions.some((sub) => sub.form_id === cf.form_id),
   )
   const historyCount = submissions.length + completedWithoutSubmission.length
-  const { lock } = useLock()
   const router = useRouterCompat()
   const [isAssigning, setIsAssigning] = useState(false)
   const [selectedFormId, setSelectedFormId] = useState('')
@@ -300,16 +298,14 @@ export function ClientDetailClient({
                       >
                         Kopiuj link
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          lock()
-                          window.open(`/f/${cf.token}?source=salon`, '_blank')
-                        }}
+                      <a
+                        href={`/f/${cf.token}?source=salon`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="px-3 py-2 min-h-11 sm:min-h-0 sm:py-1.5 text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors"
                       >
                         Wypełnij w salonie
-                      </button>
+                      </a>
                     </>
                   )}
                   <DeleteIconButton

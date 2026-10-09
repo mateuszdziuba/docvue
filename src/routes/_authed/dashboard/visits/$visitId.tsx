@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { APPOINTMENT_STATUS_CONFIG, type AppointmentStatus } from '@/components/admin/status-badge'
 import { VisitPhotos } from '@/components/admin/visit-photos'
-import { useLock } from '@/components/providers/lock-provider'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,7 +60,6 @@ const statusKeys = Object.keys(APPOINTMENT_STATUS_CONFIG) as AppointmentStatus[]
 function VisitDetailPage() {
   useInvalidateOnFocus()
   const { appointment: initial, isOwner, requiredForms } = Route.useLoaderData()
-  const { lock } = useLock()
   const navigate = useNavigate()
   const apt = initial as any
   const [status, setStatus] = useState<AppointmentStatus>(apt.status)
@@ -106,8 +104,19 @@ function VisitDetailPage() {
   async function handleFillFormInSalon(form: RequiredFormInfo) {
     const token = await resolveFormToken(form)
     if (!token) return
-    lock()
-    window.open(`/f/${token}?source=salon`, '_blank')
+    const url = `${window.location.origin}/f/${token}?source=salon`
+    const opened = window.open(url, '_blank')
+    if (opened) {
+      opened.opener = null
+      return
+    }
+    // Popup zablokowany (np. PWA) — przynajmniej skopiuj link.
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link skopiowany — otwórz go na urządzeniu klienta')
+    } catch {
+      toast.error('Nie udało się otworzyć formularza')
+    }
   }
 
   async function handleDelete() {
@@ -266,9 +275,21 @@ function VisitDetailPage() {
                       >
                         Kopiuj link
                       </Button>
-                      <Button size="sm" onClick={() => void handleFillFormInSalon(form)}>
-                        Wypełnij w salonie
-                      </Button>
+                      {form.token ? (
+                        <Button size="sm" asChild>
+                          <a
+                            href={`/f/${form.token}?source=salon`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Wypełnij w salonie
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => void handleFillFormInSalon(form)}>
+                          Wypełnij w salonie
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>

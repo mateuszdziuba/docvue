@@ -1,7 +1,7 @@
 'use client'
 
 import { useNavigate } from '@tanstack/react-router'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/search-input'
 import { Link } from '@/lib/link-compat'
 import { useRouterCompat } from '@/lib/router-compat'
@@ -85,47 +86,33 @@ export function ClientsList({
   return (
     <>
       <div className="space-y-6">
-        {/* Add Client Button / Form */}
-        <div className="bg-card rounded-xl p-6 border border-border/60">
-          {showAddForm ? (
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-4">Dodaj nowego klienta</h3>
-              <AddClientForm
-                onSuccess={() => {
-                  router.refresh()
-                  setShowAddForm(false)
-                }}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          ) : isOwner ? (
-            <button
+        {/* Add Client Form (gdy otwarty) */}
+        {showAddForm && (
+          <div className="bg-card rounded-xl p-6 border border-border/60">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Dodaj nowego klienta</h3>
+            <AddClientForm
+              onSuccess={() => {
+                router.refresh()
+                setShowAddForm(false)
+              }}
+              onCancel={() => setShowAddForm(false)}
+            />
+          </div>
+        )}
+
+        {/* Wyszukiwarka + akcja — spójnie z listą formularzy */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+          <SearchInput placeholder="Szukaj klientów (imię, telefon, lokalizacja)..." />
+          {!showAddForm && isOwner && (
+            <Button
               type="button"
               onClick={() => setShowAddForm(true)}
-              className="inline-flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
+              className="w-full gap-2 sm:w-auto"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                />
-              </svg>
+              <Plus className="h-4 w-4" aria-hidden="true" />
               Dodaj klienta
-            </button>
-          ) : null}
-        </div>
-
-        {/* Search - Moved here as requested */}
-        <div className="w-full">
-          <SearchInput placeholder="Szukaj klientów (imię, telefon, lokalizacja)..." />
+            </Button>
+          )}
         </div>
 
         {/* Clients List */}

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
 import { format, parseISO } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import { Download, Printer } from 'lucide-react'
+import { Download, Eye, Printer } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { normalizeFieldType } from '@/lib/form-validation'
 import { applySalonPlaceholders, type SalonContact } from '@/lib/salon-placeholders'
 import { formatFieldValue, isImageSignature, resolveSalonCity } from '@/lib/submission-format'
@@ -48,6 +49,8 @@ function SubmissionDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const sub = submission as any
   const fields: FormField[] = (sub.forms?.schema as { fields?: FormField[] })?.fields ?? []
   const salonContact = salon as SalonContact | null
@@ -70,6 +73,22 @@ function SubmissionDetailPage() {
     document.body.appendChild(link)
     link.click()
     link.remove()
+  }
+
+  async function handlePreviewSnapshot() {
+    setPreviewLoading(true)
+    try {
+      const stored = await getSubmissionDocumentUrlFn({ data: { id: sub.id } })
+      if ('url' in stored && stored.url) {
+        setPreviewUrl(stored.url)
+      } else {
+        toast.error('Brak zapisanej migawki PDF dla tej odpowiedzi')
+      }
+    } catch {
+      toast.error('Nie udało się otworzyć dokumentu')
+    } finally {
+      setPreviewLoading(false)
+    }
   }
 
   async function handleDownloadPdf() {
@@ -164,6 +183,17 @@ function SubmissionDetailPage() {
             <Printer className="mr-1.5 h-4 w-4" aria-hidden="true" />
             Drukuj
           </Button>
+          {sub.pdf_path && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handlePreviewSnapshot()}
+              disabled={previewLoading}
+            >
+              <Eye className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {previewLoading ? 'Otwieranie…' : 'Podejrzyj migawkę'}
+            </Button>
+          )}
           <Button size="sm" onClick={() => void handleDownloadPdf()} disabled={pdfLoading}>
             <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {pdfLoading ? 'Generowanie…' : 'Pobierz PDF'}
@@ -324,6 +354,21 @@ function SubmissionDetailPage() {
           {format(new Date(), 'd MMMM yyyy, HH:mm', { locale: pl })}
         </footer>
       </article>
+
+      <Dialog open={previewUrl !== null} onOpenChange={(open) => !open && setPreviewUrl(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Migawka PDF zapisana przy podpisaniu</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <iframe
+              src={previewUrl}
+              title="Migawka podpisanej zgody (PDF)"
+              className="h-[70vh] w-full rounded-lg border border-border bg-white"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

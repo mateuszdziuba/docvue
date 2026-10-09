@@ -79,19 +79,33 @@ function FormSuccessPage() {
               )}
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button
-                type="button"
-                size="lg"
-                onClick={() => window.close()}
-                className="min-h-12 text-xs font-semibold uppercase tracking-[0.12em]"
-              >
-                Zamknij stronę
-              </Button>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Jeśli karta nie zamknęła się automatycznie, zamknij ją ręcznie.
-            </p>
+            {filledInSalon ? (
+              <>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => {
+                      window.close()
+                      // Gdy przeglądarka/PWA nie pozwala zamknąć karty — wróć do panelu.
+                      window.setTimeout(() => {
+                        window.location.assign('/dashboard')
+                      }, 500)
+                    }}
+                    className="min-h-12 text-xs font-semibold uppercase tracking-[0.12em]"
+                  >
+                    Wróć do panelu
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Jeśli karta nie zamknęła się automatycznie, zamknij ją ręcznie.
+                </p>
+              </>
+            ) : (
+              <p className="mt-8 text-sm text-muted-foreground">
+                Możesz teraz bezpiecznie zamknąć tę kartę.
+              </p>
+            )}
 
             <div className="mt-8 border-t border-border pt-6">
               <DocvueLogo className="text-sm" />
