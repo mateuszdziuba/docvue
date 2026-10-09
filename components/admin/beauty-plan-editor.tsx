@@ -26,7 +26,7 @@ import {
   Plus,
   Sun,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -40,17 +40,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Link } from '@/lib/link-compat'
+import { useRouterCompat } from '@/lib/router-compat'
 import type { TimeOfDay } from '@/src/lib/beauty-plan-diff'
 import { saveBeautyPlanFn, scrapeProductFn } from '@/src/server/beauty-plans'
 import { DeleteIconButton } from './delete-icon-button'
@@ -70,14 +65,14 @@ type BeautyPlanProductDraft = BeautyPlanProductInitial & {
   availableInSalon: boolean
 }
 
-interface EditBeautyPlanDialogProps {
+interface BeautyPlanEditorProps {
   clientId: string
   planId?: string
   initialMorningDesc?: string
   initialEveningDesc?: string
   initialMorningProducts?: BeautyPlanProductInitial[]
   initialEveningProducts?: BeautyPlanProductInitial[]
-  trigger?: React.ReactNode
+  clientName?: string | null
   onSaved?: () => void | Promise<void>
 }
 
@@ -148,226 +143,238 @@ function SortableProductCard({
   const priceLabel = product.price !== null ? PRICE_FORMATTER.format(product.price) : null
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`overflow-hidden rounded-xl border border-border/60 bg-muted/30 ${
-        isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''
-      }`}
-    >
-      {/* Nagłówek akordeonu — kompaktowy, łatwy do przeciągania */}
-      <div className="flex items-center gap-1 p-2 sm:gap-2 sm:p-3">
-        <button
-          type="button"
-          className="grid h-11 w-9 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:text-foreground active:cursor-grabbing"
-          aria-label={`Przenieś produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" aria-hidden="true" />
-        </button>
+    <Collapsible open={expanded} onOpenChange={onToggle} asChild>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`overflow-hidden rounded-xl border border-border/60 bg-muted/30 ${
+          isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''
+        }`}
+      >
+        {/* Nagłówek (zwinięta wersja) — obrazek, nazwa, cena; łatwy do przeciągania */}
+        <div className="flex items-center gap-1 p-2 sm:gap-2 sm:p-3">
+          <button
+            type="button"
+            className="grid h-11 w-9 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            aria-label={`Przenieś produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
+          </button>
 
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-controls={bodyId}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left"
-        >
-          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {index + 1}.
-          </span>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-            {product.name.trim() || 'Nowy kosmetyk'}
-          </span>
-          {product.availableInSalon && (
-            <span className="hidden shrink-0 rounded-full bg-success-container px-2 py-0.5 text-[11px] font-medium text-on-success-container sm:inline-flex">
-              W gabinecie
-            </span>
-          )}
-          {priceLabel && (
-            <span className="shrink-0 text-sm font-semibold text-on-success-container">
-              {priceLabel}
-            </span>
-          )}
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-              expanded ? 'rotate-180' : ''
-            }`}
-            aria-hidden="true"
-          />
-        </button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-11 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground"
-          onClick={onCopy}
-          title={`Kopiuj do ${otherLabel}`}
-        >
-          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-          <span className="hidden sm:inline">Kopiuj do {otherLabel}</span>
-        </Button>
-        <DeleteIconButton
-          label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
-          className="h-11 w-11 shrink-0"
-          onClick={onRemove}
-        />
-      </div>
-
-      {/* Rozwinięte pola produktu */}
-      {expanded && (
-        <div id={bodyId} className="space-y-3 border-t border-border/50 p-4 pt-3">
-          <div className="flex gap-4">
-            {product.imageUrl ? (
-              <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left"
+            >
+              {product.imageUrl ? (
                 <img
                   src={product.imageUrl}
-                  alt={product.name || 'Zdjęcie produktu'}
-                  className="h-full w-full object-cover"
+                  alt=""
+                  className="h-8 w-8 shrink-0 rounded-md border border-border/50 bg-background object-cover"
                 />
-              </div>
-            ) : (
-              <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
-                <LinkIcon className="h-5 w-5 opacity-50" />
-              </div>
-            )}
+              ) : (
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border/50 bg-muted/40 text-muted-foreground">
+                  <LinkIcon className="h-3.5 w-3.5 opacity-60" aria-hidden="true" />
+                </span>
+              )}
+              <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {index + 1}.
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                {product.name.trim() || 'Nowy kosmetyk'}
+              </span>
+              {product.availableInSalon && (
+                <span className="hidden shrink-0 rounded-full bg-success-container px-2 py-0.5 text-[11px] font-medium text-on-success-container sm:inline-flex">
+                  W gabinecie
+                </span>
+              )}
+              {priceLabel && (
+                <span className="shrink-0 text-sm font-semibold text-on-success-container">
+                  {priceLabel}
+                </span>
+              )}
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                  expanded ? 'rotate-180' : ''
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+          </CollapsibleTrigger>
 
-            <div className="flex-1">
-              <Label
-                htmlFor={fieldId('url')}
-                className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
-              >
-                <LinkIcon className="h-3 w-3" aria-hidden="true" />
-                Link do sklepu
-              </Label>
-              <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-11 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground"
+            onClick={onCopy}
+            title={`Kopiuj do ${otherLabel}`}
+          >
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Kopiuj do {otherLabel}</span>
+          </Button>
+          <DeleteIconButton
+            label={`Usuń produkt ${index + 1} (${time === 'morning' ? 'rano' : 'wieczór'})`}
+            className="h-11 w-11 shrink-0"
+            onClick={onRemove}
+          />
+        </div>
+
+        {/* Rozwinięte pola produktu */}
+        <CollapsibleContent>
+          <div id={bodyId} className="space-y-3 border-t border-border/50 p-4 pt-3">
+            <div className="flex gap-4">
+              {product.imageUrl ? (
+                <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-background sm:block">
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name || 'Zdjęcie produktu'}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/40 text-muted-foreground sm:flex">
+                  <LinkIcon className="h-5 w-5 opacity-50" />
+                </div>
+              )}
+
+              <div className="flex-1">
+                <Label
+                  htmlFor={fieldId('url')}
+                  className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground"
+                >
+                  <LinkIcon className="h-3 w-3" aria-hidden="true" />
+                  Link do sklepu
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id={fieldId('url')}
+                    type="url"
+                    value={product.url}
+                    onChange={(event) => onChange('url', event.target.value)}
+                    placeholder="https://..."
+                    aria-invalid={scrapeError ? true : undefined}
+                    aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
+                    className="min-h-11 rounded-lg md:min-h-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="min-h-11 shrink-0 md:min-h-0"
+                    disabled={!product.url || isScraping}
+                    onClick={onFetch}
+                  >
+                    {isScraping ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      'Pobierz dane'
+                    )}
+                  </Button>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Automatyczne pobieranie danych działa dla większości sklepów. Jeśli się nie uda —
+                  wpisz dane ręcznie.
+                </p>
+                {scrapeError && (
+                  <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
+                    {scrapeError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <div className="md:col-span-3">
+                <Label
+                  htmlFor={fieldId('name')}
+                  className="mb-1.5 text-xs font-medium text-muted-foreground"
+                >
+                  Nazwa produktu
+                </Label>
                 <Input
-                  id={fieldId('url')}
-                  type="url"
-                  value={product.url}
-                  onChange={(event) => onChange('url', event.target.value)}
-                  placeholder="https://..."
-                  aria-invalid={scrapeError ? true : undefined}
-                  aria-describedby={scrapeError ? `${fieldId('url')}-error` : undefined}
+                  id={fieldId('name')}
+                  type="text"
+                  value={product.name}
+                  onChange={(event) => onChange('name', event.target.value)}
+                  placeholder="Np. CeraVe Oczyszczający żel"
+                  maxLength={200}
                   className="min-h-11 rounded-lg md:min-h-0"
                 />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="min-h-11 shrink-0 md:min-h-0"
-                  disabled={!product.url || isScraping}
-                  onClick={onFetch}
-                >
-                  {isScraping ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    'Pobierz dane'
-                  )}
-                </Button>
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                Automatyczne pobieranie danych działa dla większości sklepów. Jeśli się nie uda —
-                wpisz dane ręcznie.
-              </p>
-              {scrapeError && (
-                <p id={`${fieldId('url')}-error`} className="mt-1.5 text-xs text-destructive">
-                  {scrapeError}
-                </p>
-              )}
+              <div className="md:col-span-1">
+                <Label
+                  htmlFor={fieldId('price')}
+                  className="mb-1.5 text-xs font-medium text-muted-foreground"
+                >
+                  Cena (PLN)
+                </Label>
+                <Input
+                  id={fieldId('price')}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={product.price ?? ''}
+                  onChange={(event) => {
+                    const parsed = Number.parseFloat(event.target.value)
+                    onChange('price', Number.isFinite(parsed) ? parsed : null)
+                  }}
+                  placeholder="0.00"
+                  className="min-h-11 rounded-lg md:min-h-0"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="md:col-span-3">
-              <Label
-                htmlFor={fieldId('name')}
-                className="mb-1.5 text-xs font-medium text-muted-foreground"
-              >
-                Nazwa produktu
-              </Label>
-              <Input
-                id={fieldId('name')}
-                type="text"
-                value={product.name}
-                onChange={(event) => onChange('name', event.target.value)}
-                placeholder="Np. CeraVe Oczyszczający żel"
-                maxLength={200}
-                className="min-h-11 rounded-lg md:min-h-0"
-              />
-            </div>
-            <div className="md:col-span-1">
-              <Label
-                htmlFor={fieldId('price')}
-                className="mb-1.5 text-xs font-medium text-muted-foreground"
-              >
-                Cena (PLN)
-              </Label>
-              <Input
-                id={fieldId('price')}
-                type="number"
-                min="0"
-                step="0.01"
-                value={product.price ?? ''}
-                onChange={(event) => {
-                  const parsed = Number.parseFloat(event.target.value)
-                  onChange('price', Number.isFinite(parsed) ? parsed : null)
-                }}
-                placeholder="0.00"
-                className="min-h-11 rounded-lg md:min-h-0"
-              />
-            </div>
-          </div>
-
-          <label
-            htmlFor={fieldId('salon')}
-            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2"
-          >
-            <Checkbox
-              id={fieldId('salon')}
-              checked={product.availableInSalon}
-              onCheckedChange={(checked) => onChange('availableInSalon', checked === true)}
-            />
-            <span className="text-sm text-foreground">
-              Dostępne w gabinecie — klient może kupić na miejscu
-            </span>
-          </label>
-
-          <div>
-            <Label
-              htmlFor={fieldId('usage')}
-              className="mb-1.5 text-xs font-medium text-muted-foreground"
+            <label
+              htmlFor={fieldId('salon')}
+              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2"
             >
-              Instrukcja użycia dla klienta (opcjonalnie)
-            </Label>
-            <Textarea
-              id={fieldId('usage')}
-              value={product.usageDescription}
-              onChange={(event) => onChange('usageDescription', event.target.value)}
-              rows={2}
-              placeholder="Np. Wklep delikatnie w okolice oka..."
-              className="resize-none rounded-lg"
-            />
+              <Checkbox
+                id={fieldId('salon')}
+                checked={product.availableInSalon}
+                onCheckedChange={(checked) => onChange('availableInSalon', checked === true)}
+              />
+              <span className="text-sm text-foreground">
+                Dostępne w gabinecie — klient może kupić na miejscu
+              </span>
+            </label>
+
+            <div>
+              <Label
+                htmlFor={fieldId('usage')}
+                className="mb-1.5 text-xs font-medium text-muted-foreground"
+              >
+                Instrukcja użycia dla klienta (opcjonalnie)
+              </Label>
+              <Textarea
+                id={fieldId('usage')}
+                value={product.usageDescription}
+                onChange={(event) => onChange('usageDescription', event.target.value)}
+                rows={2}
+                placeholder="Np. Wklep delikatnie w okolice oka..."
+                className="resize-none rounded-lg"
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   )
 }
 
-export function EditBeautyPlanDialog({
+export function BeautyPlanEditor({
   clientId,
   planId,
   initialMorningDesc = '',
   initialEveningDesc = '',
   initialMorningProducts = [],
   initialEveningProducts = [],
-  trigger,
+  clientName,
   onSaved,
-}: EditBeautyPlanDialogProps) {
-  const [open, setOpen] = useState(false)
+}: BeautyPlanEditorProps) {
+  const router = useRouterCompat()
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -419,34 +426,31 @@ export function EditBeautyPlanDialog({
     else setEveningProducts(updater)
   }
 
-  const resetDraft = () => {
-    setMorningDesc(initialMorningDesc)
-    setEveningDesc(initialEveningDesc)
-    setMorningProducts(toDrafts(initialMorningProducts))
-    setEveningProducts(toDrafts(initialEveningProducts))
-    setScrapeErrors({})
-    setScrapingKey(null)
-    setExpandedIds(new Set())
-  }
+  const backToClient = () => router.push(`/dashboard/clients/${clientId}`)
 
-  const handleOpenChange = (next: boolean) => {
-    if (next) {
-      resetDraft()
-      setOpen(true)
-      return
-    }
+  const handleCancel = () => {
     if (isDirty) {
       setConfirmCloseOpen(true)
       return
     }
-    setOpen(false)
+    backToClient()
   }
 
   const handleDiscard = () => {
-    resetDraft()
     setConfirmCloseOpen(false)
-    setOpen(false)
+    backToClient()
   }
+
+  // Ostrzeżenie przy zamykaniu karty z niezapisanymi zmianami (Baymard)
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
 
   const handleAddProduct = (time: TimeOfDay) => {
     const draft = newDraft()
@@ -604,7 +608,7 @@ export function EditBeautyPlanDialog({
 
       toast.success(planId ? 'Zaktualizowano plan pielęgnacyjny' : 'Utworzono plan pielęgnacyjny')
       await onSaved?.()
-      setOpen(false)
+      backToClient()
     } catch {
       toast.error('Nie udało się zapisać planu. Spróbuj ponownie.')
     } finally {
@@ -667,107 +671,96 @@ export function EditBeautyPlanDialog({
   )
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-          {trigger ?? (
-            <Button variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Utwórz plan pielęgnacyjny
-            </Button>
-          )}
-        </DialogTrigger>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle className="text-2xl font-bold text-foreground">
-              {planId ? 'Edytuj plan pielęgnacyjny' : 'Nowy plan pielęgnacyjny'}
-            </DialogTitle>
-            <DialogDescription>
-              Uzupełnij zalecenia na rano i wieczór oraz dodaj kosmetyki wraz z instrukcją użycia.
-            </DialogDescription>
-          </DialogHeader>
+    <div className="mx-auto max-w-3xl space-y-6 p-6">
+      <div>
+        <Link
+          href={`/dashboard/clients/${clientId}`}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Wróć do klienta
+        </Link>
+        <h1 className="mt-2 font-serif text-2xl font-normal tracking-tight text-foreground">
+          {planId ? 'Edytuj plan pielęgnacyjny' : 'Nowy plan pielęgnacyjny'}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {clientName ? `${clientName} · ` : ''}
+          Uzupełnij zalecenia na rano i wieczór oraz dodaj kosmetyki wraz z instrukcją użycia.
+        </p>
+      </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-6 px-6 pt-4 pb-6">
-              <div className="space-y-4 rounded-2xl border border-warning/30 bg-warning-container/50 p-5">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning-container text-on-warning-container">
-                    <Sun className="h-4 w-4" aria-hidden="true" />
-                  </div>
-                  <h2 className="text-lg font-bold text-on-warning-container">
-                    Pielęgnacja poranna
-                  </h2>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="morning-description"
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    Wskazówki / opis rutyny
-                  </Label>
-                  <Textarea
-                    id="morning-description"
-                    value={morningDesc}
-                    onChange={(event) => setMorningDesc(event.target.value)}
-                    rows={3}
-                    placeholder="Np. 1. Oczyszczanie, 2. Tonizacja, 3. Krem z filtrem..."
-                    className="rounded-xl px-4 py-3"
-                  />
-                </div>
-
-                {renderProductSection('morning', morningProducts)}
-              </div>
-
-              <div className="space-y-4 rounded-2xl border border-info/30 bg-info-container/50 p-5">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info-container text-on-info-container">
-                    <Moon className="h-4 w-4" aria-hidden="true" />
-                  </div>
-                  <h2 className="text-lg font-bold text-on-info-container">
-                    Pielęgnacja wieczorna
-                  </h2>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="evening-description"
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    Wskazówki / opis rutyny
-                  </Label>
-                  <Textarea
-                    id="evening-description"
-                    value={eveningDesc}
-                    onChange={(event) => setEveningDesc(event.target.value)}
-                    rows={3}
-                    placeholder="Np. 1. Demakijaż, 2. Mycie twarzy, 3. Serum z retinolem..."
-                    className="rounded-xl px-4 py-3"
-                  />
-                </div>
-
-                {renderProductSection('evening', eveningProducts)}
-              </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-4 rounded-2xl border border-warning/30 bg-warning-container/50 p-5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning-container text-on-warning-container">
+              <Sun className="h-4 w-4" aria-hidden="true" />
             </div>
+            <h2 className="text-lg font-bold text-on-warning-container">Pielęgnacja poranna</h2>
+          </div>
 
-            <div className="sticky bottom-0 z-10 flex justify-end gap-3 border-t border-border bg-background/95 px-6 py-4 backdrop-blur">
-              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
-                Anuluj
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Zapisywanie...
-                  </>
-                ) : (
-                  'Zapisz plan'
-                )}
-              </Button>
+          <div className="space-y-2">
+            <Label
+              htmlFor="morning-description"
+              className="text-sm font-medium text-muted-foreground"
+            >
+              Wskazówki / opis rutyny
+            </Label>
+            <Textarea
+              id="morning-description"
+              value={morningDesc}
+              onChange={(event) => setMorningDesc(event.target.value)}
+              rows={3}
+              placeholder="Np. 1. Oczyszczanie, 2. Tonizacja, 3. Krem z filtrem..."
+              className="rounded-xl px-4 py-3"
+            />
+          </div>
+
+          {renderProductSection('morning', morningProducts)}
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-info/30 bg-info-container/50 p-5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info-container text-on-info-container">
+              <Moon className="h-4 w-4" aria-hidden="true" />
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <h2 className="text-lg font-bold text-on-info-container">Pielęgnacja wieczorna</h2>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="evening-description"
+              className="text-sm font-medium text-muted-foreground"
+            >
+              Wskazówki / opis rutyny
+            </Label>
+            <Textarea
+              id="evening-description"
+              value={eveningDesc}
+              onChange={(event) => setEveningDesc(event.target.value)}
+              rows={3}
+              placeholder="Np. 1. Demakijaż, 2. Mycie twarzy, 3. Serum z retinolem..."
+              className="rounded-xl px-4 py-3"
+            />
+          </div>
+
+          {renderProductSection('evening', eveningProducts)}
+        </div>
+
+        <div className="sticky bottom-4 z-10 flex justify-end gap-3 rounded-xl border border-border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
+          <Button type="button" variant="ghost" onClick={handleCancel}>
+            Anuluj
+          </Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Zapisywanie...
+              </>
+            ) : (
+              'Zapisz plan'
+            )}
+          </Button>
+        </div>
+      </form>
 
       <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
         <AlertDialogContent>
@@ -789,6 +782,6 @@ export function EditBeautyPlanDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }

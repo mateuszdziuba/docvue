@@ -8,6 +8,7 @@ import {
   Moon,
   Package,
   Pencil,
+  Plus,
   RefreshCw,
   Sun,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Link } from '@/lib/link-compat'
 import {
   type BeautyPlan,
   type BeautyPlanProduct,
@@ -22,8 +24,8 @@ import {
   getBeautyPlanFn,
   sendBeautyPlanEmailFn,
 } from '@/src/server/beauty-plans'
+import type { BeautyPlanProductInitial } from './beauty-plan-editor'
 import { DeleteBeautyPlanButton } from './delete-beauty-plan-button'
-import { type BeautyPlanProductInitial, EditBeautyPlanDialog } from './edit-beauty-plan-dialog'
 import { ShareBeautyPlanButton } from './share-beauty-plan-button'
 
 interface BeautyPlanSectionProps {
@@ -285,7 +287,12 @@ export function BeautyPlanSection({ clientId, clientEmail }: BeautyPlanSectionPr
             Ten klient nie ma jeszcze spersonalizowanego planu pielęgnacyjnego.
           </p>
         </div>
-        <EditBeautyPlanDialog clientId={clientId} onSaved={load} />
+        <Button asChild variant="outline">
+          <Link href={`/dashboard/clients/${clientId}/plan`}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Utwórz plan pielęgnacyjny
+          </Link>
+        </Button>
       </section>
     )
   }
@@ -321,26 +328,15 @@ export function BeautyPlanSection({ clientId, clientEmail }: BeautyPlanSectionPr
               </span>
             </div>
           )}
-          <EditBeautyPlanDialog
-            clientId={clientId}
-            planId={plan.id}
-            initialMorningDesc={plan.morning_description ?? ''}
-            initialEveningDesc={plan.evening_description ?? ''}
-            initialMorningProducts={morningProducts.map(toDraft)}
-            initialEveningProducts={eveningProducts.map(toDraft)}
-            onSaved={load}
-            trigger={
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-h-11 md:min-h-0"
-                aria-label="Edytuj plan pielęgnacyjny"
-              >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                Edytuj
-              </Button>
-            }
-          />
+          <Button asChild variant="outline" size="sm" className="min-h-11 md:min-h-0">
+            <Link
+              href={`/dashboard/clients/${clientId}/plan`}
+              aria-label="Edytuj plan pielęgnacyjny"
+            >
+              <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Edytuj
+            </Link>
+          </Button>
           {clientEmail && (
             <Button
               variant="outline"
