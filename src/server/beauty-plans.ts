@@ -115,6 +115,10 @@ function validateProducts(
       id: product.id,
       availableInSalon: Boolean(product.availableInSalon),
       position,
+      catalogProductId:
+        typeof product.catalogProductId === 'string' && product.catalogProductId
+          ? product.catalogProductId
+          : null,
       timeOfDay: product.timeOfDay,
       name,
       url,
@@ -141,21 +145,24 @@ function toProductRow(product: IncomingBeautyPlanProduct) {
   }
 }
 
-function toLegacyProductRow(product: IncomingBeautyPlanProduct) {
-  return {
-    time_of_day: product.timeOfDay,
-    name: product.name.trim(),
-    url: product.url?.trim() || null,
-    image_url: product.imageUrl?.trim() || null,
-    price: product.price ?? null,
-    usage_description: product.usageDescription?.trim() || null,
-  }
-}
+const OPTIONAL_PRODUCT_COLUMNS = ['available_in_salon', 'position', 'catalog_product_id'] as const
 
 function isMissingBeautyPlanColumn(message: string | undefined): boolean {
   return Boolean(
     message && /available_in_salon|position|catalog_product_id|column|schema cache/i.test(message),
   )
+}
+
+/** Usuwa z wiersza tylko tę kolumnę, której brakuje w bazie (migracja niewklejona). */
+function stripMissingColumn(row: Record<string, unknown>, message: string | undefined): boolean {
+  if (!message) return false
+  for (const column of OPTIONAL_PRODUCT_COLUMNS) {
+    if (message.includes(column) && column in row) {
+      delete row[column]
+      return true
+    }
+  }
+  return false
 }
 
 export const getBeautyPlanFn = createServerFn({ method: 'GET' })
@@ -218,42 +225,46 @@ export const saveBeautyPlanFn = createServerFn({ method: 'POST' })
     const { toUpdate, toInsert, toDeleteIds } = diffProducts(existing ?? [], validated.products)
 
     for (const item of toUpdate) {
-      const { error } = await supabase
-        .from('beauty_plan_products')
-        .update(toProductRow(item.product))
-        .eq('id', item.id)
-        .eq('plan_id', plan.id)
-      if (error) {
-        // Fallback przed migracją 20261012.
-        if (isMissingBeautyPlanColumn(error.message)) {
-          const legacy = await supabase
-            .from('beauty_plan_products')
-            .update(toLegacyProductRow(item.product))
-            .eq('id', item.id)
-            .eq('plan_id', plan.id)
-          if (legacy.error) return { error: legacy.error.message }
-          continue
+      const row: Record<string, unknown> = { ...toProductRow(item.product) }
+      let lastError: string | null = null
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const { error } = await supabase
+          .from('beauty_plan_products')
+          .update(row)
+          .eq('id', item.id)
+          .eq('plan_id', plan.id)
+        if (!error) {
+          lastError = null
+          break
         }
-        return { error: error.message }
+        lastError = error.message
+        if (!isMissingBeautyPlanColumn(error.message)) break
+        if (!stripMissingColumn(row, error.message)) break
       }
+      if (lastError) return { error: lastError }
     }
 
     if (toInsert.length > 0) {
-      const { error } = await supabase
-        .from('beauty_plan_products')
-        .insert(toInsert.map((product) => ({ plan_id: plan.id, ...toProductRow(product) })))
-      if (error) {
-        if (isMissingBeautyPlanColumn(error.message)) {
-          const legacy = await supabase
-            .from('beauty_plan_products')
-            .insert(
-              toInsert.map((product) => ({ plan_id: plan.id, ...toLegacyProductRow(product) })),
-            )
-          if (legacy.error) return { error: legacy.error.message }
-        } else {
-          return { error: error.message }
+      const rows: Array<Record<string, unknown>> = toInsert.map((product) => ({
+        plan_id: plan.id,
+        ...toProductRow(product),
+      }))
+      let lastError: string | null = null
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const { error } = await supabase.from('beauty_plan_products').insert(rows)
+        if (!error) {
+          lastError = null
+          break
         }
+        lastError = error.message
+        if (!isMissingBeautyPlanColumn(error.message)) break
+        let stripped = false
+        for (const row of rows) {
+          if (stripMissingColumn(row, error.message)) stripped = true
+        }
+        if (!stripped) break
       }
+      if (lastError) return { error: lastError }
     }
 
     if (toDeleteIds.length > 0) {

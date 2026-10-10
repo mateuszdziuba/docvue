@@ -349,6 +349,52 @@ function SortableProductCard({
               </span>
             </label>
 
+            <div className="flex flex-wrap items-center gap-2">
+              {product.catalogProductId ? (
+                <span className="inline-flex items-center rounded-full bg-success-container px-2 py-0.5 text-[11px] font-medium text-on-success-container">
+                  W bazie kosmetyków
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  Spoza bazy
+                </span>
+              )}
+              {product.url && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-9 gap-1.5 text-xs"
+                  onClick={onRefreshFromUrl}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  Odśwież z URL
+                </Button>
+              )}
+              {product.catalogProductId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-9 gap-1.5 text-xs"
+                  onClick={onReplaceImage}
+                  disabled={isUploadingImage}
+                >
+                  {isUploadingImage ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  Wymień zdjęcie
+                </Button>
+              )}
+            </div>
+
             <div>
               <Label
                 htmlFor={fieldId('usage')}

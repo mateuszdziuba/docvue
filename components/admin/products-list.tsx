@@ -6,8 +6,10 @@ import {
   Loader2,
   Package,
   Pencil,
+  Plus,
   RefreshCw,
   Search,
+  Store,
 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -43,6 +45,7 @@ import {
   updateCatalogProductFn,
 } from '@/src/server/products'
 import { DeleteIconButton } from './delete-icon-button'
+import { ProductPickerDialog } from './product-picker-dialog'
 
 interface ProductsListProps {
   initialProducts: CatalogProduct[]
@@ -64,20 +67,24 @@ export function ProductsList({
 }: ProductsListProps) {
   const [products, setProducts] = useState(initialProducts)
   const [query, setQuery] = useState('')
+  const [onlySalon, setOnlySalon] = useState(false)
   const [refreshingId, setRefreshingId] = useState<string | null>(null)
   const [editing, setEditing] = useState<CatalogProduct | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase()
-    if (!search) return products
-    return products.filter(
-      (product) =>
+    return products.filter((product) => {
+      if (onlySalon && !product.available_in_salon) return false
+      if (!search) return true
+      return (
         product.name.toLowerCase().includes(search) ||
-        (product.url ?? '').toLowerCase().includes(search),
-    )
-  }, [products, query])
+        (product.url ?? '').toLowerCase().includes(search)
+      )
+    })
+  }, [products, query, onlySalon])
 
   const handleRefresh = async (product: CatalogProduct) => {
     if (!product.url) return
@@ -124,22 +131,48 @@ export function ProductsList({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="relative w-full sm:max-w-sm">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Szukaj kosmetyku (nazwa lub link)…"
-            className="pl-9"
-            aria-label="Szukaj kosmetyku"
-          />
+        <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row sm:items-center">
+          <div className="relative w-full">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Szukaj kosmetyku (nazwa lub link)…"
+              className="pl-9"
+              aria-label="Szukaj kosmetyku"
+            />
+          </div>
+          <Button
+            type="button"
+            variant={onlySalon ? 'default' : 'outline'}
+            size="sm"
+            aria-pressed={onlySalon}
+            onClick={() => setOnlySalon((previous) => !previous)}
+            className="min-h-10 shrink-0 gap-1.5"
+          >
+            <Store className="h-4 w-4" aria-hidden="true" />W gabinecie
+          </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {products.length} {products.length === 1 ? 'kosmetyk' : 'kosmetyków'} w bazie
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            {onlySalon || query.trim()
+              ? `${filtered.length} z ${products.length}`
+              : `${products.length} ${products.length === 1 ? 'kosmetyk' : 'kosmetyków'}`}{' '}
+            w bazie
+          </p>
+          <Button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="gap-2"
+            disabled={Boolean(initialError)}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Dodaj kosmetyk
+          </Button>
+        </div>
       </div>
 
       {initialError ? (
@@ -148,8 +181,10 @@ export function ProductsList({
         </p>
       ) : filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
-          {query
-            ? 'Brak wyników.'
+          {query || onlySalon
+            ? onlySalon
+              ? 'Brak kosmetyków dostępnych w gabinecie dla tego wyszukiwania.'
+              : 'Brak wyników.'
             : 'Baza jest pusta. Dodaj kosmetyki w edytorze planu pielęgnacyjnego (Z bazy → Przez URL / Ręcznie).'}
         </p>
       ) : (
@@ -250,6 +285,17 @@ export function ProductsList({
           ))}
         </ul>
       )}
+
+      <ProductPickerDialog
+        mode="catalog"
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(product) => {
+          setProducts((previous) =>
+            previous.some((item) => item.id === product.id) ? previous : [product, ...previous],
+          )
+        }}
+      />
 
       {editing && (
         <ProductEditDialog

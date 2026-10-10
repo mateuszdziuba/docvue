@@ -60,71 +60,89 @@ export const getCatalogProductsFn = createServerFn({ method: 'GET' })
     return { products: (products ?? []) as CatalogProduct[] }
   })
 
-export const addProductFromUrlFn = createServerFn({ method: 'POST' })
-  .inputValidator((d: { url: string }) => d)
+export const saveProductFromUrlFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (d: {
+      url: string
+      name: string
+      imageUrl?: string | null
+      price?: number | null
+      usageDescription?: string | null
+      availableInSalon?: boolean
+    }) => d,
+  )
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller) return { error: 'Nie jesteś zalogowany' }
 
-    const limit = consumeRateLimit(`scrape:${caller.userId}`, 20, 60_000)
-    if (!limit.ok) return { error: rateLimitError(limit).error }
-
     const url = normalizeHttpUrl(data.url ?? '')
     if (!url) return { error: 'Nieprawidłowy adres URL produktu' }
-    if (isBlockedHost(new URL(url))) return { error: 'Nie można pobrać danych z tego adresu' }
+    if (isBlockedHost(new URL(url))) return { error: 'Nie można użyć tego adresu' }
 
-    // Sprawdź, czy produkt już jest w bazie (po URL)
+    const name = (data.name ?? '').trim()
+    if (!name) return { error: 'Nazwa kosmetyku jest wymagana' }
+    if (name.length > 200) return { error: 'Nazwa może mieć maksymalnie 200 znaków' }
+
+    const fields = {
+      name,
+      image_url: data.imageUrl?.trim() || null,
+      price: data.price ?? null,
+      usage_description: data.usageDescription?.trim() || null,
+      available_in_salon: Boolean(data.availableInSalon),
+      source: 'url' as const,
+      last_refreshed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Jawne sprawdzenie zamiast ON CONFLICT (działa też z częściowym indeksem).
     const { data: existing, error: existingError } = await supabase
       .from('products')
-      .select('*')
+      .select('id')
       .eq('salon_id', caller.salonId)
       .eq('url', url)
       .maybeSingle()
-    if (existingError && isMissingCatalogTable(existingError.message)) {
-      return { error: CATALOG_MIGRATION_ERROR }
+    if (existingError) {
+      if (isMissingCatalogTable(existingError.message)) return { error: CATALOG_MIGRATION_ERROR }
+      return { error: existingError.message }
     }
-    if (existing) return { product: existing as CatalogProduct, existed: true }
 
-    const scraped = await scrapeProductData(url)
-    if ('error' in scraped) return { error: scraped.error }
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from('products')
+        .update(fields)
+        .eq('id', existing.id)
+        .eq('salon_id', caller.salonId)
+        .select()
+        .single()
+      if (error) {
+        if (isMissingCatalogTable(error.message)) return { error: CATALOG_MIGRATION_ERROR }
+        return { error: error.message }
+      }
+      return { product: updated as CatalogProduct, existed: true }
+    }
 
-    const { data: product, error } = await supabase
+    const { data: inserted, error } = await supabase
       .from('products')
-      .upsert(
-        {
-          salon_id: caller.salonId,
-          name: scraped.name ?? 'Kosmetyk',
-          url,
-          image_url: scraped.imageUrl,
-          price: scraped.price,
-          source: 'url',
-          last_refreshed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'salon_id,url' },
-      )
+      .insert({ salon_id: caller.salonId, url, ...fields })
       .select()
       .single()
     if (error) {
       if (isMissingCatalogTable(error.message)) return { error: CATALOG_MIGRATION_ERROR }
+      // Wyścig: ktoś dodał w międzyczasie — pobierz istniejący
+      if (/duplicate key/i.test(error.message)) {
+        const { data: raced } = await supabase
+          .from('products')
+          .select('*')
+          .eq('salon_id', caller.salonId)
+          .eq('url', url)
+          .maybeSingle()
+        if (raced) return { product: raced as CatalogProduct, existed: true }
+      }
       return { error: error.message }
     }
 
-    // Cache scrapowania (współdzielony z scrapeProductFn)
-    const admin = await createAdminClient()
-    await admin.from('scraped_products_cache').upsert(
-      {
-        url,
-        name: scraped.name,
-        image_url: scraped.imageUrl,
-        price: scraped.price,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'url' },
-    )
-
-    return { product: product as CatalogProduct }
+    return { product: inserted as CatalogProduct }
   })
 
 export const refreshCatalogProductFn = createServerFn({ method: 'POST' })
