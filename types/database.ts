@@ -92,6 +92,21 @@ export interface Submission {
   pdf_sha256?: string | null
 }
 
+export interface Product {
+  id: string
+  salon_id: string
+  name: string
+  url: string | null
+  image_url: string | null
+  price: number | null
+  usage_description: string | null
+  available_in_salon: boolean
+  source: 'url' | 'custom'
+  last_refreshed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface ChatMessage {
   id: string
   salon_id: string

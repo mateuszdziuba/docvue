@@ -216,6 +216,23 @@ const IconMenu = () => (
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 
+const IconProducts = () => (
+  <svg
+    className="w-[18px] h-[18px]"
+    aria-hidden="true"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+    />
+  </svg>
+)
+
 const navigation = [
   { label: 'Przegląd', href: '/dashboard', icon: <IconDashboard />, exact: true },
   { label: 'Klienci', href: '/dashboard/clients', icon: <IconClients /> },
@@ -224,6 +241,7 @@ const navigation = [
   { label: 'Formularze', href: '/dashboard/forms', icon: <IconForms /> },
   { label: 'Odpowiedzi', href: '/dashboard/submissions', icon: <IconSubmissions /> },
   { label: 'Zabiegi', href: '/dashboard/treatments', icon: <IconTreatments /> },
+  { label: 'Kosmetyki', href: '/dashboard/products', icon: <IconProducts /> },
 ]
 
 const ownerNav = [
@@ -340,66 +358,66 @@ export function MobileHeader({
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 bg-surface-container-low border-b border-border md:hidden safe-area-pt">
-        <div className="flex items-center justify-between h-14 px-4">
-          <DocvueLogo className="text-lg" />
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
+      <div className="flex items-center justify-between h-14 px-4">
+        <DocvueLogo className="text-lg" />
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors"
+              aria-label="Otwórz menu"
+            >
+              <IconMenu />
+            </button>
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="w-60 p-0 pt-14 bg-surface-container-low"
+            aria-label="Menu nawigacji"
+          >
+            <nav className="flex-1 flex flex-col gap-0.5 px-2 py-3 overflow-y-auto">
+              {navigation.map((item) => (
+                <NavLink key={item.href} item={item} onClick={close} />
+              ))}
+              {isOwner && (
+                <>
+                  <div className="my-2 mx-1 border-t border-border" />
+                  {ownerNav.map((item) => (
+                    <NavLink key={item.href} item={item} onClick={close} />
+                  ))}
+                </>
+              )}
+            </nav>
+
+            <div className="px-2 py-3 border-t border-border space-y-0.5">
+              <InstallAppButton onBeforeOpen={close} />
+
               <button
                 type="button"
-                className="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors"
-                aria-label="Otwórz menu"
+                onClick={() => {
+                  lock()
+                  close()
+                }}
+                className="flex items-center gap-2.5 w-full px-3 py-1.5 min-h-11 rounded-md text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
               >
-                <IconMenu />
+                <span className="opacity-70">
+                  <IconLock />
+                </span>
+                Tryb kiosku
               </button>
-            </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-60 p-0 pt-14 bg-surface-container-low"
-              aria-label="Menu nawigacji"
-            >
-              <nav className="flex-1 flex flex-col gap-0.5 px-2 py-3 overflow-y-auto">
-                {navigation.map((item) => (
-                  <NavLink key={item.href} item={item} onClick={close} />
-                ))}
-                {isOwner && (
-                  <>
-                    <div className="my-2 mx-1 border-t border-border" />
-                    {ownerNav.map((item) => (
-                      <NavLink key={item.href} item={item} onClick={close} />
-                    ))}
-                  </>
-                )}
-              </nav>
 
-              <div className="px-2 py-3 border-t border-border space-y-0.5">
-                <InstallAppButton onBeforeOpen={close} />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    lock()
-                    close()
-                  }}
-                  className="flex items-center gap-2.5 w-full px-3 py-1.5 min-h-11 rounded-md text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
-                >
-                  <span className="opacity-70">
-                    <IconLock />
-                  </span>
-                  Tryb kiosku
-                </button>
-
-                <Link
-                  to="/logout"
-                  className="flex items-center gap-2.5 w-full px-3 py-1.5 min-h-11 rounded-md text-sm text-destructive hover:bg-destructive/8 hover:text-destructive transition-colors"
-                  onClick={close}
-                >
-                  <IconLogout />
-                  Wyloguj się
-                </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
+              <Link
+                to="/logout"
+                className="flex items-center gap-2.5 w-full px-3 py-1.5 min-h-11 rounded-md text-sm text-destructive hover:bg-destructive/8 hover:text-destructive transition-colors"
+                onClick={close}
+              >
+                <IconLogout />
+                Wyloguj się
+              </Link>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     </header>
   )
 }

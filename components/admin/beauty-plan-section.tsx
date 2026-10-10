@@ -59,6 +59,7 @@ function toDraft(product: BeautyPlanProduct): BeautyPlanProductInitial {
     price: product.price === null ? null : toPrice(product.price),
     usageDescription: product.usage_description ?? '',
     availableInSalon: product.available_in_salon,
+    catalogProductId: product.catalog_product_id,
   }
 }
 

@@ -32,6 +32,7 @@ import { Route as AuthedDashboardClientsIndexRouteImport } from './routes/_authe
 import { Route as AuthedDashboardClientsClientIdRouteImport } from './routes/_authed/dashboard/clients/$clientId'
 import { Route as AuthedDashboardFormsIndexRouteImport } from './routes/_authed/dashboard/forms/index'
 import { Route as AuthedDashboardFormsNewRouteImport } from './routes/_authed/dashboard/forms/new'
+import { Route as AuthedDashboardProductsIndexRouteImport } from './routes/_authed/dashboard/products/index'
 import { Route as AuthedDashboardSettingsIndexRouteImport } from './routes/_authed/dashboard/settings/index'
 import { Route as AuthedDashboardStaffIndexRouteImport } from './routes/_authed/dashboard/staff/index'
 import { Route as AuthedDashboardSubmissionsIndexRouteImport } from './routes/_authed/dashboard/submissions/index'
@@ -159,6 +160,12 @@ const AuthedDashboardFormsNewRoute = AuthedDashboardFormsNewRouteImport.update({
   path: '/forms/new',
   getParentRoute: () => AuthedDashboardRoute,
 } as any)
+const AuthedDashboardProductsIndexRoute =
+  AuthedDashboardProductsIndexRouteImport.update({
+    id: '/products/',
+    path: '/products/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
 const AuthedDashboardSettingsIndexRoute =
   AuthedDashboardSettingsIndexRouteImport.update({
     id: '/settings/',
@@ -238,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/calendar/': typeof AuthedDashboardCalendarIndexRoute
   '/dashboard/clients/': typeof AuthedDashboardClientsIndexRoute
   '/dashboard/forms/': typeof AuthedDashboardFormsIndexRoute
+  '/dashboard/products/': typeof AuthedDashboardProductsIndexRoute
   '/dashboard/settings/': typeof AuthedDashboardSettingsIndexRoute
   '/dashboard/staff/': typeof AuthedDashboardStaffIndexRoute
   '/dashboard/submissions/': typeof AuthedDashboardSubmissionsIndexRoute
@@ -269,6 +277,7 @@ export interface FileRoutesByTo {
   '/dashboard/calendar': typeof AuthedDashboardCalendarIndexRoute
   '/dashboard/clients': typeof AuthedDashboardClientsIndexRoute
   '/dashboard/forms': typeof AuthedDashboardFormsIndexRoute
+  '/dashboard/products': typeof AuthedDashboardProductsIndexRoute
   '/dashboard/settings': typeof AuthedDashboardSettingsIndexRoute
   '/dashboard/staff': typeof AuthedDashboardStaffIndexRoute
   '/dashboard/submissions': typeof AuthedDashboardSubmissionsIndexRoute
@@ -304,6 +313,7 @@ export interface FileRoutesById {
   '/_authed/dashboard/calendar/': typeof AuthedDashboardCalendarIndexRoute
   '/_authed/dashboard/clients/': typeof AuthedDashboardClientsIndexRoute
   '/_authed/dashboard/forms/': typeof AuthedDashboardFormsIndexRoute
+  '/_authed/dashboard/products/': typeof AuthedDashboardProductsIndexRoute
   '/_authed/dashboard/settings/': typeof AuthedDashboardSettingsIndexRoute
   '/_authed/dashboard/staff/': typeof AuthedDashboardStaffIndexRoute
   '/_authed/dashboard/submissions/': typeof AuthedDashboardSubmissionsIndexRoute
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/dashboard/calendar/'
     | '/dashboard/clients/'
     | '/dashboard/forms/'
+    | '/dashboard/products/'
     | '/dashboard/settings/'
     | '/dashboard/staff/'
     | '/dashboard/submissions/'
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/dashboard/calendar'
     | '/dashboard/clients'
     | '/dashboard/forms'
+    | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard/staff'
     | '/dashboard/submissions'
@@ -403,6 +415,7 @@ export interface FileRouteTypes {
     | '/_authed/dashboard/calendar/'
     | '/_authed/dashboard/clients/'
     | '/_authed/dashboard/forms/'
+    | '/_authed/dashboard/products/'
     | '/_authed/dashboard/settings/'
     | '/_authed/dashboard/staff/'
     | '/_authed/dashboard/submissions/'
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardFormsNewRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
+    '/_authed/dashboard/products/': {
+      id: '/_authed/dashboard/products/'
+      path: '/products'
+      fullPath: '/dashboard/products/'
+      preLoaderRoute: typeof AuthedDashboardProductsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
     '/_authed/dashboard/settings/': {
       id: '/_authed/dashboard/settings/'
       path: '/settings'
@@ -666,6 +686,7 @@ interface AuthedDashboardRouteChildren {
   AuthedDashboardCalendarIndexRoute: typeof AuthedDashboardCalendarIndexRoute
   AuthedDashboardClientsIndexRoute: typeof AuthedDashboardClientsIndexRoute
   AuthedDashboardFormsIndexRoute: typeof AuthedDashboardFormsIndexRoute
+  AuthedDashboardProductsIndexRoute: typeof AuthedDashboardProductsIndexRoute
   AuthedDashboardSettingsIndexRoute: typeof AuthedDashboardSettingsIndexRoute
   AuthedDashboardStaffIndexRoute: typeof AuthedDashboardStaffIndexRoute
   AuthedDashboardSubmissionsIndexRoute: typeof AuthedDashboardSubmissionsIndexRoute
@@ -685,6 +706,7 @@ const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
   AuthedDashboardCalendarIndexRoute: AuthedDashboardCalendarIndexRoute,
   AuthedDashboardClientsIndexRoute: AuthedDashboardClientsIndexRoute,
   AuthedDashboardFormsIndexRoute: AuthedDashboardFormsIndexRoute,
+  AuthedDashboardProductsIndexRoute: AuthedDashboardProductsIndexRoute,
   AuthedDashboardSettingsIndexRoute: AuthedDashboardSettingsIndexRoute,
   AuthedDashboardStaffIndexRoute: AuthedDashboardStaffIndexRoute,
   AuthedDashboardSubmissionsIndexRoute: AuthedDashboardSubmissionsIndexRoute,

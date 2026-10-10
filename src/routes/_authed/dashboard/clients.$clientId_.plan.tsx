@@ -32,6 +32,7 @@ function toInitial(product: BeautyPlanProduct): BeautyPlanProductInitial {
     price: product.price,
     usageDescription: product.usage_description ?? '',
     availableInSalon: product.available_in_salon,
+    catalogProductId: product.catalog_product_id,
   }
 }
 

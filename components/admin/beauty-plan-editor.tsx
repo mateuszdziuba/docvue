@@ -20,13 +20,15 @@ import {
   ChevronDown,
   Copy,
   GripVertical,
+  ImagePlus,
   Link as LinkIcon,
   Loader2,
   Moon,
   Plus,
+  RefreshCw,
   Sun,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -46,9 +48,17 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Link } from '@/lib/link-compat'
 import { useRouterCompat } from '@/lib/router-compat'
+import { createClient } from '@/lib/supabase/client'
 import type { TimeOfDay } from '@/src/lib/beauty-plan-diff'
 import { saveBeautyPlanFn, scrapeProductFn } from '@/src/server/beauty-plans'
+import {
+  type CatalogProduct,
+  createProductImageUploadFn,
+  refreshCatalogProductFn,
+  setProductImageFn,
+} from '@/src/server/products'
 import { DeleteIconButton } from './delete-icon-button'
+import { ProductPickerDialog } from './product-picker-dialog'
 
 export type BeautyPlanProductInitial = {
   id?: string
@@ -58,6 +68,7 @@ export type BeautyPlanProductInitial = {
   price: number | null
   usageDescription: string
   availableInSalon?: boolean
+  catalogProductId?: string | null
 }
 
 type BeautyPlanProductDraft = BeautyPlanProductInitial & {
@@ -84,17 +95,6 @@ function toDrafts(products: BeautyPlanProductInitial[]): BeautyPlanProductDraft[
   }))
 }
 
-function newDraft(): BeautyPlanProductDraft {
-  return {
-    draftId: crypto.randomUUID(),
-    name: '',
-    url: '',
-    price: null,
-    usageDescription: '',
-    availableInSalon: false,
-  }
-}
-
 interface SortableProductCardProps {
   time: TimeOfDay
   index: number
@@ -106,6 +106,10 @@ interface SortableProductCardProps {
   onRemove: () => void
   onCopy: () => void
   onFetch: () => void
+  onRefreshFromUrl: () => void
+  onReplaceImage: () => void
+  isRefreshing: boolean
+  isUploadingImage: boolean
   onChange: (
     field: keyof BeautyPlanProductInitial | 'availableInSalon',
     value: string | number | boolean | null,
@@ -125,6 +129,10 @@ function SortableProductCard({
   onRemove,
   onCopy,
   onFetch,
+  onRefreshFromUrl,
+  onReplaceImage,
+  isRefreshing,
+  isUploadingImage,
   onChange,
 }: SortableProductCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -400,6 +408,13 @@ export function BeautyPlanEditor({
     })
   }
 
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerTime, setPickerTime] = useState<TimeOfDay>('morning')
+  const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set())
+  const [uploadingImageIds, setUploadingImageIds] = useState<Set<string>>(new Set())
+  const [imageTargetId, setImageTargetId] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const initialSnapshot = JSON.stringify({
@@ -452,11 +467,138 @@ export function BeautyPlanEditor({
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
 
-  const handleAddProduct = (time: TimeOfDay) => {
-    const draft = newDraft()
-    mutateProducts(time, (products) => [...products, draft])
-    // Nowy produkt od razu rozwinięty do uzupełnienia
+  const openPicker = (time: TimeOfDay) => {
+    setPickerTime(time)
+    setPickerOpen(true)
+  }
+
+  const handlePickProduct = (product: CatalogProduct) => {
+    const draft: BeautyPlanProductDraft = {
+      draftId: crypto.randomUUID(),
+      name: product.name,
+      url: product.url ?? '',
+      imageUrl: product.image_url,
+      price: product.price,
+      usageDescription: product.usage_description ?? '',
+      availableInSalon: product.available_in_salon,
+      catalogProductId: product.id,
+    }
+    mutateProducts(pickerTime, (products) => [...products, draft])
     setExpandedIds((previous) => new Set(previous).add(draft.draftId))
+    toast.success('Dodano kosmetyk do planu')
+  }
+
+  const handleRefreshFromUrl = async (time: TimeOfDay, index: number) => {
+    const product = getProducts(time)[index]
+    if (!product?.url) return
+    const draftId = product.draftId
+    setRefreshingIds((previous) => new Set(previous).add(draftId))
+    try {
+      if (product.catalogProductId) {
+        const result = await refreshCatalogProductFn({ data: { id: product.catalogProductId } })
+        if ('error' in result && result.error) {
+          toast.error(result.error)
+          return
+        }
+        const updated = (result as { product: CatalogProduct }).product
+        mutateProducts(time, (products) =>
+          products.map((item, itemIndex) =>
+            itemIndex === index
+              ? { ...item, name: updated.name, imageUrl: updated.image_url, price: updated.price }
+              : item,
+          ),
+        )
+        toast.success('Zaktualizowano dane kosmetyku')
+      } else {
+        const result = await scrapeProductFn({ data: { url: product.url } })
+        if ('error' in result && result.error) {
+          toast.error(result.error)
+          return
+        }
+        const scraped = result as {
+          name?: string | null
+          imageUrl?: string | null
+          price?: number | null
+        }
+        mutateProducts(time, (products) =>
+          products.map((item, itemIndex) =>
+            itemIndex === index
+              ? {
+                  ...item,
+                  name: scraped.name || item.name,
+                  imageUrl: scraped.imageUrl || item.imageUrl,
+                  price: scraped.price ?? item.price,
+                }
+              : item,
+          ),
+        )
+        toast.success('Pobrano dane produktu')
+      }
+    } catch {
+      toast.error('Nie udało się odświeżyć danych')
+    } finally {
+      setRefreshingIds((previous) => {
+        const next = new Set(previous)
+        next.delete(draftId)
+        return next
+      })
+    }
+  }
+
+  const handleReplaceImageClick = (draftId: string) => {
+    setImageTargetId(draftId)
+    imageInputRef.current?.click()
+  }
+
+  const handleImageFile = async (file: File | undefined) => {
+    if (!file || !imageTargetId) return
+    const entry = [...morningProducts, ...eveningProducts].find(
+      (product) => product.draftId === imageTargetId,
+    )
+    if (!entry?.catalogProductId) return
+    const targetId = imageTargetId
+    setUploadingImageIds((previous) => new Set(previous).add(targetId))
+    try {
+      const prepared = await createProductImageUploadFn({
+        data: { productId: entry.catalogProductId, contentType: file.type },
+      })
+      if ('error' in prepared && prepared.error) {
+        toast.error(prepared.error)
+        return
+      }
+      if (!('path' in prepared) || !prepared.path || !prepared.token) return
+      const supabase = createClient()
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type })
+      if (uploadError) {
+        toast.error('Nie udało się wysłać zdjęcia')
+        return
+      }
+      const saved = await setProductImageFn({
+        data: { id: entry.catalogProductId, path: prepared.path },
+      })
+      const imageUrl = 'product' in saved && saved.product ? saved.product.image_url : null
+      if (imageUrl) {
+        const applyImage = (products: BeautyPlanProductDraft[]) =>
+          products.map((product) =>
+            product.draftId === targetId ? { ...product, imageUrl } : product,
+          )
+        setMorningProducts(applyImage)
+        setEveningProducts(applyImage)
+      }
+      toast.success('Zdjęcie zaktualizowane')
+    } catch {
+      toast.error('Nie udało się zaktualizować zdjęcia')
+    } finally {
+      setUploadingImageIds((previous) => {
+        const next = new Set(previous)
+        next.delete(targetId)
+        return next
+      })
+      setImageTargetId(null)
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
   }
 
   const handleRemoveProduct = (time: TimeOfDay, index: number) => {
@@ -562,6 +704,7 @@ export function BeautyPlanEditor({
         price: product.price,
         usageDescription: product.usageDescription || null,
         availableInSalon: product.availableInSalon,
+        catalogProductId: product.catalogProductId ?? null,
         position: index,
       })),
       ...eveningProducts.map((product, index) => ({
@@ -573,6 +716,7 @@ export function BeautyPlanEditor({
         price: product.price,
         usageDescription: product.usageDescription || null,
         availableInSalon: product.availableInSalon,
+        catalogProductId: product.catalogProductId ?? null,
         position: index,
       })),
     ]
@@ -649,6 +793,10 @@ export function BeautyPlanEditor({
                     onRemove={() => handleRemoveProduct(time, index)}
                     onCopy={() => handleCopyProduct(time, index)}
                     onFetch={() => void handleFetchData(time, index)}
+                    onRefreshFromUrl={() => void handleRefreshFromUrl(time, index)}
+                    onReplaceImage={() => handleReplaceImageClick(product.draftId)}
+                    isRefreshing={refreshingIds.has(product.draftId)}
+                    isUploadingImage={uploadingImageIds.has(product.draftId)}
                     onChange={(field, value) => handleProductChange(time, index, field, value)}
                   />
                 )
@@ -661,7 +809,7 @@ export function BeautyPlanEditor({
       <Button
         type="button"
         variant="outline"
-        onClick={() => handleAddProduct(time)}
+        onClick={() => openPicker(time)}
         className="min-h-11 w-full border-dashed text-xs md:min-h-10"
       >
         <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
@@ -761,6 +909,20 @@ export function BeautyPlanEditor({
           </Button>
         </div>
       </form>
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(event) => void handleImageFile(event.target.files?.[0])}
+      />
+
+      <ProductPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={handlePickProduct}
+      />
 
       <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
         <AlertDialogContent>

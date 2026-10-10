@@ -10,6 +10,7 @@ export type IncomingBeautyPlanProduct = {
   usageDescription?: string | null
   availableInSalon?: boolean
   position?: number | null
+  catalogProductId?: string | null
 }
 
 export type ProductsDiff = {
@@ -28,6 +29,7 @@ function withoutId(product: IncomingBeautyPlanProduct): IncomingBeautyPlanProduc
     usageDescription: product.usageDescription,
     availableInSalon: product.availableInSalon,
     position: product.position,
+    catalogProductId: product.catalogProductId,
   }
 }
 
