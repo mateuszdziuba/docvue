@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { createAdminClient } from '../../lib/supabase/admin'
 import { getSupabaseServerClient } from '../utils/supabase'
 import { getCallerSalonId } from './_salon-resolver'
 
@@ -83,6 +84,29 @@ export const deleteClientFn = createServerFn({ method: 'POST' })
     const supabase = getSupabaseServerClient()
     const caller = await getCallerSalonId(supabase)
     if (!caller?.isOwner) return { error: 'Brak uprawnień' }
+
+    // Usuwamy zdjęcia konsultacji przed kaskadowym usunięciem klienta —
+    // storage nie jest objęty kaskadą bazy.
+    const { data: consultationPhotos } = await supabase
+      .from('client_consultations')
+      .select('face_photo_path')
+      .eq('client_id', data.id)
+      .eq('salon_id', caller.salonId)
+      .not('face_photo_path', 'is', null)
+
+    const paths = (consultationPhotos ?? [])
+      .map((row) => row.face_photo_path as string | null)
+      .filter((path): path is string => Boolean(path))
+
+    if (paths.length > 0) {
+      try {
+        const admin = await createAdminClient()
+        await admin.storage.from('consultation-photos').remove(paths)
+      } catch {
+        // Brak storage nie powinien blokować usunięcia klienta.
+      }
+    }
+
     const { error } = await supabase
       .from('clients')
       .delete()

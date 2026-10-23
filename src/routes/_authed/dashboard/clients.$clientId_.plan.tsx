@@ -6,18 +6,29 @@ import {
 import type { BeautyPlanProduct } from '@/src/server/beauty-plans'
 import { getBeautyPlanFn } from '@/src/server/beauty-plans'
 import { getClientFn } from '@/src/server/clients'
+import { getConsultationFn } from '@/src/server/consultations'
+import { getTreatmentsFn } from '@/src/server/treatments'
 
 export const Route = createFileRoute('/_authed/dashboard/clients/$clientId_/plan')({
   loader: async ({ params }) => {
-    const [clientResult, planResult] = await Promise.all([
+    const [clientResult, planResult, treatmentsResult] = await Promise.all([
       getClientFn({ data: { id: params.clientId } }),
       getBeautyPlanFn({ data: { clientId: params.clientId } }),
+      getTreatmentsFn({ data: {} }),
     ])
     if (clientResult.error || !clientResult.client) throw notFound()
+
+    const linkedConsultationId = planResult.plan?.consultation_id ?? null
+    const linkedConsultation = linkedConsultationId
+      ? await getConsultationFn({ data: { id: linkedConsultationId } })
+      : null
+
     return {
       client: clientResult.client,
       plan: planResult.plan,
       products: planResult.products ?? [],
+      treatments: treatmentsResult.treatments,
+      linkedConsultation: linkedConsultation?.consultation ?? null,
     }
   },
   component: BeautyPlanEditorPage,
@@ -37,7 +48,7 @@ function toInitial(product: BeautyPlanProduct): BeautyPlanProductInitial {
 }
 
 function BeautyPlanEditorPage() {
-  const { client, plan, products } = Route.useLoaderData()
+  const { client, plan, products, treatments, linkedConsultation } = Route.useLoaderData()
   const { clientId } = Route.useParams()
 
   return (
@@ -53,6 +64,8 @@ function BeautyPlanEditorPage() {
       initialEveningProducts={products
         .filter((product) => product.time_of_day === 'evening')
         .map(toInitial)}
+      linkedConsultation={linkedConsultation}
+      treatments={treatments}
     />
   )
 }

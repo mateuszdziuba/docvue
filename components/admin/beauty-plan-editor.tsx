@@ -46,6 +46,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { formatConsultationDate } from '@/lib/consultation'
 import { Link } from '@/lib/link-compat'
 import { useRouterCompat } from '@/lib/router-compat'
 import { createClient } from '@/lib/supabase/client'
@@ -57,6 +58,8 @@ import {
   refreshCatalogProductFn,
   setProductImageFn,
 } from '@/src/server/products'
+import type { ClientConsultation } from '@/types/consultation'
+import type { Treatment } from '@/types/database'
 import { DeleteIconButton } from './delete-icon-button'
 import { ProductPickerDialog } from './product-picker-dialog'
 
@@ -84,7 +87,89 @@ interface BeautyPlanEditorProps {
   initialMorningProducts?: BeautyPlanProductInitial[]
   initialEveningProducts?: BeautyPlanProductInitial[]
   clientName?: string | null
+  linkedConsultation?: ClientConsultation | null
+  treatments?: Pick<Treatment, 'id' | 'name' | 'duration_minutes' | 'price'>[]
   onSaved?: () => void | Promise<void>
+}
+
+const PLAN_STAGE_META = [
+  ['stage1', 'Etap 1'],
+  ['stage2', 'Etap 2'],
+  ['stage3', 'Etap 3'],
+] as const
+
+function LinkedConsultationCard({
+  consultation,
+  treatments,
+  clientId,
+}: {
+  consultation: ClientConsultation
+  treatments: Pick<Treatment, 'id' | 'name' | 'duration_minutes' | 'price'>[]
+  clientId: string
+}) {
+  const treatmentName = (id: string) =>
+    treatments.find((treatment) => treatment.id === id)?.name ?? 'Zabieg usunięty z katalogu'
+
+  return (
+    <section className="rounded-2xl border border-primary/20 bg-primary-container/30 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="label-caps text-on-primary-container">Zalecenia z konsultacji</p>
+          <h2 className="mt-1 font-serif text-xl text-on-primary-container">Plan terapii</h2>
+          <p className="mt-1 text-xs text-on-primary-container/80">
+            {formatConsultationDate(consultation.consultation_date)}
+          </p>
+        </div>
+        <Link
+          href={`/dashboard/clients/${clientId}/consultations/${consultation.id}`}
+          className="inline-flex min-h-10 items-center rounded-full border border-primary/25 bg-background/70 px-3.5 text-xs font-medium text-on-primary-container transition-colors hover:bg-background"
+        >
+          Otwórz konsultację →
+        </Link>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        {PLAN_STAGE_META.map(([stage, label]) => {
+          const stageData = consultation.data.summary.plan[stage]
+          return (
+            <div key={stage} className="rounded-xl border border-primary/15 bg-background/60 p-3.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+                {label}
+              </p>
+              <div className="mt-2 space-y-2 text-xs leading-relaxed text-on-primary-container">
+                <div>
+                  <p className="font-semibold">Pielęgnacja domowa</p>
+                  <p className="mt-0.5 whitespace-pre-line text-on-primary-container/80">
+                    {stageData.homeCare || 'Brak opisu'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold">Zabiegi z katalogu</p>
+                  {stageData.treatmentIds.length > 0 ? (
+                    <ul className="mt-0.5 space-y-0.5 text-on-primary-container/80">
+                      {stageData.treatmentIds.map((id) => (
+                        <li key={id}>• {treatmentName(id)}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-0.5 text-on-primary-container/70">Nie przypisano zabiegów.</p>
+                  )}
+                </div>
+                {stageData.supplementation ? (
+                  <div>
+                    <p className="font-semibold">Suplementacja</p>
+                    <p className="mt-0.5 whitespace-pre-line text-on-primary-container/80">
+                      {stageData.supplementation}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
 }
 
 function toDrafts(products: BeautyPlanProductInitial[]): BeautyPlanProductDraft[] {
@@ -426,6 +511,8 @@ export function BeautyPlanEditor({
   initialMorningProducts = [],
   initialEveningProducts = [],
   clientName,
+  linkedConsultation = null,
+  treatments = [],
   onSaved,
 }: BeautyPlanEditorProps) {
   const router = useRouterCompat()
@@ -881,6 +968,14 @@ export function BeautyPlanEditor({
           Uzupełnij zalecenia na rano i wieczór oraz dodaj kosmetyki wraz z instrukcją użycia.
         </p>
       </div>
+
+      {linkedConsultation ? (
+        <LinkedConsultationCard
+          consultation={linkedConsultation}
+          treatments={treatments}
+          clientId={clientId}
+        />
+      ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4 rounded-2xl border border-warning/30 bg-warning-container/50 p-5">

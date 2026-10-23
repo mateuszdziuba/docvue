@@ -40,8 +40,11 @@ import { Route as AuthedDashboardSubmissionsSubmissionIdRouteImport } from './ro
 import { Route as AuthedDashboardTreatmentsIndexRouteImport } from './routes/_authed/dashboard/treatments/index'
 import { Route as AuthedDashboardVisitsIndexRouteImport } from './routes/_authed/dashboard/visits/index'
 import { Route as AuthedDashboardVisitsVisitIdRouteImport } from './routes/_authed/dashboard/visits/$visitId'
+import { Route as AuthedDashboardClientsClientIdConsultationsRouteImport } from './routes/_authed/dashboard/clients.$clientId_.consultations'
 import { Route as AuthedDashboardClientsClientIdPlanRouteImport } from './routes/_authed/dashboard/clients.$clientId_.plan'
 import { Route as AuthedDashboardFormsFormIdEditRouteImport } from './routes/_authed/dashboard/forms/$formId/edit'
+import { Route as AuthedDashboardClientsClientIdConsultationsIndexRouteImport } from './routes/_authed/dashboard/clients.$clientId_.consultations.index'
+import { Route as AuthedDashboardClientsClientIdConsultationsConsultationIdRouteImport } from './routes/_authed/dashboard/clients.$clientId_.consultations.$consultationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -208,6 +211,12 @@ const AuthedDashboardVisitsVisitIdRoute =
     path: '/visits/$visitId',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
+const AuthedDashboardClientsClientIdConsultationsRoute =
+  AuthedDashboardClientsClientIdConsultationsRouteImport.update({
+    id: '/clients/$clientId_/consultations',
+    path: '/clients/$clientId/consultations',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
 const AuthedDashboardClientsClientIdPlanRoute =
   AuthedDashboardClientsClientIdPlanRouteImport.update({
     id: '/clients/$clientId_/plan',
@@ -219,6 +228,18 @@ const AuthedDashboardFormsFormIdEditRoute =
     id: '/forms/$formId/edit',
     path: '/forms/$formId/edit',
     getParentRoute: () => AuthedDashboardRoute,
+  } as any)
+const AuthedDashboardClientsClientIdConsultationsIndexRoute =
+  AuthedDashboardClientsClientIdConsultationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedDashboardClientsClientIdConsultationsRoute,
+  } as any)
+const AuthedDashboardClientsClientIdConsultationsConsultationIdRoute =
+  AuthedDashboardClientsClientIdConsultationsConsultationIdRouteImport.update({
+    id: '/$consultationId',
+    path: '/$consultationId',
+    getParentRoute: () => AuthedDashboardClientsClientIdConsultationsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -251,8 +272,11 @@ export interface FileRoutesByFullPath {
   '/dashboard/submissions/': typeof AuthedDashboardSubmissionsIndexRoute
   '/dashboard/treatments/': typeof AuthedDashboardTreatmentsIndexRoute
   '/dashboard/visits/': typeof AuthedDashboardVisitsIndexRoute
+  '/dashboard/clients/$clientId/consultations': typeof AuthedDashboardClientsClientIdConsultationsRouteWithChildren
   '/dashboard/clients/$clientId/plan': typeof AuthedDashboardClientsClientIdPlanRoute
   '/dashboard/forms/$formId/edit': typeof AuthedDashboardFormsFormIdEditRoute
+  '/dashboard/clients/$clientId/consultations/$consultationId': typeof AuthedDashboardClientsClientIdConsultationsConsultationIdRoute
+  '/dashboard/clients/$clientId/consultations/': typeof AuthedDashboardClientsClientIdConsultationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -285,6 +309,8 @@ export interface FileRoutesByTo {
   '/dashboard/visits': typeof AuthedDashboardVisitsIndexRoute
   '/dashboard/clients/$clientId/plan': typeof AuthedDashboardClientsClientIdPlanRoute
   '/dashboard/forms/$formId/edit': typeof AuthedDashboardFormsFormIdEditRoute
+  '/dashboard/clients/$clientId/consultations/$consultationId': typeof AuthedDashboardClientsClientIdConsultationsConsultationIdRoute
+  '/dashboard/clients/$clientId/consultations': typeof AuthedDashboardClientsClientIdConsultationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -319,8 +345,11 @@ export interface FileRoutesById {
   '/_authed/dashboard/submissions/': typeof AuthedDashboardSubmissionsIndexRoute
   '/_authed/dashboard/treatments/': typeof AuthedDashboardTreatmentsIndexRoute
   '/_authed/dashboard/visits/': typeof AuthedDashboardVisitsIndexRoute
+  '/_authed/dashboard/clients/$clientId_/consultations': typeof AuthedDashboardClientsClientIdConsultationsRouteWithChildren
   '/_authed/dashboard/clients/$clientId_/plan': typeof AuthedDashboardClientsClientIdPlanRoute
   '/_authed/dashboard/forms/$formId/edit': typeof AuthedDashboardFormsFormIdEditRoute
+  '/_authed/dashboard/clients/$clientId_/consultations/$consultationId': typeof AuthedDashboardClientsClientIdConsultationsConsultationIdRoute
+  '/_authed/dashboard/clients/$clientId_/consultations/': typeof AuthedDashboardClientsClientIdConsultationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -354,8 +383,11 @@ export interface FileRouteTypes {
     | '/dashboard/submissions/'
     | '/dashboard/treatments/'
     | '/dashboard/visits/'
+    | '/dashboard/clients/$clientId/consultations'
     | '/dashboard/clients/$clientId/plan'
     | '/dashboard/forms/$formId/edit'
+    | '/dashboard/clients/$clientId/consultations/$consultationId'
+    | '/dashboard/clients/$clientId/consultations/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -388,6 +420,8 @@ export interface FileRouteTypes {
     | '/dashboard/visits'
     | '/dashboard/clients/$clientId/plan'
     | '/dashboard/forms/$formId/edit'
+    | '/dashboard/clients/$clientId/consultations/$consultationId'
+    | '/dashboard/clients/$clientId/consultations'
   id:
     | '__root__'
     | '/'
@@ -421,8 +455,11 @@ export interface FileRouteTypes {
     | '/_authed/dashboard/submissions/'
     | '/_authed/dashboard/treatments/'
     | '/_authed/dashboard/visits/'
+    | '/_authed/dashboard/clients/$clientId_/consultations'
     | '/_authed/dashboard/clients/$clientId_/plan'
     | '/_authed/dashboard/forms/$formId/edit'
+    | '/_authed/dashboard/clients/$clientId_/consultations/$consultationId'
+    | '/_authed/dashboard/clients/$clientId_/consultations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -660,6 +697,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardVisitsVisitIdRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
+    '/_authed/dashboard/clients/$clientId_/consultations': {
+      id: '/_authed/dashboard/clients/$clientId_/consultations'
+      path: '/clients/$clientId/consultations'
+      fullPath: '/dashboard/clients/$clientId/consultations'
+      preLoaderRoute: typeof AuthedDashboardClientsClientIdConsultationsRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
     '/_authed/dashboard/clients/$clientId_/plan': {
       id: '/_authed/dashboard/clients/$clientId_/plan'
       path: '/clients/$clientId/plan'
@@ -674,8 +718,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardFormsFormIdEditRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
+    '/_authed/dashboard/clients/$clientId_/consultations/': {
+      id: '/_authed/dashboard/clients/$clientId_/consultations/'
+      path: '/'
+      fullPath: '/dashboard/clients/$clientId/consultations/'
+      preLoaderRoute: typeof AuthedDashboardClientsClientIdConsultationsIndexRouteImport
+      parentRoute: typeof AuthedDashboardClientsClientIdConsultationsRoute
+    }
+    '/_authed/dashboard/clients/$clientId_/consultations/$consultationId': {
+      id: '/_authed/dashboard/clients/$clientId_/consultations/$consultationId'
+      path: '/$consultationId'
+      fullPath: '/dashboard/clients/$clientId/consultations/$consultationId'
+      preLoaderRoute: typeof AuthedDashboardClientsClientIdConsultationsConsultationIdRouteImport
+      parentRoute: typeof AuthedDashboardClientsClientIdConsultationsRoute
+    }
   }
 }
+
+interface AuthedDashboardClientsClientIdConsultationsRouteChildren {
+  AuthedDashboardClientsClientIdConsultationsConsultationIdRoute: typeof AuthedDashboardClientsClientIdConsultationsConsultationIdRoute
+  AuthedDashboardClientsClientIdConsultationsIndexRoute: typeof AuthedDashboardClientsClientIdConsultationsIndexRoute
+}
+
+const AuthedDashboardClientsClientIdConsultationsRouteChildren: AuthedDashboardClientsClientIdConsultationsRouteChildren =
+  {
+    AuthedDashboardClientsClientIdConsultationsConsultationIdRoute:
+      AuthedDashboardClientsClientIdConsultationsConsultationIdRoute,
+    AuthedDashboardClientsClientIdConsultationsIndexRoute:
+      AuthedDashboardClientsClientIdConsultationsIndexRoute,
+  }
+
+const AuthedDashboardClientsClientIdConsultationsRouteWithChildren =
+  AuthedDashboardClientsClientIdConsultationsRoute._addFileChildren(
+    AuthedDashboardClientsClientIdConsultationsRouteChildren,
+  )
 
 interface AuthedDashboardRouteChildren {
   AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
@@ -692,6 +768,7 @@ interface AuthedDashboardRouteChildren {
   AuthedDashboardSubmissionsIndexRoute: typeof AuthedDashboardSubmissionsIndexRoute
   AuthedDashboardTreatmentsIndexRoute: typeof AuthedDashboardTreatmentsIndexRoute
   AuthedDashboardVisitsIndexRoute: typeof AuthedDashboardVisitsIndexRoute
+  AuthedDashboardClientsClientIdConsultationsRoute: typeof AuthedDashboardClientsClientIdConsultationsRouteWithChildren
   AuthedDashboardClientsClientIdPlanRoute: typeof AuthedDashboardClientsClientIdPlanRoute
   AuthedDashboardFormsFormIdEditRoute: typeof AuthedDashboardFormsFormIdEditRoute
 }
@@ -712,6 +789,8 @@ const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
   AuthedDashboardSubmissionsIndexRoute: AuthedDashboardSubmissionsIndexRoute,
   AuthedDashboardTreatmentsIndexRoute: AuthedDashboardTreatmentsIndexRoute,
   AuthedDashboardVisitsIndexRoute: AuthedDashboardVisitsIndexRoute,
+  AuthedDashboardClientsClientIdConsultationsRoute:
+    AuthedDashboardClientsClientIdConsultationsRouteWithChildren,
   AuthedDashboardClientsClientIdPlanRoute:
     AuthedDashboardClientsClientIdPlanRoute,
   AuthedDashboardFormsFormIdEditRoute: AuthedDashboardFormsFormIdEditRoute,

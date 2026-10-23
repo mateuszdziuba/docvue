@@ -31,6 +31,7 @@ export type BeautyPlan = {
   salon_id: string
   morning_description: string | null
   evening_description: string | null
+  consultation_id: string | null
   created_at: string
   updated_at: string
 }
@@ -274,6 +275,45 @@ export const saveBeautyPlanFn = createServerFn({ method: 'POST' })
         .eq('plan_id', plan.id)
         .in('id', toDeleteIds)
       if (error) return { error: error.message }
+    }
+
+    return { success: true, planId: plan.id as string }
+  })
+
+export const linkBeautyPlanToConsultationFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: { consultationId: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient()
+    const caller = await getCallerSalonId(supabase)
+    if (!caller) return { error: 'Brak dostępu' }
+
+    const { data: consultation } = await supabase
+      .from('client_consultations')
+      .select('id, client_id')
+      .eq('id', data.consultationId)
+      .eq('salon_id', caller.salonId)
+      .maybeSingle()
+    if (!consultation) return { error: 'Konsultacja nie istnieje' }
+
+    const { data: plan, error } = await supabase
+      .from('beauty_plans')
+      .upsert(
+        {
+          client_id: consultation.client_id,
+          salon_id: caller.salonId,
+          consultation_id: consultation.id,
+        },
+        { onConflict: 'client_id' },
+      )
+      .select('id')
+      .single()
+
+    if (error || !plan) {
+      return {
+        error: error?.message.includes('consultation_id')
+          ? 'Baza nie ma jeszcze kolumny consultation_id. Uruchom migrację 20261024.'
+          : (error?.message ?? 'Nie udało się powiązać planu pielęgnacyjnego'),
+      }
     }
 
     return { success: true, planId: plan.id as string }

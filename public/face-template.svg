@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1200" viewBox="0 0 1000 1200" role="img" aria-label="Szablon twarzy do zaznaczania obserwacji skórnych">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcf9f8"/>
+      <stop offset="1" stop-color="#f4efed"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4e1da"/>
+      <stop offset="1" stop-color="#ecd2ca"/>
+    </linearGradient>
+    <radialGradient id="blush" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d9a8a3" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#d9a8a3" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1000" height="1200" fill="url(#bg)"/>
+
+  <!-- szyja i ramiona -->
+  <path d="M370 760 C370 880 300 930 220 980 L220 1200 L780 1200 L780 980 C700 930 630 880 630 760 Z" fill="#e8d3cc" opacity="0.75"/>
+  <path d="M360 850 C420 920 580 920 640 850" fill="none" stroke="#d5b8b0" stroke-width="3" opacity="0.5"/>
+
+  <!-- uszy -->
+  <ellipse cx="238" cy="540" rx="58" ry="92" fill="#eed7d0" stroke="#c9a9a2" stroke-width="4"/>
+  <ellipse cx="762" cy="540" rx="58" ry="92" fill="#eed7d0" stroke="#c9a9a2" stroke-width="4"/>
+  <path d="M230 515 C250 535 252 565 238 590" fill="none" stroke="#c9a9a2" stroke-width="3" opacity="0.7"/>
+  <path d="M770 515 C750 535 748 565 762 590" fill="none" stroke="#c9a9a2" stroke-width="3" opacity="0.7"/>
+
+  <!-- twarz -->
+  <path d="M500 120 C690 120 780 290 780 500 C780 720 650 900 500 960 C350 900 220 720 220 500 C220 290 310 120 500 120 Z" fill="url(#skin)" stroke="#c9a9a2" stroke-width="5"/>
+
+  <!-- włosy / linia włosów -->
+  <path d="M238 360 C270 190 390 110 500 110 C610 110 730 190 762 360 C700 260 620 210 500 210 C380 210 300 260 238 360 Z" fill="#d8c2bc" opacity="0.8"/>
+
+  <!-- brwi -->
+  <path d="M320 430 C365 405 425 410 455 438" fill="none" stroke="#8f706a" stroke-width="11" stroke-linecap="round"/>
+  <path d="M680 430 C635 405 575 410 545 438" fill="none" stroke="#8f706a" stroke-width="11" stroke-linecap="round"/>
+
+  <!-- oczy -->
+  <path d="M310 505 C350 470 425 470 462 505 C425 540 350 540 310 505 Z" fill="#fffaf8" stroke="#a98780" stroke-width="4"/>
+  <path d="M690 505 C650 470 575 470 538 505 C575 540 650 540 690 505 Z" fill="#fffaf8" stroke="#a98780" stroke-width="4"/>
+  <circle cx="388" cy="505" r="26" fill="#9b7771"/>
+  <circle cx="612" cy="505" r="26" fill="#9b7771"/>
+  <circle cx="388" cy="505" r="11" fill="#3b2d2b"/>
+  <circle cx="612" cy="505" r="11" fill="#3b2d2b"/>
+  <circle cx="396" cy="496" r="6" fill="#fffaf8" opacity="0.9"/>
+  <circle cx="620" cy="496" r="6" fill="#fffaf8" opacity="0.9"/>
+  <path d="M300 500 C345 455 430 455 472 500" fill="none" stroke="#7f625d" stroke-width="5" stroke-linecap="round"/>
+  <path d="M700 500 C655 455 570 455 528 500" fill="none" stroke="#7f625d" stroke-width="5" stroke-linecap="round"/>
+  <path d="M310 535 C350 560 425 560 462 535" fill="none" stroke="#c9a9a2" stroke-width="3" opacity="0.7"/>
+  <path d="M690 535 C650 560 575 560 538 535" fill="none" stroke="#c9a9a2" stroke-width="3" opacity="0.7"/>
+
+  <!-- nos -->
+  <path d="M500 480 C500 550 490 610 468 650 C490 675 510 675 532 650 C510 610 500 550 500 480" fill="none" stroke="#c9a9a2" stroke-width="4" stroke-linecap="round"/>
+  <path d="M468 650 C485 660 515 660 532 650" fill="none" stroke="#b48f88" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="455" cy="650" rx="17" ry="10" fill="#d7b0a8" opacity="0.6"/>
+  <ellipse cx="545" cy="650" rx="17" ry="10" fill="#d7b0a8" opacity="0.6"/>
+
+  <!-- usta -->
+  <path d="M390 745 C440 705 560 705 610 745 C560 790 440 790 390 745 Z" fill="#d9a8a3" stroke="#b98781" stroke-width="4"/>
+  <path d="M390 745 C440 765 560 765 610 745" fill="none" stroke="#a97873" stroke-width="3"/>
+  <path d="M440 755 C470 742 530 742 560 755" fill="none" stroke="#f6ded9" stroke-width="3" opacity="0.8"/>
+
+  <!-- policzki -->
+  <ellipse cx="330" cy="620" rx="95" ry="65" fill="url(#blush)"/>
+  <ellipse cx="670" cy="620" rx="95" ry="65" fill="url(#blush)"/>
+
+  <!-- delikatne linie pomocnicze stref -->
+  <g stroke="#c9a9a2" stroke-width="1.5" stroke-dasharray="7 10" opacity="0.22" fill="none">
+    <path d="M250 410 C350 395 650 395 750 410"/>
+    <path d="M250 690 C350 710 650 710 750 690"/>
+    <path d="M500 210 L500 470"/>
+    <path d="M330 505 C330 600 350 680 390 735"/>
+    <path d="M670 505 C670 600 650 680 610 735"/>
+  </g>
+
+  <text x="500" y="1140" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#8f706a" opacity="0.65" letter-spacing="4">SZABLON TWARZY</text>
+</svg>
