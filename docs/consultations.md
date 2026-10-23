@@ -35,7 +35,8 @@ W środowisku produkcyjnym obie sekcje są dopisane na końcu `supabase/prod-set
 - MediaPipe Face Landmarker wykrywa 478 punktów **lokalnie w przeglądarce**.
 - Z tessellation powstaje siatka 2.5D; zdjęcie jest teksturą, a rysunki/piny są zapisywane w UV.
 - Widok 2D działa bez WebGL i jest pełnoprawnym fallbackiem.
-- Jeśli klient nie ma zdjęcia (np. nie wyraził zgody), personel może zaznaczać zmiany na wbudowanym szablonie twarzy (`public/face-template.svg`). Szablon działa w 2D, bez detekcji MediaPipe; po dodaniu zdjęcia mapa 3D wraca, a analiza zdjęciowa zastępuje szablon.
+- Jeśli klient nie ma zdjęcia (np. nie wyraził zgody), personel może zaznaczać zmiany na wbudowanym szablonie twarzy (`public/face-template.webp`). Szablon działa w 2D, bez detekcji MediaPipe; po dodaniu zdjęcia mapa 3D wraca, a analiza zdjęciowa zastępuje szablon.
+- Ilustracja szablonu: „Face Woman Cartoon Person Redhead” z Pixabay (Pixabay Content License, bez wymaganej atrybucji).
 - Model i WASM są pobierane z CDN MediaPipe. Jeśli gabinet wymaga pełnego self-hostingu, pobierz katalog `wasm` z `node_modules/@mediapipe/tasks-vision` oraz model `face_landmarker.task` do `public/` i zmień adresy w `lib/face-detection.ts`.
 
 ## Prywatność

@@ -15,17 +15,17 @@ export interface FaceBounds {
 }
 
 /** Wbudowany szablon twarzy używany, gdy klient nie ma zdjęcia w konsultacji. */
-export const FACE_TEMPLATE_URL = '/face-template.svg'
+export const FACE_TEMPLATE_URL = '/face-template.webp'
 
 /**
- * Obszar twarzy w szablonie. Szablon ma marginesy i szyję, więc bez tych
- * granic podpowiedzi stref (czoło, policzki, broda) wypadałyby poza twarz.
+ * Obszar twarzy w szablonie. Szablon ma włosy, marginesy i szyję, więc bez
+ * tych granic podpowiedzi stref (czoło, policzki, broda) wypadałyby poza twarz.
  */
 export const FACE_TEMPLATE_BOUNDS: FaceBounds = {
-  minX: 0.2,
-  minY: 0.1,
-  maxX: 0.8,
-  maxY: 0.82,
+  minX: 0.22,
+  minY: 0.13,
+  maxX: 0.78,
+  maxY: 0.89,
 }
 
 export function faceBoundsFromMesh(mesh: FaceMeshData | null): FaceBounds | null {
